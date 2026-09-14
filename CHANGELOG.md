@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.69.0] — 2026-09-14
+
 ### Changed
 
 - Les réglages n'ont plus qu'une entrée « IA ». « Agents » et « IA » parlaient de la même
