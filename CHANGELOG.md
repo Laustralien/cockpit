@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.72.1] — 2026-09-14
+
 ### Fixed
 
 - Le curseur pouvait ne plus apparaître dans un terminal restauré : on tapait sans voir où on
