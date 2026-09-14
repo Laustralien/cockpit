@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.72.0] — 2026-09-14
+
 ### Changed
 
 - L'écran d'un agent se parcourt par un sous-menu (Consignes, Skills, Bibliothèque) au lieu de
