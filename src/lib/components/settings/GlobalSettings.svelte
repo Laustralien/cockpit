@@ -30,7 +30,6 @@
   import { onMount, onDestroy } from "svelte";
   import AppearanceSettings from "./AppearanceSettings.svelte";
   import CarteCompte from "../compte/CarteCompte.svelte";
-  import AgentsView from "../agents/AgentsView.svelte";
   import FournisseurDetail from "./FournisseurDetail.svelte";
   import { marked } from "marked";
   // Le CHANGELOG.md est embarque au build (Vite ?raw) : consultable hors ligne, et toujours
@@ -451,12 +450,6 @@
           fournisseur={detailOuvert}
           surRetour={() => (fournisseurOuvert = null)}
         />
-        {#if detailOuvert.plugins}
-          <!-- La bibliotheque d'agents vit MAINTENANT dans le detail du fournisseur qui la
-               porte : elle ecrit dans la configuration de CE logiciel-la, elle n'a rien a
-               faire dans une entree de menu a part. -->
-          <div class="embedded-view"><AgentsView /></div>
-        {/if}
 
       {:else if view === "ia"}
         <!-- LE CHOIX DU FOURNISSEUR, et rien qu'ici. Tout le reste de l'application le lit :
@@ -679,9 +672,6 @@
   .settings { max-width: 1060px; }
   /* La bibliotheque d'agents est en trois colonnes : elle respire mal a 1060 px. */
   .settings.wide { max-width: 1500px; }
-  /* AgentsView est concu pour occuper une vue entiere (`height: 100%`). Encastre, son parent
-     n'a pas de hauteur imposee : on lui en donne une, sinon il s'ecrase a zero. */
-  .embedded-view { height: calc(100vh - var(--header-height) - 8rem); min-height: 26rem; }
   h2 { margin-bottom: 1.25rem; }
 
   .settings-layout { display: flex; gap: 1.5rem; align-items: flex-start; }

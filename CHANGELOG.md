@@ -12,6 +12,17 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- L'écran d'un agent arrivait sans marges ni cadres, tout collé : ses sections reprenaient des
+  styles qui n'existaient que dans l'écran parent. Chaque bloc a maintenant son cadre, son
+  espace et sa barre d'actions, et la bibliothèque d'agents est un bloc comme les autres.
+
+### Added
+
+- Depuis l'écran d'un agent : ouvrir le dossier de ses consignes ou d'une compétence dans le
+  gestionnaire de fichiers, et déplier une compétence pour lire sa fiche sans quitter Cockpit.
+
 ## [0.69.0] — 2026-09-14
 
 ### Changed

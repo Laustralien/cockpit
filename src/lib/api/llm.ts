@@ -120,3 +120,12 @@ export const llmConsignes = (id: string) => invoke<EtatConsignes>("llm_consignes
 export const llmEcrireConsignes = (id: string, contenu: string) =>
   invoke<void>("llm_ecrire_consignes", { id, contenu });
 export const llmCompetences = (id: string) => invoke<Competence[]>("llm_competences", { id });
+
+/// Ouvre, dans le gestionnaire de fichiers du systeme, le dossier des consignes ou celui
+/// d'une competence. Le nom est verifie cote backend contre la liste reelle.
+export const llmOuvrirDossier = (id: string, competence?: string) =>
+  invoke<void>("llm_ouvrir_dossier", { id, competence: competence ?? null });
+
+/// Le contenu du SKILL.md d'une competence.
+export const llmLireCompetence = (id: string, competence: string) =>
+  invoke<string>("llm_lire_competence", { id, competence });

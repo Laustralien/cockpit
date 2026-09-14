@@ -192,6 +192,30 @@ def glisser(x1: int, y1: int, x2: int, y2: int, pas: int = 12) -> None:
     d.sync()
 
 
+def defiler(x: int, y: int, crans: int = 5, vers_le_bas: bool = True) -> None:
+    """Fait tourner la molette au-dessus de (x, y), en coordonnees de FENETRE.
+
+    Les boutons 4 et 5 de X sont la molette : il n'y a pas d'evenement de defilement, on
+    presse et relache un bouton, une fois par cran.
+    """
+    from Xlib import X
+    from Xlib.ext import xtest
+
+    d = _ecran()
+    ox, oy = _origine_fenetre()
+    d.screen().root.warp_pointer(x + ox, y + oy)
+    d.sync()
+    time.sleep(0.2)
+    bouton = 5 if vers_le_bas else 4
+    for _ in range(crans):
+        xtest.fake_input(d, X.ButtonPress, bouton)
+        d.sync()
+        xtest.fake_input(d, X.ButtonRelease, bouton)
+        d.sync()
+        time.sleep(0.05)
+    time.sleep(0.3)
+
+
 def taper(texte: str, entree: bool = True) -> None:
     """Frappe un texte, majuscules et symboles compris.
 
@@ -594,6 +618,8 @@ if __name__ == "__main__":
         )
     elif quoi == "cliquer":
         cliquer(int(sys.argv[2]), int(sys.argv[3]))
+    elif quoi == "defiler":
+        defiler(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]) if len(sys.argv) > 4 else 5)
     elif quoi == "glisser":
         glisser(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]))
     elif quoi == "taper":

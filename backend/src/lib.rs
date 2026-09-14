@@ -1326,6 +1326,56 @@ async fn llm_competences(id: String) -> Result<Vec<llm::consignes::Competence>, 
         .unwrap_or_default())
 }
 
+/// Le dossier ou vivent les competences d'un fournisseur, ouvert dans le gestionnaire de
+/// fichiers du systeme.
+#[commande]
+async fn llm_ouvrir_dossier(id: String, competence: Option<String>) -> Result<(), String> {
+    let fournisseur = llm::par_id(&id).ok_or_else(|| format!("fournisseur inconnu : {id}"))?;
+    let capacite = fournisseur
+        .consignes()
+        .ok_or_else(|| format!("{} ne gere pas de consignes", fournisseur.nom()))?;
+    let chemin = match competence {
+        // **LE NOM EST VERIFIE CONTRE LA LISTE REELLE, JAMAIS RECOLLE AU CHEMIN.** Un nom
+        // venu du client peut contenir `..` : le chercher dans ce que le disque contient
+        // vraiment est la seule facon sure de le resoudre.
+        Some(nom) => {
+            let dossier = capacite
+                .dossier_skills()
+                .ok_or_else(|| format!("{} n'a pas de competences", fournisseur.nom()))?;
+            llm::consignes::lister_les_competences(&dossier)
+                .into_iter()
+                .find(|c| c.nom == nom)
+                .map(|c| std::path::PathBuf::from(c.chemin))
+                .ok_or_else(|| format!("competence inconnue : {nom}"))?
+        }
+        // Sans competence nommee : le dossier qui porte les consignes.
+        None => capacite
+            .fichier()
+            .parent()
+            .map(|p| p.to_path_buf())
+            .ok_or_else(|| "dossier des consignes introuvable".to_string())?,
+    };
+    ouvrir::adresse(&chemin.to_string_lossy())
+}
+
+/// Le contenu du `SKILL.md` d'une competence, pour le lire sans quitter l'ecran.
+#[commande]
+async fn llm_lire_competence(id: String, competence: String) -> Result<String, String> {
+    let fournisseur = llm::par_id(&id).ok_or_else(|| format!("fournisseur inconnu : {id}"))?;
+    let capacite = fournisseur
+        .consignes()
+        .ok_or_else(|| format!("{} ne gere pas de consignes", fournisseur.nom()))?;
+    let dossier = capacite
+        .dossier_skills()
+        .ok_or_else(|| format!("{} n'a pas de competences", fournisseur.nom()))?;
+    let trouvee = llm::consignes::lister_les_competences(&dossier)
+        .into_iter()
+        .find(|c| c.nom == competence)
+        .ok_or_else(|| format!("competence inconnue : {competence}"))?;
+    let fiche = std::path::Path::new(&trouvee.chemin).join("SKILL.md");
+    std::fs::read_to_string(&fiche).map_err(|e| format!("lecture de {} : {e}", fiche.display()))
+}
+
 /// **Un fournisseur qui ne sait pas rend `gere: false` et AUCUNE fenetre.** L'interface
 /// n'affiche alors rien du tout : une jauge vide ferait croire a une consommation nulle.
 #[commande]
