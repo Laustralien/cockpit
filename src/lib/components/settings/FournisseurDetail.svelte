@@ -29,7 +29,16 @@
     type Skill,
   } from "../../api/llm";
 
-  let { fournisseur, surRetour }: { fournisseur: CapacitesLlm; surRetour: () => void } = $props();
+  /// **UNE SECTION A LA FOIS.** Tout empile, l'ecran devenait un rouleau : on defilait pour
+  /// trouver, et chaque chose ajoutee l'aurait rallonge. La navigation vit dans le sous-menu
+  /// des reglages, qui dit aussi ou l'on est.
+  type Section = "consignes" | "skills" | "bibliotheque";
+
+  let {
+    fournisseur,
+    section = "consignes",
+    surRetour,
+  }: { fournisseur: CapacitesLlm; section?: Section; surRetour: () => void } = $props();
 
   let etat: EtatConsignes | null = $state(null);
   let skills: Skill[] = $state([]);
@@ -120,7 +129,7 @@
     <p class="muted">{$trad("common.loading")}</p>
   {:else if !etat}
     <p class="muted">{$trad("settings.ia.consignesIndisponibles")}</p>
-  {:else}
+  {:else if section === "consignes"}
     <section class="bloc">
       <div class="bloc-tete">
         <div>
@@ -161,7 +170,7 @@
         </button>
       </footer>
     </section>
-
+  {:else if section === "skills"}
     <section class="bloc">
       <div class="bloc-tete">
         <div>
@@ -202,7 +211,7 @@
         </ul>
       {/if}
     </section>
-
+  {:else if section === "bibliotheque"}
     {#if fournisseur.plugins}
       <!-- La bibliotheque d'agents vit DANS le detail du fournisseur qui la porte : elle
            ecrit dans la configuration de ce logiciel-la. Encastree par l'ecran parent, elle

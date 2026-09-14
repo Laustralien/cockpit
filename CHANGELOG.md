@@ -12,6 +12,11 @@ le script de release.
 
 ## [Unreleased]
 
+### Changed
+
+- L'écran d'un agent se parcourt par un sous-menu (Consignes, Skills, Bibliothèque) au lieu de
+  tout empiler sur une page qu'il fallait dérouler. Le menu des réglages montre où l'on est.
+
 ## [0.71.0] — 2026-09-14
 
 ### Changed

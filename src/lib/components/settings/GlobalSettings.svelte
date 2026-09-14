@@ -76,6 +76,17 @@
   /// laquelle ouvrir pour quoi. Il n'y en a plus qu'une, et on y entre PAR L'AGENT — ses
   /// consignes, ses skills, sa bibliotheque.
   let fournisseurOuvert: string | null = $state(null);
+
+  /// Les sections du detail d'un agent. **UN SOUS-MENU PLUTOT QU'UNE PAGE QUI S'ALLONGE** :
+  /// tout empile, l'ecran devenait un rouleau ou il fallait defiler pour trouver, et chaque
+  /// chose ajoutee l'aurait rallonge.
+  type SectionAgent = "consignes" | "skills" | "bibliotheque";
+  let sectionAgent: SectionAgent = $state("consignes");
+  const SOUS_MENU: { id: SectionAgent; labelKey: `settings.ia.section.${SectionAgent}` }[] = [
+    { id: "consignes", labelKey: "settings.ia.section.consignes" },
+    { id: "skills", labelKey: "settings.ia.section.skills" },
+    { id: "bibliotheque", labelKey: "settings.ia.section.bibliotheque" },
+  ];
   const detailOuvert = $derived(
     fournisseurOuvert ? ($catalogue.find((f) => f.id === fournisseurOuvert) ?? null) : null,
   );
@@ -340,12 +351,31 @@
       {#each menuVisible as item (item.id)}
         <button
           class="settings-menu-item"
-          class:active={view === item.id}
-          onclick={() => (view = item.id)}
+          class:active={view === item.id && !(item.id === "ia" && detailOuvert)}
+          onclick={() => {
+            view = item.id;
+            // Revenir sur « IA » depuis le menu ramene a la LISTE : sinon on retombe dans le
+            // detail d'un agent sans l'avoir demande.
+            if (item.id === "ia") fournisseurOuvert = null;
+          }}
         >
           <span class="menu-icon">{item.icon}</span>
           {$trad(item.labelKey)}
         </button>
+        <!-- Le sous-menu de l'agent ouvert, en retrait sous « IA ». -->
+        {#if item.id === "ia" && detailOuvert}
+          {#each SOUS_MENU as sous (sous.id)}
+            {#if sous.id !== "bibliotheque" || detailOuvert.plugins}
+              <button
+                class="settings-menu-item sous"
+                class:active={sectionAgent === sous.id}
+                onclick={() => (sectionAgent = sous.id)}
+              >
+                {$trad(sous.labelKey)}
+              </button>
+            {/if}
+          {/each}
+        {/if}
       {/each}
     </nav>
 
@@ -448,6 +478,7 @@
       {:else if view === "ia" && detailOuvert}
         <FournisseurDetail
           fournisseur={detailOuvert}
+          section={sectionAgent}
           surRetour={() => (fournisseurOuvert = null)}
         />
 
@@ -561,7 +592,13 @@
                        dessus. Il n'apparait que pour un fournisseur qui a quelque chose a
                        montrer. -->
                   {#if f.consignes}
-                    <button class="btn ouvrir" onclick={() => (fournisseurOuvert = f.id)}>
+                    <button
+                      class="btn ouvrir"
+                      onclick={() => {
+                        fournisseurOuvert = f.id;
+                        sectionAgent = "consignes";
+                      }}
+                    >
                       {$trad("settings.ia.ouvrir")} →
                     </button>
                   {/if}
@@ -695,6 +732,23 @@
     color: var(--text-secondary); cursor: pointer;
   }
   .settings-menu-item:hover { background: var(--bg-secondary); color: var(--text-primary); }
+  /* Le sous-menu d'un agent : en retrait, plus discret, avec un filet qui le rattache a
+     l'entree au-dessus. On voit d'un coup d'oeil que ces lignes DEPENDENT de « IA ». */
+  .settings-menu-item.sous {
+    margin-left: 1.15rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--border-color);
+    border-radius: 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+  .settings-menu-item.sous:hover { color: var(--text-primary); background: transparent; }
+  .settings-menu-item.sous.active {
+    color: var(--accent);
+    background: transparent;
+    border-left-color: var(--accent);
+  }
+
   .settings-menu-item.active {
     background: var(--bg-secondary); border-color: var(--border-color);
     color: var(--accent); font-weight: 600;
