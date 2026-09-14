@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.71.0] — 2026-09-14
+
 ### Changed
 
 - Les « compétences » d'un agent s'appellent des **skills**, comme partout ailleurs. C'est le
