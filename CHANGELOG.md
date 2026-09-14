@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.70.0] — 2026-09-14
+
 ### Fixed
 
 - L'écran d'un agent arrivait sans marges ni cadres, tout collé : ses sections reprenaient des
