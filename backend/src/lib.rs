@@ -1281,6 +1281,51 @@ fn llm_abonnement(state: &AppState, id: Option<String>) -> Result<llm::EtatAbonn
 /// **`async fn` parce que c'est un appel reseau** : le pont sert ses appels sur un fil, et une
 /// attente de quinze secondes y bloquerait tout le reste, terminaux compris.
 ///
+/// Les consignes globales d'un fournisseur, telles qu'il les lit.
+///
+/// **LE CLIENT DONNE UN IDENTIFIANT, JAMAIS UN CHEMIN.** C'est le fournisseur qui dit ou vit
+/// son fichier : accepter un chemin venu de l'interface donnerait a n'importe quel appel le
+/// droit de lire ou d'ecrire ou il veut sur le disque.
+#[commande]
+async fn llm_consignes(id: String) -> Result<llm::consignes::EtatConsignes, String> {
+    let fournisseur = llm::par_id(&id).ok_or_else(|| format!("fournisseur inconnu : {id}"))?;
+    let capacite = fournisseur
+        .consignes()
+        .ok_or_else(|| format!("{} ne gere pas de consignes", fournisseur.nom()))?;
+    let fichier = capacite.fichier();
+    let (existe, contenu) = llm::consignes::lire(&fichier)?;
+    Ok(llm::consignes::EtatConsignes {
+        fournisseur: fournisseur.id().to_string(),
+        nom: fournisseur.nom().to_string(),
+        chemin: fichier.to_string_lossy().to_string(),
+        existe,
+        contenu,
+    })
+}
+
+/// Ecrit les consignes globales d'un fournisseur.
+#[commande]
+async fn llm_ecrire_consignes(id: String, contenu: String) -> Result<(), String> {
+    let fournisseur = llm::par_id(&id).ok_or_else(|| format!("fournisseur inconnu : {id}"))?;
+    let capacite = fournisseur
+        .consignes()
+        .ok_or_else(|| format!("{} ne gere pas de consignes", fournisseur.nom()))?;
+    llm::consignes::ecrire(&capacite.fichier(), &contenu)
+}
+
+/// Les competences installees pour un fournisseur.
+#[commande]
+async fn llm_competences(id: String) -> Result<Vec<llm::consignes::Competence>, String> {
+    let fournisseur = llm::par_id(&id).ok_or_else(|| format!("fournisseur inconnu : {id}"))?;
+    let Some(capacite) = fournisseur.consignes() else {
+        return Ok(Vec::new());
+    };
+    Ok(capacite
+        .dossier_skills()
+        .map(|d| llm::consignes::lister_les_competences(&d))
+        .unwrap_or_default())
+}
+
 /// **Un fournisseur qui ne sait pas rend `gere: false` et AUCUNE fenetre.** L'interface
 /// n'affiche alors rien du tout : une jauge vide ferait croire a une consommation nulle.
 #[commande]

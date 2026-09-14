@@ -12,6 +12,21 @@ le script de release.
 
 ## [Unreleased]
 
+### Changed
+
+- Les réglages n'ont plus qu'une entrée « IA ». « Agents » et « IA » parlaient de la même
+  chose à deux endroits : il fallait savoir laquelle ouvrir pour quoi.
+- On entre maintenant par l'agent : depuis la liste, « Ouvrir » donne ses consignes globales,
+  éditables sur place, et ses compétences. La bibliothèque d'agents a rejoint cet écran,
+  puisqu'elle écrit dans la configuration de ce logiciel-là.
+
+### Added
+
+- Les consignes globales d'un agent (le fichier qu'il lit avant chaque conversation) se lisent
+  et se modifient depuis Cockpit. Son chemin complet est toujours affiché : c'est un fichier
+  qui lui appartient, pas un réglage de Cockpit.
+- Ses compétences sont listées avec ce que chacune dit d'elle-même.
+
 ## [0.68.0] — 2026-09-12
 
 ### Added

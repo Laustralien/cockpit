@@ -191,6 +191,29 @@ pub async fn appeler(
             ).await?))
         })
         .await,
+        "llm_consignes" => typer(async {
+            valeur(serde_json::to_value(crate::llm_consignes(
+                serde_json::from_value(prendre(a, "id", "id"))
+                    .map_err(|e| format!("argument id : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "llm_ecrire_consignes" => typer(async {
+            valeur(serde_json::to_value(crate::llm_ecrire_consignes(
+                serde_json::from_value(prendre(a, "id", "id"))
+                    .map_err(|e| format!("argument id : {e}"))?,
+                serde_json::from_value(prendre(a, "contenu", "contenu"))
+                    .map_err(|e| format!("argument contenu : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "llm_competences" => typer(async {
+            valeur(serde_json::to_value(crate::llm_competences(
+                serde_json::from_value(prendre(a, "id", "id"))
+                    .map_err(|e| format!("argument id : {e}"))?,
+            ).await?))
+        })
+        .await,
         "reorder_terminals" => typer(async {
             valeur(serde_json::to_value(crate::reorder_terminals(etat,
                 serde_json::from_value(prendre(a, "ids", "ids"))

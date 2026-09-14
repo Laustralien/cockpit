@@ -31,6 +31,7 @@
   import AppearanceSettings from "./AppearanceSettings.svelte";
   import CarteCompte from "../compte/CarteCompte.svelte";
   import AgentsView from "../agents/AgentsView.svelte";
+  import FournisseurDetail from "./FournisseurDetail.svelte";
   import { marked } from "marked";
   // Le CHANGELOG.md est embarque au build (Vite ?raw) : consultable hors ligne, et toujours
   // celui de la version installee — pas celui d'une branche distante.
@@ -66,8 +67,19 @@
   const changelogHtml = $derived(rendre(MORCEAUX.tete, "tete", $locale));
   const resteHtml = $derived(toutLHistorique ? rendre(MORCEAUX.reste, "reste", $locale) : "");
 
-  type SettingsView = "general" | "appearance" | "agents" | "ia" | "meetings" | "projects";
+  type SettingsView = "general" | "appearance" | "ia" | "meetings" | "projects";
   let view: SettingsView = $state("general");
+
+  /// Le fournisseur dont on regarde le detail, ou `null` pour la liste.
+  ///
+  /// **« AGENTS » ET « IA » ETAIENT DEUX ENTREES POUR LA MEME CHOSE.** L'une portait la
+  /// bibliotheque de plugins, l'autre le choix du fournisseur et les cles : il fallait savoir
+  /// laquelle ouvrir pour quoi. Il n'y en a plus qu'une, et on y entre PAR L'AGENT — ses
+  /// consignes, ses competences, sa bibliotheque.
+  let fournisseurOuvert: string | null = $state(null);
+  const detailOuvert = $derived(
+    fournisseurOuvert ? ($catalogue.find((f) => f.id === fournisseurOuvert) ?? null) : null,
+  );
 
 
   /// Le menu des reglages. `capacite` rend une entree conditionnelle : les agents s'installent
@@ -81,7 +93,6 @@
   }[] = [
     { id: "general", icon: "⚙", labelKey: "settings.menu.general" },
     { id: "appearance", icon: "◐", labelKey: "settings.menu.appearance" },
-    { id: "agents", icon: "⬡", labelKey: "settings.menu.agents", capacite: "plugins" },
     { id: "ia", icon: "✳", labelKey: "settings.menu.ia" },
     { id: "meetings", icon: "⏺", labelKey: "settings.menu.meetings" },
     { id: "projects", icon: "▤", labelKey: "settings.menu.projects" },
@@ -320,7 +331,9 @@
   }
 </script>
 
-<div class="settings" class:wide={view === "agents"}>
+<!-- La page s'elargit pour le detail d'un agent : il porte ses consignes et sa
+     bibliotheque, qui ont besoin d'air. -->
+<div class="settings" class:wide={view === "ia" && detailOuvert !== null}>
 
   <div class="settings-layout">
     <nav class="settings-menu">
@@ -433,10 +446,17 @@
       {:else if view === "appearance"}
         <AppearanceSettings />
 
-      {:else if view === "agents"}
-        <!-- Encastree dans les parametres : la grille de AgentsView est fluide, elle s'adapte
-             a la colonne. `.settings.wide` elargit la page pour lui laisser de l'air. -->
-        <div class="embedded-view"><AgentsView /></div>
+      {:else if view === "ia" && detailOuvert}
+        <FournisseurDetail
+          fournisseur={detailOuvert}
+          surRetour={() => (fournisseurOuvert = null)}
+        />
+        {#if detailOuvert.plugins}
+          <!-- La bibliotheque d'agents vit MAINTENANT dans le detail du fournisseur qui la
+               porte : elle ecrit dans la configuration de CE logiciel-la, elle n'a rien a
+               faire dans une entree de menu a part. -->
+          <div class="embedded-view"><AgentsView /></div>
+        {/if}
 
       {:else if view === "ia"}
         <!-- LE CHOIX DU FOURNISSEUR, et rien qu'ici. Tout le reste de l'application le lit :
@@ -541,6 +561,16 @@
                     <span class="badge" class:on={f.cle_posee} class:off={!f.cle_posee}>
                       {f.cle_posee ? $trad("settings.ia.clePosee") : $trad("settings.ia.cleAbsente")}
                     </span>
+                  {/if}
+                  <!-- **ENTRER DANS UN AGENT EST UN VRAI BOUTON**, pose AVEC les badges et non
+                       sur une ligne a lui : la ligne porte deja un choix (le radio du
+                       fournisseur prefere), et deux gestes sur la meme zone se marchent
+                       dessus. Il n'apparait que pour un fournisseur qui a quelque chose a
+                       montrer. -->
+                  {#if f.consignes}
+                    <button class="btn ouvrir" onclick={() => (fournisseurOuvert = f.id)}>
+                      {$trad("settings.ia.ouvrir")} →
+                    </button>
                   {/if}
                 </div>
 
@@ -769,6 +799,11 @@
   .fournisseur-symbole { font-weight: 700; font-size: 1rem; line-height: 1; }
   .fournisseur-nom { font-weight: 600; }
   .fournisseur-etat { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
+  .ouvrir {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 3px 10px;
+  }
   .fournisseur-capacites { grid-column: 1 / -1; display: flex; gap: 0.35rem; flex-wrap: wrap; }
   .capacite {
     font-size: 0.72rem;

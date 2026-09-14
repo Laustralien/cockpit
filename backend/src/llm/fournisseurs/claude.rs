@@ -45,6 +45,9 @@ impl Fournisseur for ClaudeCode {
     fn conversations(&self) -> Option<&'static dyn Conversations> {
         Some(&CONVERSATIONS)
     }
+    fn consignes(&self) -> Option<&'static dyn crate::llm::consignes::Consignes> {
+        Some(&CONSIGNES)
+    }
     fn consommation(&self) -> Option<&'static dyn Consommation> {
         Some(&CONSOMMATION)
     }
@@ -391,4 +394,30 @@ fn jeton_oauth() -> Result<String, String> {
         .filter(|t| !t.is_empty())
         .map(String::from)
         .ok_or_else(|| "aucun jeton : connecte-toi a Claude".to_string())
+}
+
+
+/// Ou Claude Code lit ce que l'utilisateur a ecrit pour lui.
+///
+/// **LE DOSSIER PERSONNEL SE DEMANDE A `chemins`, JAMAIS A `HOME`** : Windows n'a que
+/// `USERPROFILE`, et un chemin en dur commencant par `/` est un bug de portabilite.
+pub struct ConsignesClaude;
+pub static CONSIGNES: ConsignesClaude = ConsignesClaude;
+
+impl crate::llm::consignes::Consignes for ConsignesClaude {
+    fn fichier(&self) -> std::path::PathBuf {
+        dossier_claude().join("CLAUDE.md")
+    }
+    fn dossier_skills(&self) -> Option<std::path::PathBuf> {
+        Some(dossier_claude().join("skills"))
+    }
+}
+
+fn dossier_claude() -> std::path::PathBuf {
+    // Pas de dossier personnel : on ne fabrique pas un chemin au hasard, on retombe sur le
+    // dossier courant. Le chemin complet est de toute facon AFFICHE a l'utilisateur, donc une
+    // valeur absurde se verrait au lieu d'ecrire quelque part par surprise.
+    crate::chemins::dossier_personnel()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .join(".claude")
 }

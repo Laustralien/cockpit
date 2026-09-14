@@ -26,6 +26,8 @@ export interface CapacitesLlm {
   transcription: boolean;
   /** Ses agents s'installent au format de plugins de Claude Code. */
   plugins: boolean;
+  /** Il porte des consignes globales et des competences qu'on peut regler ici. */
+  consignes: boolean;
   cle_requise: boolean;
   /** La cle est posee. **Jamais la cle elle-meme** : elle ne remonte pas jusqu'ici. */
   cle_posee: boolean;
@@ -94,3 +96,27 @@ export const annulerConnexionLlm = () => invoke("llm_connexion_annuler");
 /** Les evenements de la connexion guidee. Memes noms que cote Rust. */
 export const EVENEMENT_CONNEXION_SORTIE = "llm_connexion_sortie";
 export const EVENEMENT_CONNEXION_FIN = "llm_connexion_fin";
+
+/// Les consignes globales d'un fournisseur, et ses competences.
+///
+/// **ON ENVOIE UN IDENTIFIANT, JAMAIS UN CHEMIN** : c'est le backend qui sait ou le CLI lit
+/// ses consignes. Lui passer un chemin donnerait a cet ecran le droit d'ecrire n'importe ou.
+export interface EtatConsignes {
+  fournisseur: string;
+  nom: string;
+  /// Chemin complet, TOUJOURS affiche : on edite un fichier qui vit hors de Cockpit.
+  chemin: string;
+  existe: boolean;
+  contenu: string;
+}
+
+export interface Competence {
+  nom: string;
+  description: string;
+  chemin: string;
+}
+
+export const llmConsignes = (id: string) => invoke<EtatConsignes>("llm_consignes", { id });
+export const llmEcrireConsignes = (id: string, contenu: string) =>
+  invoke<void>("llm_ecrire_consignes", { id, contenu });
+export const llmCompetences = (id: string) => invoke<Competence[]>("llm_competences", { id });

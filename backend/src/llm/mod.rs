@@ -36,6 +36,7 @@
 //! normal — Claude ne transcrit pas — mais ca ne doit pas se decouvrir apres coup.
 
 pub mod abonnement;
+pub mod consignes;
 pub mod consommation;
 pub mod conversations;
 pub mod fournisseurs;
@@ -111,6 +112,14 @@ pub trait Fournisseur: Send + Sync {
 
     /// Sait transcrire de l'audio.
     fn transcription(&self) -> Option<&'static dyn Transcription> {
+        None
+    }
+
+    /// Ce que l'utilisateur a ecrit pour lui : consignes globales et competences.
+    ///
+    /// `None` par defaut : plusieurs CLI n'ont aucun equivalent, et inventer un fichier que
+    /// personne ne lira serait pire que de ne rien afficher.
+    fn consignes(&self) -> Option<&'static dyn consignes::Consignes> {
         None
     }
 
@@ -286,6 +295,8 @@ pub struct Capacites {
     pub texte: bool,
     pub transcription: bool,
     pub plugins: bool,
+    /// Il porte des consignes globales et des competences qu'on peut regler ici.
+    pub consignes: bool,
     pub cle_requise: bool,
     /// La cle est posee. **Jamais la cle elle-meme** : cette liste part au frontend a chaque
     /// ouverture des reglages, et une cle n'a pas a voyager pour repondre « oui ou non ».
@@ -309,6 +320,7 @@ pub fn catalogue_pour_le_frontend(db: &Database) -> Vec<Capacites> {
             texte: f.texte().is_some(),
             transcription: f.transcription().is_some(),
             plugins: f.plugins_claude_code(),
+            consignes: f.consignes().is_some(),
             cle_requise: f.cle_requise(),
             cle_posee: cle_api(db, f.id()).is_some(),
             prefere: f.id() == choisi,

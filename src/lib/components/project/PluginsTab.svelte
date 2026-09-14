@@ -88,7 +88,7 @@
     {#if allPlugins.length === 0}
       <p class="empty">
         {$trad("plugins.emptyMarketplace")}
-        {$trad("plugins.openTab")} <strong>{$trad("settings.menu.agents")}</strong> {$trad("plugins.emptyOpenAgents")}
+        {$trad("plugins.openTab")} <strong>{$trad("settings.menu.ia")}</strong> {$trad("plugins.emptyOpenAgents")}
       </p>
     {:else}
       <ul class="plugin-list">
