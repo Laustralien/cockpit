@@ -1,5 +1,5 @@
 <script lang="ts">
-  /// Ce qu'on a ecrit pour UN agent : ses consignes globales et ses competences.
+  /// Ce qu'on a ecrit pour UN agent : ses consignes globales et ses skills.
   ///
   /// **ON EDITE LA CONFIGURATION D'UN AUTRE LOGICIEL, ET CA SE DIT.** Ce fichier est lu par le
   /// CLI, pas par Cockpit : son chemin complet est donc toujours affiche, et l'enregistrement
@@ -21,24 +21,24 @@
   import {
     llmConsignes,
     llmEcrireConsignes,
-    llmCompetences,
+    llmSkills,
     llmOuvrirDossier,
-    llmLireCompetence,
+    llmLireSkill,
     type CapacitesLlm,
     type EtatConsignes,
-    type Competence,
+    type Skill,
   } from "../../api/llm";
 
   let { fournisseur, surRetour }: { fournisseur: CapacitesLlm; surRetour: () => void } = $props();
 
   let etat: EtatConsignes | null = $state(null);
-  let competences: Competence[] = $state([]);
+  let skills: Skill[] = $state([]);
   let texte = $state("");
   /// Ce qui est RANGE sur le disque, pour savoir s'il y a des changements en cours.
   let texteRange = $state("");
   let chargement = $state(true);
   let enregistrement = $state(false);
-  /// La competence dont on lit la fiche, et son contenu.
+  /// Le skill dont on lit la fiche, et son contenu.
   let ouverte: string | null = $state(null);
   let fiche = $state("");
 
@@ -51,12 +51,12 @@
     try {
       const [c, s] = await Promise.all([
         llmConsignes(fournisseur.id),
-        llmCompetences(fournisseur.id),
+        llmSkills(fournisseur.id),
       ]);
       etat = c;
       texte = c.contenu;
       texteRange = c.contenu;
-      competences = s;
+      skills = s;
     } catch (e) {
       signalerErreur("llm.consignes", String(e));
     } finally {
@@ -79,15 +79,15 @@
     }
   }
 
-  async function ouvrirLeDossier(competence?: string) {
+  async function ouvrirLeDossier(skill?: string) {
     try {
-      await llmOuvrirDossier(fournisseur.id, competence);
+      await llmOuvrirDossier(fournisseur.id, skill);
     } catch (e) {
       notify(String(e));
     }
   }
 
-  /// Deplie la fiche d'une competence, ou la referme si c'est celle qui est ouverte.
+  /// Deplie la fiche d'un skill, ou la referme si c'est celui qui est ouvert.
   async function basculerLaFiche(nom: string) {
     if (ouverte === nom) {
       ouverte = null;
@@ -96,7 +96,7 @@
     ouverte = nom;
     fiche = "";
     try {
-      fiche = await llmLireCompetence(fournisseur.id, nom);
+      fiche = await llmLireSkill(fournisseur.id, nom);
     } catch (e) {
       ouverte = null;
       notify(String(e));
@@ -165,8 +165,8 @@
     <section class="bloc">
       <div class="bloc-tete">
         <div>
-          <h3>{$trad("settings.ia.competencesTitre")} <span class="compte">{competences.length}</span></h3>
-          <p class="soustitre">{$trad("settings.ia.competencesSoustitre")}</p>
+          <h3>{$trad("settings.ia.skillsTitre")} <span class="compte">{skills.length}</span></h3>
+          <p class="soustitre">{$trad("settings.ia.skillsSoustitre")}</p>
         </div>
         {#if fournisseur.consignes}
           <button class="btn" onclick={() => ouvrirLeDossier()}>
@@ -175,12 +175,12 @@
         {/if}
       </div>
 
-      {#if competences.length === 0}
-        <p class="muted">{$trad("settings.ia.competencesAucune")}</p>
+      {#if skills.length === 0}
+        <p class="muted">{$trad("settings.ia.skillsAucune")}</p>
       {:else}
-        <ul class="competences">
-          {#each competences as c (c.chemin)}
-            <li class="competence" class:ouverte={ouverte === c.nom}>
+        <ul class="skills">
+          {#each skills as c (c.chemin)}
+            <li class="skill" class:ouverte={ouverte === c.nom}>
               <div class="c-ligne">
                 <button class="c-nom" onclick={() => basculerLaFiche(c.nom)}>
                   <span class="chevron" aria-hidden="true">{ouverte === c.nom ? "▾" : "▸"}</span>
@@ -324,7 +324,7 @@
     border-top: 1px solid var(--border-color);
   }
 
-  .competences {
+  .skills {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -332,13 +332,13 @@
     flex-direction: column;
     gap: 8px;
   }
-  .competence {
+  .skill {
     padding: 0.7rem 0.85rem;
     border: 1px solid var(--border-color);
     border-radius: var(--radius, 8px);
     background: var(--surface-base, var(--bg-tertiary));
   }
-  .competence.ouverte { border-color: var(--accent); }
+  .skill.ouverte { border-color: var(--accent); }
   .c-ligne {
     display: flex;
     align-items: center;
@@ -368,14 +368,14 @@
     color: var(--text-secondary);
     line-height: 1.5;
     /* Ces descriptions font parfois dix lignes : on en montre assez pour reconnaitre la
-       competence, le reste se lit en depliant. */
+       skill, le reste se lit en depliant. */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .competence.ouverte .c-desc {
+  .skill.ouverte .c-desc {
     -webkit-line-clamp: unset;
     line-clamp: unset;
   }

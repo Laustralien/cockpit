@@ -1,4 +1,4 @@
-//! Ce que l'utilisateur a ecrit pour SON agent : les consignes globales et les competences.
+//! Ce que l'utilisateur a ecrit pour SON agent : les consignes globales et les skills.
 //!
 //! **UNE CAPACITE COMME LES AUTRES, DONC `None` PAR DEFAUT.** Chaque CLI d'agent range ces
 //! choses a sa facon — Claude Code lit `~/.claude/CLAUDE.md` et `~/.claude/skills/` — et
@@ -18,8 +18,8 @@ pub trait Consignes: Send + Sync {
     /// Le fichier d'instructions globales, tel que le CLI le lit.
     fn fichier(&self) -> PathBuf;
 
-    /// Le dossier des competences, une par sous-dossier. `None` quand le CLI n'a pas ce
-    /// concept : on n'affiche alors pas une liste vide, qui se lirait « aucune competence ».
+    /// Le dossier des skills, un par sous-dossier. `None` quand le CLI n'a pas ce
+    /// concept : on n'affiche alors pas une liste vide, qui se lirait « aucun skill ».
     fn dossier_skills(&self) -> Option<PathBuf> {
         None
     }
@@ -40,11 +40,11 @@ pub struct EtatConsignes {
     pub contenu: String,
 }
 
-/// Une competence : un sous-dossier qui porte un `SKILL.md`.
+/// Un skill : un sous-dossier qui porte un `SKILL.md`.
 #[derive(serde::Serialize, Clone, Debug, PartialEq)]
-pub struct Competence {
+pub struct Skill {
     pub nom: String,
-    /// Ce que la competence dit d'elle-meme. Vide quand le fichier n'a pas d'en-tete.
+    /// Ce que le skill dit de lui-meme. Vide quand le fichier n'a pas d'en-tete.
     pub description: String,
     pub chemin: String,
 }
@@ -80,23 +80,23 @@ pub fn ecrire(fichier: &std::path::Path, contenu: &str) -> Result<(), String> {
     })
 }
 
-/// Les competences d'un dossier, triees par nom.
+/// Les skills d'un dossier, tries par nom.
 ///
-/// Un dossier absent rend une liste vide : personne n'a encore ecrit de competence, et ce
+/// Un dossier absent rend une liste vide : personne n'a encore ecrit de skill, et ce
 /// n'est pas une panne.
-pub fn lister_les_competences(dossier: &std::path::Path) -> Vec<Competence> {
+pub fn lister_les_skills(dossier: &std::path::Path) -> Vec<Skill> {
     let Ok(entrees) = std::fs::read_dir(dossier) else {
         return Vec::new();
     };
-    let mut competences: Vec<Competence> = entrees
+    let mut skills: Vec<Skill> = entrees
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_dir())
         .filter_map(|e| {
             let chemin = e.path();
             let fiche = chemin.join("SKILL.md");
-            // **UN SOUS-DOSSIER SANS `SKILL.md` N'EST PAS UNE COMPETENCE.** Le dossier peut
-            // contenir autre chose (un `.git`, des ressources) : l'afficher ferait croire a
-            // une competence que le CLI ne chargera jamais.
+            // **UN SOUS-DOSSIER SANS `SKILL.md` N'EST PAS UN SKILL.** Le dossier peut contenir
+            // autre chose (un `.git`, des ressources) : l'afficher ferait croire a un skill
+            // que le CLI ne chargera jamais.
             if !fiche.is_file() {
                 return None;
             }
@@ -104,11 +104,11 @@ pub fn lister_les_competences(dossier: &std::path::Path) -> Vec<Competence> {
             let description = std::fs::read_to_string(&fiche)
                 .map(|texte| description_de(&texte))
                 .unwrap_or_default();
-            Some(Competence { nom, description, chemin: chemin.to_string_lossy().to_string() })
+            Some(Skill { nom, description, chemin: chemin.to_string_lossy().to_string() })
         })
         .collect();
-    competences.sort_by(|a, b| a.nom.cmp(&b.nom));
-    competences
+    skills.sort_by(|a, b| a.nom.cmp(&b.nom));
+    skills
 }
 
 /// La description annoncee par l'en-tete d'un `SKILL.md`.
@@ -198,7 +198,7 @@ mod tests {
     }
 
     #[test]
-    fn une_competence_est_un_dossier_qui_porte_un_skill_md() {
+    fn une_skill_est_un_dossier_qui_porte_un_skill_md() {
         let bac = std::env::temp_dir().join(format!("cockpit-skills-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&bac);
         std::fs::create_dir_all(bac.join("cache")).unwrap();
@@ -209,10 +209,10 @@ mod tests {
         .unwrap();
         // Un dossier SANS fiche : le CLI ne le chargera jamais, on ne le montre pas.
         std::fs::create_dir_all(bac.join("brouillon")).unwrap();
-        // Un fichier a la racine n'est pas une competence non plus.
+        // Un fichier a la racine n'est pas un skill non plus.
         std::fs::write(bac.join("notes.md"), "x").unwrap();
 
-        let liste = lister_les_competences(&bac);
+        let liste = lister_les_skills(&bac);
         assert_eq!(liste.len(), 1, "seul le dossier avec SKILL.md compte : {liste:?}");
         assert_eq!(liste[0].nom, "cache");
         assert_eq!(liste[0].description, "Le cache HTTP");
@@ -220,9 +220,9 @@ mod tests {
     }
 
     #[test]
-    fn un_dossier_de_competences_absent_rend_une_liste_vide() {
+    fn un_dossier_de_skills_absent_rend_une_liste_vide() {
         let manquant = std::env::temp_dir().join("cockpit-skills-qui-n-existent-pas-42");
         let _ = std::fs::remove_dir_all(&manquant);
-        assert!(lister_les_competences(&manquant).is_empty());
+        assert!(lister_les_skills(&manquant).is_empty());
     }
 }

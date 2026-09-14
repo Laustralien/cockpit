@@ -74,7 +74,7 @@
   /// **« AGENTS » ET « IA » ETAIENT DEUX ENTREES POUR LA MEME CHOSE.** L'une portait la
   /// bibliotheque de plugins, l'autre le choix du fournisseur et les cles : il fallait savoir
   /// laquelle ouvrir pour quoi. Il n'y en a plus qu'une, et on y entre PAR L'AGENT — ses
-  /// consignes, ses competences, sa bibliotheque.
+  /// consignes, ses skills, sa bibliotheque.
   let fournisseurOuvert: string | null = $state(null);
   const detailOuvert = $derived(
     fournisseurOuvert ? ($catalogue.find((f) => f.id === fournisseurOuvert) ?? null) : null,

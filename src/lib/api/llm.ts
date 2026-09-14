@@ -26,7 +26,7 @@ export interface CapacitesLlm {
   transcription: boolean;
   /** Ses agents s'installent au format de plugins de Claude Code. */
   plugins: boolean;
-  /** Il porte des consignes globales et des competences qu'on peut regler ici. */
+  /** Il porte des consignes globales et des skills qu'on peut regler ici. */
   consignes: boolean;
   cle_requise: boolean;
   /** La cle est posee. **Jamais la cle elle-meme** : elle ne remonte pas jusqu'ici. */
@@ -97,7 +97,7 @@ export const annulerConnexionLlm = () => invoke("llm_connexion_annuler");
 export const EVENEMENT_CONNEXION_SORTIE = "llm_connexion_sortie";
 export const EVENEMENT_CONNEXION_FIN = "llm_connexion_fin";
 
-/// Les consignes globales d'un fournisseur, et ses competences.
+/// Les consignes globales d'un fournisseur, et ses skills.
 ///
 /// **ON ENVOIE UN IDENTIFIANT, JAMAIS UN CHEMIN** : c'est le backend qui sait ou le CLI lit
 /// ses consignes. Lui passer un chemin donnerait a cet ecran le droit d'ecrire n'importe ou.
@@ -110,7 +110,7 @@ export interface EtatConsignes {
   contenu: string;
 }
 
-export interface Competence {
+export interface Skill {
   nom: string;
   description: string;
   chemin: string;
@@ -119,13 +119,13 @@ export interface Competence {
 export const llmConsignes = (id: string) => invoke<EtatConsignes>("llm_consignes", { id });
 export const llmEcrireConsignes = (id: string, contenu: string) =>
   invoke<void>("llm_ecrire_consignes", { id, contenu });
-export const llmCompetences = (id: string) => invoke<Competence[]>("llm_competences", { id });
+export const llmSkills = (id: string) => invoke<Skill[]>("llm_skills", { id });
 
 /// Ouvre, dans le gestionnaire de fichiers du systeme, le dossier des consignes ou celui
-/// d'une competence. Le nom est verifie cote backend contre la liste reelle.
-export const llmOuvrirDossier = (id: string, competence?: string) =>
-  invoke<void>("llm_ouvrir_dossier", { id, competence: competence ?? null });
+/// d'un skill. Le nom est verifie cote backend contre la liste reelle.
+export const llmOuvrirDossier = (id: string, skill?: string) =>
+  invoke<void>("llm_ouvrir_dossier", { id, skill: skill ?? null });
 
-/// Le contenu du SKILL.md d'une competence.
-export const llmLireCompetence = (id: string, competence: string) =>
-  invoke<string>("llm_lire_competence", { id, competence });
+/// Le contenu du SKILL.md d'un skill.
+export const llmLireSkill = (id: string, skill: string) =>
+  invoke<string>("llm_lire_skill", { id, skill });

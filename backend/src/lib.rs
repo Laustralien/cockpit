@@ -1313,42 +1313,42 @@ async fn llm_ecrire_consignes(id: String, contenu: String) -> Result<(), String>
     llm::consignes::ecrire(&capacite.fichier(), &contenu)
 }
 
-/// Les competences installees pour un fournisseur.
+/// Les skills installes pour un fournisseur.
 #[commande]
-async fn llm_competences(id: String) -> Result<Vec<llm::consignes::Competence>, String> {
+async fn llm_skills(id: String) -> Result<Vec<llm::consignes::Skill>, String> {
     let fournisseur = llm::par_id(&id).ok_or_else(|| format!("fournisseur inconnu : {id}"))?;
     let Some(capacite) = fournisseur.consignes() else {
         return Ok(Vec::new());
     };
     Ok(capacite
         .dossier_skills()
-        .map(|d| llm::consignes::lister_les_competences(&d))
+        .map(|d| llm::consignes::lister_les_skills(&d))
         .unwrap_or_default())
 }
 
-/// Le dossier ou vivent les competences d'un fournisseur, ouvert dans le gestionnaire de
-/// fichiers du systeme.
+/// Le dossier des consignes d'un fournisseur, ou celui d'un skill, ouvert dans le
+/// gestionnaire de fichiers du systeme.
 #[commande]
-async fn llm_ouvrir_dossier(id: String, competence: Option<String>) -> Result<(), String> {
+async fn llm_ouvrir_dossier(id: String, skill: Option<String>) -> Result<(), String> {
     let fournisseur = llm::par_id(&id).ok_or_else(|| format!("fournisseur inconnu : {id}"))?;
     let capacite = fournisseur
         .consignes()
         .ok_or_else(|| format!("{} ne gere pas de consignes", fournisseur.nom()))?;
-    let chemin = match competence {
+    let chemin = match skill {
         // **LE NOM EST VERIFIE CONTRE LA LISTE REELLE, JAMAIS RECOLLE AU CHEMIN.** Un nom
         // venu du client peut contenir `..` : le chercher dans ce que le disque contient
         // vraiment est la seule facon sure de le resoudre.
         Some(nom) => {
             let dossier = capacite
                 .dossier_skills()
-                .ok_or_else(|| format!("{} n'a pas de competences", fournisseur.nom()))?;
-            llm::consignes::lister_les_competences(&dossier)
+                .ok_or_else(|| format!("{} n'a pas de skills", fournisseur.nom()))?;
+            llm::consignes::lister_les_skills(&dossier)
                 .into_iter()
                 .find(|c| c.nom == nom)
                 .map(|c| std::path::PathBuf::from(c.chemin))
-                .ok_or_else(|| format!("competence inconnue : {nom}"))?
+                .ok_or_else(|| format!("skill inconnu : {nom}"))?
         }
-        // Sans competence nommee : le dossier qui porte les consignes.
+        // Sans skill nommee : le dossier qui porte les consignes.
         None => capacite
             .fichier()
             .parent()
@@ -1358,20 +1358,20 @@ async fn llm_ouvrir_dossier(id: String, competence: Option<String>) -> Result<()
     ouvrir::adresse(&chemin.to_string_lossy())
 }
 
-/// Le contenu du `SKILL.md` d'une competence, pour le lire sans quitter l'ecran.
+/// Le contenu du `SKILL.md` d'un skill, pour le lire sans quitter l'ecran.
 #[commande]
-async fn llm_lire_competence(id: String, competence: String) -> Result<String, String> {
+async fn llm_lire_skill(id: String, skill: String) -> Result<String, String> {
     let fournisseur = llm::par_id(&id).ok_or_else(|| format!("fournisseur inconnu : {id}"))?;
     let capacite = fournisseur
         .consignes()
         .ok_or_else(|| format!("{} ne gere pas de consignes", fournisseur.nom()))?;
     let dossier = capacite
         .dossier_skills()
-        .ok_or_else(|| format!("{} n'a pas de competences", fournisseur.nom()))?;
-    let trouvee = llm::consignes::lister_les_competences(&dossier)
+        .ok_or_else(|| format!("{} n'a pas de skills", fournisseur.nom()))?;
+    let trouvee = llm::consignes::lister_les_skills(&dossier)
         .into_iter()
-        .find(|c| c.nom == competence)
-        .ok_or_else(|| format!("competence inconnue : {competence}"))?;
+        .find(|c| c.nom == skill)
+        .ok_or_else(|| format!("skill inconnu : {skill}"))?;
     let fiche = std::path::Path::new(&trouvee.chemin).join("SKILL.md");
     std::fs::read_to_string(&fiche).map_err(|e| format!("lecture de {} : {e}", fiche.display()))
 }

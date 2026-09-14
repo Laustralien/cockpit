@@ -115,7 +115,7 @@ pub trait Fournisseur: Send + Sync {
         None
     }
 
-    /// Ce que l'utilisateur a ecrit pour lui : consignes globales et competences.
+    /// Ce que l'utilisateur a ecrit pour lui : consignes globales et skills.
     ///
     /// `None` par defaut : plusieurs CLI n'ont aucun equivalent, et inventer un fichier que
     /// personne ne lira serait pire que de ne rien afficher.
@@ -295,7 +295,7 @@ pub struct Capacites {
     pub texte: bool,
     pub transcription: bool,
     pub plugins: bool,
-    /// Il porte des consignes globales et des competences qu'on peut regler ici.
+    /// Il porte des consignes globales et des skills qu'on peut regler ici.
     pub consignes: bool,
     pub cle_requise: bool,
     /// La cle est posee. **Jamais la cle elle-meme** : cette liste part au frontend a chaque

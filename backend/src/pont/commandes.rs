@@ -195,17 +195,17 @@ pub async fn appeler(
             valeur(serde_json::to_value(crate::llm_ouvrir_dossier(
                 serde_json::from_value(prendre(a, "id", "id"))
                     .map_err(|e| format!("argument id : {e}"))?,
-                serde_json::from_value(prendre(a, "competence", "competence"))
-                    .map_err(|e| format!("argument competence : {e}"))?,
+                serde_json::from_value(prendre(a, "skill", "skill"))
+                    .map_err(|e| format!("argument skill : {e}"))?,
             ).await?))
         })
         .await,
-        "llm_lire_competence" => typer(async {
-            valeur(serde_json::to_value(crate::llm_lire_competence(
+        "llm_lire_skill" => typer(async {
+            valeur(serde_json::to_value(crate::llm_lire_skill(
                 serde_json::from_value(prendre(a, "id", "id"))
                     .map_err(|e| format!("argument id : {e}"))?,
-                serde_json::from_value(prendre(a, "competence", "competence"))
-                    .map_err(|e| format!("argument competence : {e}"))?,
+                serde_json::from_value(prendre(a, "skill", "skill"))
+                    .map_err(|e| format!("argument skill : {e}"))?,
             ).await?))
         })
         .await,
@@ -225,8 +225,8 @@ pub async fn appeler(
             ).await?))
         })
         .await,
-        "llm_competences" => typer(async {
-            valeur(serde_json::to_value(crate::llm_competences(
+        "llm_skills" => typer(async {
+            valeur(serde_json::to_value(crate::llm_skills(
                 serde_json::from_value(prendre(a, "id", "id"))
                     .map_err(|e| format!("argument id : {e}"))?,
             ).await?))
