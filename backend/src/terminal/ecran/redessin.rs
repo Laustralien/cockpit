@@ -65,7 +65,7 @@ fn dessiner(ecran: &Ecran, avec_historique: bool, pour_photo: bool) -> Vec<u8> {
     r.palette();
     r.contenu(avec_historique, pour_photo);
     r.region();
-    r.modes();
+    r.modes(pour_photo);
     r.style_curseur();
     r.curseur();
     r.mode_insertion();
@@ -509,7 +509,17 @@ impl Redessin<'_> {
         self.pousser(&format!("\x1b[{};{}r", debut + 1, bas));
     }
 
-    fn modes(&mut self) {
+    /// Les modes DEC, tels qu'ils etaient.
+    ///
+    /// **UNE PHOTO REND TOUJOURS LE CURSEUR VISIBLE, ET CE N'EST PAS DE L'INFIDELITE.** Les
+    /// invites riches (powerlevel10k, starship) masquent le curseur le temps de se redessiner.
+    /// La photo se prend sur un geste : elle peut tomber pile a cet instant, et le masquage se
+    /// retrouve alors fige pour toujours — le shell qui repart derriere une restauration est
+    /// NEUF, il ne remettra jamais un mode qu'il n'a pas pose lui-meme. On tapait donc sans
+    /// voir ou l'on etait (signale le 2026-09-14). Un REDESSIN, lui, reste fidele : il
+    /// rebranche une session VIVANTE, ou vim ou un agent a pu masquer le curseur a l'instant
+    /// meme, et l'ecrire visible le ferait apparaitre au milieu de leur interface.
+    fn modes(&mut self, pour_photo: bool) {
         let actuels = *self.ecran.term().mode();
         let defaut = TermMode::default();
 
@@ -537,10 +547,17 @@ impl Redessin<'_> {
             (TermMode::URGENCY_HINTS, 1042),
             (TermMode::BRACKETED_PASTE, 2004),
         ] {
-            if actuels.contains(bit) == defaut.contains(bit) {
+            // Voir le commentaire de la fonction : une photo ne transmet pas un curseur
+            // masque, qui n'a aucune chance d'etre remis par le shell neuf d'apres.
+            let pose = if pour_photo && bit == TermMode::SHOW_CURSOR {
+                true
+            } else {
+                actuels.contains(bit)
+            };
+            if pose == defaut.contains(bit) {
                 continue;
             }
-            let action = if actuels.contains(bit) { 'h' } else { 'l' };
+            let action = if pose { 'h' } else { 'l' };
             self.pousser(&format!("\x1b[?{code}{action}"));
         }
 

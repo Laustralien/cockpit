@@ -577,3 +577,32 @@ fn la_photo_d_etat_decrit_bien_l_ecran() {
     assert_eq!(etat.curseur.colonne, 1);
 }
 
+/// **UNE PHOTO PRISE PENDANT QU'UN PROMPT MASQUE LE CURSEUR NE DOIT PAS LE MASQUER POUR
+/// TOUJOURS.** Les invites riches (powerlevel10k, starship) cachent le curseur le temps de se
+/// redessiner. La photo se prend sur un geste, donc elle peut tomber pile a ce moment :
+/// restituee telle quelle, elle rend un terminal ou l'on tape sans voir ou l'on est. Et le
+/// shell qui repart derriere une restauration est NEUF : il ne remettra pas un mode qu'il n'a
+/// pas pose lui-meme.
+#[test]
+fn une_photo_rend_toujours_le_curseur_visible() {
+    let ecran = ecran_avale(b"\x1b[?25lbonjour");
+    let photo = ecran.photographier();
+    // **C'EST L'ETAT D'ARRIVEE QUI COMPTE, PAS LES OCTETS.** Premiere version de cet essai :
+    // elle exigeait un `?25h` dans la photo. Or « curseur visible » est le DEFAUT, et la
+    // photo commence par une remise a zero complete : ne rien emettre suffit. L'essai
+    // decrivait une forme, pas la propriete voulue — et il aurait refuse une bonne photo.
+    let relu = ecran_avale(&photo);
+    assert!(
+        relu.term().mode().contains(alacritty_terminal::term::TermMode::SHOW_CURSOR),
+        "apres relecture de la photo, le curseur doit etre visible"
+    );
+}
+
+/// Un REDESSIN, lui, reste fidele : il sert a rebrancher une session VIVANTE, ou vim ou un
+/// agent peut legitimement avoir masque le curseur a l'instant meme.
+#[test]
+fn un_redessin_reste_fidele_au_curseur_masque() {
+    let ecran = ecran_avale(b"\x1b[?25lbonjour");
+    let dessin = String::from_utf8_lossy(&ecran.redessiner()).to_string();
+    assert!(dessin.contains("\x1b[?25l"), "le redessin restitue l'etat reel : {dessin:?}");
+}

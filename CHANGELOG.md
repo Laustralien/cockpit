@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Le curseur pouvait ne plus apparaître dans un terminal restauré : on tapait sans voir où on
+  en était. Sa photo avait été prise pendant que l'invite du shell le masquait pour se
+  redessiner, et rien ne le remettait ensuite.
+
 ## [0.72.0] — 2026-09-14
 
 ### Changed
