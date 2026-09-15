@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.73.0] — 2026-09-15
+
 ### Changed
 
 - Un fichier s'édite directement : on clique dans le texte et on écrit, le curseur se pose là
