@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.72.2] — 2026-09-15
+
 ### Fixed
 
 - Un terminal ouvert à côté d'un autre démarrait avec son invite tout en bas, hors champ : sa
