@@ -87,6 +87,8 @@
   let editing = $state(false);
   let draft = $state("");
   let saving = $state(false);
+  /// Ou poser le curseur en entrant en edition : la ou l'on vient de cliquer.
+  let curseurEdition: number | undefined = $state(undefined);
   const dirty = $derived(editing && draft !== fileRaw);
 
   // Aller a la definition
@@ -160,7 +162,11 @@
 
   async function openFileByPath(relPath: string) {
     if (!project?.path) return;
-    if (dirty && !(await demanderConfirmation({ message: $trad("files.discardConfirm"), action: $trad("common.discard") }))) return;
+    // **ON ENREGISTRE AVANT DE PARTIR, ON NE DEMANDE PLUS D'ABANDONNER.** Avec un
+    // enregistrement automatique, une fenetre « voulez-vous perdre vos modifications ? » au
+    // moment de changer de fichier serait absurde : elle propose de jeter un travail que le
+    // logiciel s'est engage a garder.
+    if (dirty) await save();
     editing = false;
     selectedPath = relPath;
     loadingFile = true;
@@ -197,19 +203,96 @@
   }
 
   // --- Edition ---
-  function startEdit() {
+
+  /// Ou l'on a clique, en nombre de caracteres depuis le debut du fichier.
+  ///
+  /// **LE RENDU COLORE EST UNE SUITE DE NOEUDS TEXTE DANS L'ORDRE DU FICHIER** : on demande
+  /// au navigateur quel noeud est sous le pointeur, puis on additionne la longueur de tous
+  /// ceux qui le precedent. Rend `undefined` quand le navigateur ne sait pas repondre — le
+  /// curseur part alors au debut, ce qui est moins bien mais jamais faux.
+  function offsetDuClic(e: MouseEvent): number | undefined {
+    const racine = codeWrapEl;
+    if (!racine) return undefined;
+    type AvecCaret = Document & {
+      caretRangeFromPoint?: (x: number, y: number) => Range | null;
+      caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+    };
+    const d = document as AvecCaret;
+    let noeud: Node | null = null;
+    let dans = 0;
+    if (d.caretRangeFromPoint) {
+      const r = d.caretRangeFromPoint(e.clientX, e.clientY);
+      if (r) { noeud = r.startContainer; dans = r.startOffset; }
+    } else if (d.caretPositionFromPoint) {
+      const p = d.caretPositionFromPoint(e.clientX, e.clientY);
+      if (p) { noeud = p.offsetNode; dans = p.offset; }
+    }
+    if (!noeud || noeud.nodeType !== Node.TEXT_NODE || !racine.contains(noeud)) return undefined;
+    let total = 0;
+    const marcheur = document.createTreeWalker(racine, NodeFilter.SHOW_TEXT);
+    let courant = marcheur.nextNode();
+    while (courant) {
+      if (courant === noeud) return total + dans;
+      total += courant.textContent?.length ?? 0;
+      courant = marcheur.nextNode();
+    }
+    return undefined;
+  }
+
+  function startEdit(curseur?: number) {
     if (fileTruncated) { notify($trad("files.truncated")); return; }
     if (!fileRaw && fileNotice) return;
     draft = fileRaw;
+    curseurEdition = curseur;
     editing = true;
   }
 
+  /// Repasse en lecture. Le bouton s'appelle « Lecture » et non « Annuler » : il ne jette
+  /// rien, il enregistre ce qui reste et rend la vue coloree, sa recherche et ses liens.
   async function cancelEdit() {
-    if (dirty && !(await demanderConfirmation({ message: $trad("files.discardConfirm"), action: $trad("common.discard") }))) return;
+    if (dirty) await save();
     editing = false;
+    curseurEdition = undefined;
   }
 
-  async function save() {
+  // --- Enregistrement automatique ---
+  //
+  // **UNE PAUSE QUI REPART A CHAQUE TOUCHE N'ARRIVE JAMAIS QUAND ON ECRIT SANS S'ARRETER.**
+  // Le projet a deja paye ce piege sur l'editeur de notes : un debounce seul laissait le
+  // travail non enregistre aussi longtemps que la frappe durait. D'ou un PLAFOND : au plus
+  // tard `ATTENTE_MAX_MS` apres la premiere modification non enregistree, on ecrit.
+  const ATTENTE_MS = 700;
+  const ATTENTE_MAX_MS = 4000;
+  let minuteurSauvegarde: ReturnType<typeof setTimeout> | null = null;
+  let butoirSauvegarde: ReturnType<typeof setTimeout> | null = null;
+
+  function planifierLaSauvegarde() {
+    if (minuteurSauvegarde) clearTimeout(minuteurSauvegarde);
+    minuteurSauvegarde = setTimeout(() => void save(), ATTENTE_MS);
+    if (!butoirSauvegarde) {
+      butoirSauvegarde = setTimeout(() => void save(), ATTENTE_MAX_MS);
+    }
+  }
+
+  function oublierLaSauvegarde() {
+    if (minuteurSauvegarde) { clearTimeout(minuteurSauvegarde); minuteurSauvegarde = null; }
+    if (butoirSauvegarde) { clearTimeout(butoirSauvegarde); butoirSauvegarde = null; }
+  }
+
+  // Suit le brouillon : toute modification programme son enregistrement.
+  $effect(() => {
+    // Lu pour etre suivi. `dirty` depend de `draft` et de `fileRaw`.
+    if (dirty) planifierLaSauvegarde();
+  });
+
+  /// Ecrit le fichier.
+  ///
+  /// **AUCUN MESSAGE QUAND C'EST AUTOMATIQUE.** Un enregistrement qui part tout seul toutes
+  /// les secondes ferait defiler une pile de notifications pour dire ce que l'indicateur de
+  /// l'en-tete dit deja en permanence. On ne le confirme que sur un geste explicite (Ctrl+S),
+  /// ou l'utilisateur attend une reponse.
+  async function save(explicite = false) {
+    oublierLaSauvegarde();
     if (!project?.path || !editing || saving) return;
     saving = true;
     try {
@@ -221,7 +304,7 @@
       const st = await statProjectFile(project.path, selectedPath);
       if (st) { fileMtime = st.mtime; fileSize = st.size; }
       diskChanged = false;
-      notify($trad("files.saved"), "success");
+      if (explicite) notify($trad("files.saved"), "success");
     } catch (e) { notify(String(e)); }
     finally { saving = false; }
   }
@@ -288,7 +371,10 @@
     if (pre) pre.scrollLeft = left;
   }
 
-  /** Rechargement demande explicitement (bandeau) : peut abandonner l'edition en cours. */
+  /// Rechargement demande explicitement (bandeau), quand le fichier a bouge sur le disque.
+  ///
+  /// **CELUI-CI DEMANDE ENCORE**, et c'est le seul : reprendre la version du disque ECRASE ce
+  /// qu'on a tape, et personne d'autre que l'utilisateur ne peut arbitrer entre les deux.
   async function reloadNow() {
     if (editing && dirty && !(await demanderConfirmation({ message: $trad("files.discardConfirm"), action: $trad("common.discard") }))) return;
     editing = false;
@@ -398,7 +484,19 @@
   }
 
   async function onCodeClick(e: MouseEvent) {
-    if (!(e.ctrlKey || e.metaKey) || !project?.path || defBusy) return;
+    // **UN CLIC SIMPLE DANS LE TEXTE ENTRE EN EDITION, AU BON ENDROIT.** Il n'y a plus de
+    // bouton « Modifier » : on ouvre un fichier et on ecrit, comme dans un editeur. Le mode
+    // lecture reste pour ce qu'il sait faire de plus (recherche, aller a la definition,
+    // retour a la ligne), on y revient par le bouton « Lecture ».
+    if (!(e.ctrlKey || e.metaKey)) {
+      // Une SELECTION en cours n'est pas un clic : on vient de selectionner du texte pour le
+      // copier, entrer en edition la ferait disparaitre.
+      if (!window.getSelection()?.isCollapsed) return;
+      if (fileTruncated || !fileRaw) return;
+      startEdit(offsetDuClic(e));
+      return;
+    }
+    if (!project?.path || defBusy) return;
     const pos = wordAtPoint(e);
     if (!pos) return;
     e.preventDefault();
@@ -891,12 +989,14 @@
               <button class="icon-mini" onclick={openFind} title={$trad("files.findInFile")}>🔍</button>
             {/if}
             {#if editing}
-              <button class="btn small primary" onclick={save} disabled={saving || !dirty} title="Ctrl+S">
-                {saving ? $trad("files.saving") : $trad("files.save")}
-              </button>
+              <!-- L'enregistrement est AUTOMATIQUE : ce texte dit ou l'on en est, il ne
+                   demande rien. Ctrl+S reste, pour qui a le geste. -->
+              <span class="etat-sauvegarde">
+                {#if saving}{$trad("files.saving")}
+                {:else if dirty}{$trad("files.enCours")}
+                {:else}{$trad("files.enregistre")}{/if}
+              </span>
               <button class="btn small" onclick={cancelEdit}>{$trad("files.read")}</button>
-            {:else if fileRaw}
-              <button class="btn small" onclick={startEdit} title={$trad("files.editHint")}>{$trad("files.edit")}</button>
             {/if}
           </span>
         </div>
@@ -937,7 +1037,13 @@
         </div>
       {:else if editing}
         <div class="editor-host">
-          <CodeEditor bind:value={draft} lang={langFor(selectedPath)} dark={$themeBase === "dark"} onSave={save} />
+          <CodeEditor
+            bind:value={draft}
+            lang={langFor(selectedPath)}
+            dark={$themeBase === "dark"}
+            onSave={() => void save(true)}
+            curseurInitial={curseurEdition}
+          />
         </div>
       {:else if fileHtml}
         <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->

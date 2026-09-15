@@ -9,11 +9,18 @@
     lang,
     dark,
     onSave,
+    curseurInitial,
   }: {
     value: string;
     lang: string;
     dark: boolean;
     onSave: () => void;
+    /// Ou poser le curseur a l'ouverture, en nombre de caracteres depuis le debut.
+    ///
+    /// **C'EST CE QUI REND L'EDITION IMMEDIATE SUPPORTABLE** : on entre en edition en
+    /// cliquant dans le texte, et le curseur doit tomber LA ou l'on a clique. Sans ca, il
+    /// atterrit au debut du fichier et il faut retrouver sa ligne.
+    curseurInitial?: number;
   } = $props();
 
   // La coloration est relancee apres une pause de frappe. Mesure dans le WebKitGTK
@@ -48,8 +55,21 @@
     }, HIGHLIGHT_DEBOUNCE_MS);
   });
 
+  // Le focus, et le curseur la ou l'on a clique. `$effect` sans dependance lue en dehors :
+  // il ne s'execute qu'au montage, donc taper ne le rejoue pas.
   $effect(() => {
-    taEl?.focus();
+    if (!taEl) return;
+    taEl.focus();
+    if (curseurInitial !== undefined) {
+      const ou = Math.max(0, Math.min(curseurInitial, taEl.value.length));
+      taEl.setSelectionRange(ou, ou);
+      // Le textarea ne fait pas defiler tout seul vers une selection posee par programme.
+      // Sans ca, on clique en bas d'un fichier de mille lignes et l'editeur s'ouvre en haut.
+      const lignesAvant = taEl.value.slice(0, ou).split("\n").length - 1;
+      const hauteurLigne = parseFloat(getComputedStyle(taEl).lineHeight) || 18;
+      taEl.scrollTop = Math.max(0, lignesAvant * hauteurLigne - taEl.clientHeight / 2);
+      syncScroll();
+    }
   });
 
   function syncScroll() {

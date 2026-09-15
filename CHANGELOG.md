@@ -12,6 +12,14 @@ le script de release.
 
 ## [Unreleased]
 
+### Changed
+
+- Un fichier s'édite directement : on clique dans le texte et on écrit, le curseur se pose là
+  où on a cliqué. Il n'y a plus de bouton « Modifier », et l'enregistrement part tout seul.
+  Le bouton « Lecture » ramène à la vue colorée, qui garde la recherche et l'aller à la
+  définition.
+- Changer de fichier enregistre au lieu de demander si on veut perdre ses modifications.
+
 ## [0.72.3] — 2026-09-15
 
 ### Fixed
