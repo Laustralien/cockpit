@@ -959,6 +959,15 @@
     const entry = createXterm();
     mounted.forEach((tid) => { const e = pool.get(tid); if (e) e.el.style.display = "none"; });
     entry.el.style.display = "block";
+    // **ON MESURE DANS LE VOLET OU LE TERMINAL VA VIVRE, PAS DANS LE CONTENEUR ENTIER.**
+    // `createXterm` pose l'element dans le conteneur, qui est plus GRAND qu'un volet des
+    // qu'il y en a deux. Le PTY naissait donc avec trop de lignes, le shell ecrivait son
+    // accueil dessus, puis le passage dans le volet le rETRECISSAIT : tout partait dans
+    // l'historique et l'invite se retrouvait tout en bas, hors champ (constate au banc le
+    // 2026-09-15, exactement comme signale). Un terminal neuf prend la place du volet ACTIF :
+    // c'est donc lui qu'il faut mesurer.
+    const hoteCible = activeId !== null ? hotes.get(activeId) : undefined;
+    if (hoteCible) hoteCible.appendChild(entry.el);
     // `fit()` peut echouer sur un conteneur pas encore mesure : sans consequence, la
     // taille est renvoyee au prochain ResizeObserver. Silence VOULU, pas un oubli.
     try { entry.fit.fit(); } catch {}

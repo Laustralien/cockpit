@@ -12,6 +12,11 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Un terminal ouvert à côté d'un autre démarrait avec son invite tout en bas, hors champ : sa
+  taille était calculée sur la zone entière au lieu du volet où il allait vivre.
+
 ## [0.72.1] — 2026-09-14
 
 ### Fixed
