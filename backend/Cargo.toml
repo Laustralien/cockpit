@@ -1,6 +1,6 @@
 [package]
 name = "cockpit"
-version = "0.72.2"
+version = "0.72.3"
 edition = "2021"
 description = "Desktop Docker orchestration app"
 

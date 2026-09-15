@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.72.3] — 2026-09-15
+
 ### Fixed
 
 - L'onglet Fichiers cachait tout ce que git ignore : `.env.local`, `vendor/`, `node_modules/`
