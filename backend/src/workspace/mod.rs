@@ -13,6 +13,13 @@ pub struct DirEntry {
     pub name: String,
     pub rel_path: String,
     pub is_dir: bool,
+    /// git l'ignore (`.gitignore`, `.ignore`, exclusions globales).
+    ///
+    /// **IL EST QUAND MEME RENDU.** Le parcours filtrait sur ces regles, donc `.env.local`,
+    /// `vendor/` ou `node_modules/` n'apparaissaient nulle part : on cherchait un fichier
+    /// qu'on avait sous les yeux dans le terminal. Ignore par git ne veut pas dire absent du
+    /// disque — c'est l'interface qui le marque, elle ne le cache plus.
+    pub ignore: bool,
 }
 
 #[derive(Serialize, Clone)]
@@ -87,9 +94,30 @@ pub fn list_dir(project_path: &str, rel_path: &str) -> Result<Vec<DirEntry>, Str
         return Err("pas un repertoire".into());
     }
 
+    // **DEUX PARCOURS : CE QUE GIT SUIT, ET TOUT.** Le second rend la verite du disque, le
+    // premier sert seulement a savoir ce que git ignore, pour le MARQUER. Un seul dossier a
+    // la fois (`max_depth(1)`), donc ca coute deux lectures d'un repertoire, pas une descente.
+    let suivis: std::collections::HashSet<String> = WalkBuilder::new(&dir)
+        .max_depth(Some(1))
+        .hidden(false)
+        .filter_entry(|e| e.file_name() != ".git")
+        .build()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.depth() == 1)
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .collect();
+
     let mut entries: Vec<DirEntry> = WalkBuilder::new(&dir)
         .max_depth(Some(1))
         .hidden(false) // on montre les fichiers caches (.env, .gitlab-ci.yml...)
+        // Les regles d'exclusion sont TOUTES levees : c'est ce qui fait remonter `.env.local`
+        // et les dossiers de dependances. `.git` reste ecarte — son contenu n'est pas du
+        // travail, et l'ouvrir par megarde n'aide personne.
+        .git_ignore(false)
+        .git_global(false)
+        .git_exclude(false)
+        .ignore(false)
+        .parents(false)
         .filter_entry(|e| e.file_name() != ".git")
         .build()
         .filter_map(|e| e.ok())
@@ -97,11 +125,9 @@ pub fn list_dir(project_path: &str, rel_path: &str) -> Result<Vec<DirEntry>, Str
         .filter_map(|e| {
             let is_dir = e.file_type().map(|t| t.is_dir()).unwrap_or(false);
             let rel = chemin_relatif(&root, e.path());
-            Some(DirEntry {
-                name: e.file_name().to_string_lossy().to_string(),
-                rel_path: rel,
-                is_dir,
-            })
+            let nom = e.file_name().to_string_lossy().to_string();
+            let ignore = !suivis.contains(&nom);
+            Some(DirEntry { name: nom, rel_path: rel, is_dir, ignore })
         })
         .collect();
 
@@ -467,8 +493,12 @@ pub fn search_project(project_path: &str, query: &str) -> Result<SearchResults, 
 mod tests {
     use super::*;
 
+    /// **LA LISTE MONTRE CE QUE LE DISQUE CONTIENT, PAS CE QUE GIT SUIT.** Cet essai disait
+    /// l'inverse jusqu'au 2026-09-15 : il exigeait que `node_modules` soit ABSENT. La regle
+    /// etait fausse, et elle cachait aussi `.env.local` — un fichier qu'on edite tous les
+    /// jours, introuvable dans l'onglet Fichiers. Ce qui est ignore est marque, pas masque.
     #[test]
-    fn test_list_dir_respects_gitignore_and_sorts() {
+    fn test_list_dir_montre_tout_et_marque_les_ignores() {
         let dir = std::env::temp_dir().join(format!("cockpit_ws_test_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("src")).unwrap();
@@ -483,7 +513,12 @@ mod tests {
         assert!(names.contains(&"src"));
         assert!(names.contains(&"a.txt"));
         assert!(!names.contains(&".git"));
-        assert!(!names.contains(&"node_modules"), "gitignore doit etre respecte: {:?}", names);
+        assert!(names.contains(&"node_modules"), "un dossier ignore reste visible : {names:?}");
+        let par_nom: std::collections::HashMap<&str, &DirEntry> =
+            entries.iter().map(|e| (e.name.as_str(), e)).collect();
+        assert!(par_nom["node_modules"].ignore, "mais il est marque");
+        assert!(!par_nom["src"].ignore);
+        assert!(!par_nom["a.txt"].ignore);
         // Dossiers d'abord
         assert!(entries[0].is_dir);
 
@@ -711,5 +746,40 @@ mod tests {
         assert!(stat_project_file(root, "ok.txt").unwrap().is_some(), "fichier normal lisible");
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod tests_liste {
+    use super::*;
+
+    /// **UN FICHIER IGNORE PAR GIT EXISTE QUAND MEME SUR LE DISQUE.** Le parcours appliquait
+    /// les regles de `.gitignore` : `.env.local` n'apparaissait donc nulle part dans l'onglet
+    /// Fichiers, alors qu'on l'edite tous les jours depuis le terminal. Il remonte desormais,
+    /// marque `ignore`, et c'est l'interface qui en tire les consequences.
+    #[test]
+    fn un_fichier_ignore_par_git_est_rendu_et_marque() {
+        let bac = std::env::temp_dir().join(format!("cockpit-liste-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&bac);
+        std::fs::create_dir_all(bac.join(".git")).unwrap();
+        std::fs::write(bac.join(".gitignore"), "/.env.local\n/vendor\n").unwrap();
+        std::fs::write(bac.join(".env"), "SUIVI=1").unwrap();
+        std::fs::write(bac.join(".env.local"), "SECRET=1").unwrap();
+        std::fs::write(bac.join("composer.json"), "{}").unwrap();
+        std::fs::create_dir_all(bac.join("vendor")).unwrap();
+
+        let entrees = list_dir(&bac.to_string_lossy(), "").unwrap();
+        let par_nom: std::collections::HashMap<&str, &DirEntry> =
+            entrees.iter().map(|e| (e.name.as_str(), e)).collect();
+
+        assert!(par_nom.contains_key(".env.local"), "le fichier ignore doit etre la : {:?}",
+            entrees.iter().map(|e| &e.name).collect::<Vec<_>>());
+        assert!(par_nom[".env.local"].ignore, "et il doit etre marque comme ignore");
+        assert!(par_nom["vendor"].ignore, "un DOSSIER ignore aussi");
+        assert!(!par_nom[".env"].ignore, "un fichier suivi ne l'est pas");
+        assert!(!par_nom["composer.json"].ignore);
+        // `.git` n'a rien a faire dans la liste : son contenu n'est pas du travail.
+        assert!(!par_nom.contains_key(".git"), "le dossier .git reste ecarte");
+        let _ = std::fs::remove_dir_all(&bac);
     }
 }

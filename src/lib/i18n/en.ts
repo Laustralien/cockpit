@@ -392,6 +392,7 @@ export const en: Catalog = {
   "sys.uptimeHours": "{hours}h {mins}m",
   "sys.memoryDetailUnavailable": "Only Linux reports the memory breakdown (cache, buffers, shared): this system only exposes the total in use.",
   "files.title": "Files",
+  "files.ignoreParGit": "Ignored by git (present on disk)",
   "files.newFileRoot": "New file at the root",
   "files.newFolderRoot": "New folder at the root",
   "files.searchPlaceholder": "Search the project…",

@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- L'onglet Fichiers cachait tout ce que git ignore : `.env.local`, `vendor/`, `node_modules/`
+  n'apparaissaient nulle part alors qu'ils sont sur le disque. Ils sont maintenant listés, en
+  gris, avec une infobulle qui dit pourquoi.
+
 ## [0.72.2] — 2026-09-15
 
 ### Fixed

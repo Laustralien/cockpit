@@ -22,6 +22,10 @@
     name: string;
     rel_path: string;
     is_dir: boolean;
+    /// git l'ignore. **AFFICHE QUAND MEME, MAIS SIGNALE** : `.env.local` s'edite tous les
+    /// jours, et ne pas le voir ici faisait douter de l'onglet. Le griser dit « git ne le
+    /// suit pas » sans le cacher.
+    ignore: boolean;
     expanded: boolean;
     loading: boolean;
     children: TreeNode[] | null;
@@ -132,7 +136,7 @@
       signalerErreur("files.loadRoot", String(e)); treeError = String(e); }
   }
 
-  function toNode(e: { name: string; rel_path: string; is_dir: boolean }): TreeNode {
+  function toNode(e: { name: string; rel_path: string; is_dir: boolean; ignore: boolean }): TreeNode {
     return { ...e, expanded: false, loading: false, children: null };
   }
 
@@ -773,7 +777,14 @@
           onCancel={() => (renamingPath = null)}
         />
       {:else}
-        <span class="tree-name" class:dir={node.is_dir}>{node.name}</span>
+        <!-- Un fichier ignore par git se LIT comme tel, il ne se cache pas : c'est la
+             difference entre « git ne le suit pas » et « il n'existe pas ». -->
+        <span
+          class="tree-name"
+          class:dir={node.is_dir}
+          class:ignore={node.ignore}
+          title={node.ignore ? $trad("files.ignoreParGit") : undefined}
+        >{node.name}</span>
       {/if}
     </div>
     {#if node.is_dir && creating?.parentRel === node.rel_path}
@@ -1010,6 +1021,8 @@
   }
   .tree-refresh:hover { color: var(--accent); }
   .create-row { background: var(--bg-tertiary); }
+  /* Grise, et sans italique : l'italique rend le monospace des noms de fichiers illisible. */
+  .tree-name.ignore { color: var(--text-muted); }
   .tree-row {
     display: flex; align-items: center; gap: 0.35rem;
     padding: 0.12rem 0.4rem; cursor: pointer; font-size: 0.82rem;

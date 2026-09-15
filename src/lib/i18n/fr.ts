@@ -401,6 +401,7 @@ export const fr = {
   "sys.uptimeHours": "{hours} h {mins} min",
   "sys.memoryDetailUnavailable": "Le détail de la mémoire (cache, tampons, partage) n'est publié que par Linux : ce système n'expose que le total utilisé.",
   "files.title": "Fichiers",
+  "files.ignoreParGit": "Ignoré par git (présent sur le disque)",
   "files.newFileRoot": "Nouveau fichier à la racine",
   "files.newFolderRoot": "Nouveau dossier à la racine",
   "files.searchPlaceholder": "Rechercher dans le projet…",

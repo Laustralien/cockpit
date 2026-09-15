@@ -287,6 +287,8 @@ export interface DirEntry {
   name: string;
   rel_path: string;
   is_dir: boolean;
+  /** git l'ignore. Il est rendu quand meme : ignore ne veut pas dire absent du disque. */
+  ignore: boolean;
 }
 
 export interface FileContent {
