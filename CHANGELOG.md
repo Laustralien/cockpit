@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.74.0] — 2026-09-16
+
 ### Added
 
 - Un terminal où l'agent attend une réponse, ou vient de finir, le dit dans la barre latérale :
