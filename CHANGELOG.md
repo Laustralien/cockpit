@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.74.1] — 2026-09-16
+
 ### Fixed
 
 - Le repère d'un terminal ne clignote plus quand on va le voir : il disparaît tant que le
