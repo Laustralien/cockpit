@@ -12,6 +12,18 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Un terminal où l'agent attend une réponse, ou vient de finir, le dit dans la barre latérale :
+  la ligne s'encadre et porte « attend » ou « fini ». Le repère s'efface quand on y retourne ou
+  quand l'agent se remet à travailler. Le nombre de terminaux qui attendent s'affiche à côté du
+  titre de la section.
+
+### Changed
+
+- Les terminaux de la barre latérale sont encadrés et tiennent sur deux lignes, le projet sous
+  le nom : plus faciles à viser, et il reste la place pour ce qu'ils ont à dire.
+
 ## [0.73.0] — 2026-09-15
 
 ### Changed

@@ -7,6 +7,7 @@
   import type { FitAddon as XFitAddon } from "@xterm/addon-fit";
   import { trad, translate } from "../../i18n";
   import { signalerErreur } from "../../stores/errors";
+  import { noterUneSortie, oublierLeTerminal } from "../../terminaux/activite";
 
   /// POOL PERSISTANT — LE COEUR DE L'ARCHITECTURE TERMINAUX (NE PAS RE-LOCALISER).
   ///
@@ -57,6 +58,9 @@
     for (const { el } of pool.values()) parking().appendChild(el);
   }
   function disposePoolEntry(id: number) {
+    // Un terminal ferme n'a plus d'activite a suivre : sa ligne s'en va avec lui, sinon la
+    // table grossirait pour toute la duree de l'application.
+    oublierLeTerminal(id);
     const e = pool.get(id);
     if (!e) return;
     e.dataSub?.dispose();
@@ -97,6 +101,11 @@
   // s'arretait completement au lieu d'etre au moins analysee. Retiree dans la 0.54.12.
   listenGlobal<{ id: number; data: string }>("terminal_output", (e) => {
     pool.get(e.payload.id)?.term.write(b64ToBytes(e.payload.data));
+    // **DEUX OPERATIONS, ET RIEN D'AUTRE, SUR CE CHEMIN.** Poser un instant dans une table
+    // ordinaire ne declenche aucun rendu ; c'est ce qui permet a la barre laterale de savoir
+    // qu'un agent s'est tu sans qu'on paie quoi que ce soit par octet recu. Toute la regle
+    // qui en decoule est ailleurs, et echantillonnee.
+    noterUneSortie(e.payload.id);
   });
   listenGlobal<number>("terminal_exit", (e) => {
     pool.get(e.payload)?.term.write("\r\n\x1b[2m[processus terminé]\x1b[0m\r\n");
