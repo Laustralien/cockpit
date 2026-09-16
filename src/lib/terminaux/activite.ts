@@ -39,6 +39,13 @@ export const SILENCE_MS = 3000;
  * `derniereSortie` absent veut dire « on n'a jamais rien vu passer » : le terminal n'a pas
  * encore ete ouvert dans cette session de l'application. On repond alors « en cours » et jamais
  * « il attend » — **envoyer quelqu'un vers un terminal qui travaille est pire que de se taire.**
+ *
+ * **`regarde` VEUT DIRE « CE TERMINAL EST SOUS LES YEUX », ET IL NE PORTE AUCUN REPERE.**
+ * Premiere version : le repere s'effacait au CLIC. Mais « il attend » est un ETAT COURANT, pas
+ * un evenement passe : une seconde plus tard le calcul le retrouvait vrai et le remettait, donc
+ * le cadre disparaissait puis revenait sous les yeux de l'utilisateur. Un terminal qu'on
+ * REGARDE n'a rien a signaler — on y voit deja tout — et le repere revient de lui-meme des
+ * qu'on regarde ailleurs, ce qui est exactement ce qu'on veut.
  */
 export function prochainEtat(
   suivi: Suivi | undefined,
@@ -46,16 +53,19 @@ export function prochainEtat(
   derniereSortie: number | undefined,
   maintenant: number,
   silenceMs: number = SILENCE_MS,
+  regarde: boolean = false,
 ): Suivi {
   if (llm) {
     const silencieux = derniereSortie !== undefined && maintenant - derniereSortie >= silenceMs;
-    return { agentAvant: true, etat: silencieux ? "attend" : "en-cours" };
+    return { agentAvant: true, etat: regarde ? "aucun" : silencieux ? "attend" : "en-cours" };
   }
   // L'agent tournait au passage precedent et ne tourne plus : il vient de rendre la main.
-  if (suivi?.agentAvant) return { agentAvant: false, etat: "fini" };
+  // Le regarder a cet instant CONSOMME l'information : elle a ete vue.
+  if (suivi?.agentAvant) return { agentAvant: false, etat: regarde ? "aucun" : "fini" };
   // « Fini » reste affiche jusqu'a ce qu'on retourne voir le terminal : c'est justement
   // l'information qu'on a demandee, elle ne doit pas s'effacer toute seule.
-  return { agentAvant: false, etat: suivi?.etat === "fini" ? "fini" : "aucun" };
+  const garde = suivi?.etat === "fini" && !regarde;
+  return { agentAvant: false, etat: garde ? "fini" : "aucun" };
 }
 
 /** Un etat qui merite un repere a l'ecran. « En cours » n'en est pas un : c'est l'ordinaire. */

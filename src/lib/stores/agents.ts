@@ -21,6 +21,12 @@ const PERIODE_MS = 1000;
 
 const suivis = new Map<number, Suivi>();
 
+/**
+ * Les terminaux actuellement SOUS LES YEUX : ceux des volets affiches, quand l'onglet des
+ * terminaux est ouvert. Ils ne portent aucun repere (voir `prochainEtat`).
+ */
+const regardes = new Set<number>();
+
 /** L'etat par identifiant de terminal. Seuls ceux qui meritent un repere y figurent. */
 export const etatsAgents = writable<Map<number, EtatAgent>>(new Map());
 
@@ -37,7 +43,9 @@ function recalculer(): void {
 
   for (const t of liste) {
     vus.add(t.id);
-    const suivant = prochainEtat(suivis.get(t.id), t.llm, sortieDe(t.id), maintenant);
+    const suivant = prochainEtat(
+      suivis.get(t.id), t.llm, sortieDe(t.id), maintenant, undefined, regardes.has(t.id),
+    );
     suivis.set(t.id, suivant);
     if (meriteUnRepere(suivant.etat)) sortie.set(t.id, suivant.etat);
   }
@@ -53,19 +61,25 @@ function recalculer(): void {
 }
 
 /**
- * Le repere d'un terminal s'efface quand on va le voir.
+ * Dit quels terminaux sont sous les yeux. L'onglet des terminaux l'annonce, et annonce une
+ * liste VIDE en partant.
  *
- * C'est le seul geste qui le retire : l'information « il a fini » ne doit pas s'evaporer
- * toute seule, sinon on la rate en regardant ailleurs.
+ * **CE N'EST PAS « MARQUER COMME VU », ET LA NUANCE EST TOUT LE CORRECTIF.** Effacer le repere
+ * au clic faisait disparaitre le cadre puis revenir une seconde plus tard, parce que l'agent
+ * attendait toujours : « il attend » est un etat COURANT, il ne se marque pas comme lu. Ici
+ * c'est le fait de REGARDER qui fait taire le repere, et il revient tout seul quand on part —
+ * sauf « il a fini », qui est un evenement passe et se consomme pour de bon.
+ *
+ * Tous les volets affiches comptent, pas seulement celui qui a le focus : ils sont a l'ecran.
  */
-export function marquerVu(id: number): void {
-  const suivi = suivis.get(id);
-  if (suivi) suivis.set(id, { ...suivi, etat: suivi.etat === "fini" ? "aucun" : suivi.etat });
-  const avant = get(etatsAgents);
-  if (!avant.has(id)) return;
-  const apres = new Map(avant);
-  apres.delete(id);
-  etatsAgents.set(apres);
+export function regarderLesTerminaux(ids: Iterable<number>): void {
+  const avant = [...regardes].sort().join();
+  regardes.clear();
+  for (const id of ids) regardes.add(id);
+  if ([...regardes].sort().join() === avant) return;
+  // Sans ce tour immediat, le repere du terminal qu'on vient d'ouvrir resterait affiche
+  // jusqu'a une seconde de plus.
+  if (minuteur !== null) recalculer();
 }
 
 let minuteur: ReturnType<typeof setInterval> | null = null;

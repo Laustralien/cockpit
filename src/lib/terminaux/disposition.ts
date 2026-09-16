@@ -48,6 +48,20 @@ export function sessionsAffichees(noeud: Noeud | null): number[] {
   return [...sessionsAffichees(noeud.a), ...sessionsAffichees(noeud.b)];
 }
 
+/**
+ * Ce qui est REELLEMENT sous les yeux, volets ou pas.
+ *
+ * **UNE DISPOSITION ABSENTE NE VEUT PAS DIRE « ECRAN VIDE ».** C'est l'etat ordinaire d'un
+ * onglet qui n'a jamais ete divise : il montre un seul terminal, l'actif, et `sessionsAffichees`
+ * rend alors une liste vide. Croire cette liste a fait afficher un repere « il attend » sur le
+ * terminal que l'utilisateur avait sous les yeux (0.74.0).
+ */
+export function aLEcran(noeud: Noeud | null, actif: number | null): number[] {
+  const volets = sessionsAffichees(noeud);
+  if (volets.length > 0) return volets;
+  return actif === null ? [] : [actif];
+}
+
 /** Combien de volets. Un onglet a un seul volet n'affiche aucun separateur. */
 export function nombreDeVolets(noeud: Noeud | null): number {
   return sessionsAffichees(noeud).length;

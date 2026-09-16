@@ -8,6 +8,7 @@
   import { trad, translate } from "../../i18n";
   import { signalerErreur } from "../../stores/errors";
   import { noterUneSortie, oublierLeTerminal } from "../../terminaux/activite";
+  import { regarderLesTerminaux } from "../../stores/agents";
 
   /// POOL PERSISTANT — LE COEUR DE L'ARCHITECTURE TERMINAUX (NE PAS RE-LOCALISER).
   ///
@@ -234,7 +235,7 @@
   import type { Worktree } from "../../types";
   import {
     deplacer, depuisJson, diviser, feuille, fixerRatio, nettoyer, nombreDeVolets,
-    poserLaSession, retirer, sessionsAffichees, type Chemin, type Cote, type Noeud,
+    aLEcran, poserLaSession, retirer, sessionsAffichees, type Chemin, type Cote, type Noeud,
   } from "../../terminaux/disposition";
   import { coteVise, dansLeCadre, voisinLePlusProche } from "../../terminaux/visee";
   import { getAppSettings, setAppSetting } from "../../api/recorder";
@@ -647,6 +648,14 @@
     untrack(() => {
       void montage.then(() => honorerDemande(wanted)).catch((e) => notify(String(e)));
     });
+  });
+
+  // **CE QUI EST A L'ECRAN N'A PAS BESOIN D'UN REPERE DANS LA BARRE LATERALE.** Tous les
+  // volets affiches comptent, pas seulement celui qui a le focus. En partant (autre onglet,
+  // autre projet), on annonce une liste vide : les reperes reviennent, ce qui est le but.
+  $effect(() => {
+    regarderLesTerminaux(aLEcran(disposition, activeId));
+    return () => regarderLesTerminaux([]);
   });
 
   // Commande rapide / shell de conteneur demandee alors que l'onglet est DEJA monte :

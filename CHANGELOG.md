@@ -12,6 +12,11 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Le repère d'un terminal ne clignote plus quand on va le voir : il disparaît tant que le
+  terminal est à l'écran, et revient si l'agent attend toujours une fois qu'on est ailleurs.
+
 ## [0.74.0] — 2026-09-16
 
 ### Added

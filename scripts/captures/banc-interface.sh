@@ -88,9 +88,16 @@ clic 900 500 1
 python3 "$OUTILS" taper "claude $TRAVAIL/bin/faux-agent"
 sleep 5
 image 2-agent-en-cours
-# Il se tait : au-dela du silence, la barre laterale doit le dire.
+# **IL SE TAIT, MAIS ON LE REGARDE : LA BARRE LATERALE NE DOIT RIEN DIRE.** Un repere sur le
+# terminal qu'on a sous les yeux s'effacait au clic puis revenait a la seconde suivante (0.74.0).
 sleep 8
-image 3-agent-attend
+image 3-sous-les-yeux
+# On part ailleurs : le repere doit apparaitre, c'est toute son utilite.
+clic 797 127 4            # l onglet Fichiers
+image 4-ailleurs
+# Et il repart quand on revient, sans clignoter.
+clic 713 127 4            # retour sur Terminal
+image 5-de-retour
 
 echo "images : $TRAVAIL/img"
 grep -icE "error|erreur" "$TRAVAIL/app.log" | sed 's/^/  lignes d erreur dans le log : /'

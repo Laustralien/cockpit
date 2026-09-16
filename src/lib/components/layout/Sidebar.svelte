@@ -12,7 +12,7 @@
   import ContextMenu from "../ui/ContextMenu.svelte";
   import { notify } from "../../stores/toast";
   import { reorderable } from "../../actions/reorderable";
-  import { etatsAgents, nombreQuiAttendent, marquerVu } from "../../stores/agents";
+  import { etatsAgents, nombreQuiAttendent } from "../../stores/agents";
   import { reorder, type DropPosition } from "../../utils/reorder";
   import { onMount } from "svelte";
   import { trad, tradN } from "../../i18n";
@@ -729,7 +729,7 @@
                 class="terminal-item"
                 class:attend={etat === "attend"}
                 class:fini={etat === "fini"}
-                onclick={() => { marquerVu(t.id); gotoTerminal(t); }}
+                onclick={() => gotoTerminal(t)}
                 oncontextmenu={(e) => openTermContextMenu(e, t)}
                 title={$trad("sidebar.gotoTerminal", { project: t.project })}
               >

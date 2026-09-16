@@ -77,3 +77,42 @@ test("seuls l'attente et la fin meritent un repere", () => {
   assert.equal(meriteUnRepere("en-cours"), false);
   assert.equal(meriteUnRepere("aucun"), false);
 });
+
+// --- Le terminal qu'on REGARDE ---------------------------------------------------------
+
+test("un terminal sous les yeux ne porte aucun repere", () => {
+  // Le defaut livre en 0.74.0 : le repere s'effacait au clic, puis le calcul suivant le
+  // remettait une seconde plus tard, puisque l'agent attendait toujours. Le cadre
+  // disparaissait et revenait sous les yeux de l'utilisateur.
+  const attend = prochainEtat(undefined, true, T - SILENCE_MS - 1, T);
+  assert.equal(attend.etat, "attend");
+  const regarde = prochainEtat(attend, true, T - SILENCE_MS - 1, T + 1000, SILENCE_MS, true);
+  assert.equal(regarde.etat, "aucun", "on le voit, il n'a rien a signaler");
+});
+
+test("le repere revient quand on regarde ailleurs", () => {
+  let s = prochainEtat(undefined, true, T - SILENCE_MS - 1, T, SILENCE_MS, true);
+  assert.equal(s.etat, "aucun");
+  s = prochainEtat(s, true, T - SILENCE_MS - 1, T + 1000, SILENCE_MS, false);
+  assert.equal(s.etat, "attend", "l'agent attend toujours : on le redit");
+});
+
+test("regarder un terminal qui vient de finir consomme l'information", () => {
+  let s = prochainEtat(undefined, true, T, T);
+  // Il rend la main pendant qu'on le regarde : rien a signaler, on l'a vu.
+  s = prochainEtat(s, false, T, T + 1000, SILENCE_MS, true);
+  assert.equal(s.etat, "aucun");
+  // Et « fini » ne reapparait pas quand on part.
+  s = prochainEtat(s, false, T, T + 2000, SILENCE_MS, false);
+  assert.equal(s.etat, "aucun", "l'information a ete vue, elle ne revient pas");
+});
+
+test("« fini » survit a un passage ailleurs, puis se consomme en regardant", () => {
+  let s = prochainEtat(undefined, true, T, T);
+  s = prochainEtat(s, false, T, T + 1000);
+  assert.equal(s.etat, "fini");
+  s = prochainEtat(s, false, T, T + 2000, SILENCE_MS, true);
+  assert.equal(s.etat, "aucun", "vu");
+  s = prochainEtat(s, false, T, T + 3000, SILENCE_MS, false);
+  assert.equal(s.etat, "aucun", "et il ne revient pas");
+});

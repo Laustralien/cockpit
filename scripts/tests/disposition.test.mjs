@@ -10,7 +10,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
+import { aLEcran,
   feuille,
   diviser,
   retirer,
@@ -223,4 +223,18 @@ test("remplacer une feuille garde la geometrie", () => {
   assert.deepEqual(sessionsAffichees(apres), [1, 8]);
   assert.equal(apres.ratio, 0.7);
   assert.equal(apres.sens, "lignes");
+});
+
+// --- Ce qui est sous les yeux ------------------------------------------------------------
+
+test("sans disposition, le terminal actif est bien a l'ecran", () => {
+  // Le defaut de la 0.74.0 : un onglet jamais divise n'a pas de disposition, donc
+  // `sessionsAffichees` rendait une liste vide et le terminal affiche recevait un repere.
+  assert.deepEqual(aLEcran(null, 7), [7]);
+  assert.deepEqual(aLEcran(null, null), []);
+});
+
+test("avec des volets, ce sont tous les volets, pas seulement l'actif", () => {
+  const d = diviser(feuille(1), 1, "colonnes", 2);
+  assert.deepEqual(aLEcran(d, 1).sort(), [1, 2]);
 });
