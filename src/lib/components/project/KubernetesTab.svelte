@@ -16,6 +16,7 @@
   import { getAppSettings, setAppSetting } from "../../api/recorder";
   import { trad } from "../../i18n";
   import PodJournal from "./PodJournal.svelte";
+  import VueRessources from "./VueRessources.svelte";
   import {
     k8sContextes, k8sNamespaces, k8sPods, k8sEvenements, k8sYaml,
     k8sKubectlPresent, k8sAjouterUnCluster, type Contexte,
@@ -25,6 +26,7 @@
     appliquer, appliquerLesMesures, cibleDeDemarrage, enFamilles, comptesDesFiltres,
     appliquerLeFiltre, peutAllerA, type Pod, type Mesure, type Filtre,
   } from "../../k8s/vue";
+  import { noter, type Historique } from "../../k8s/mesures";
 
   let { name }: { name: string } = $props();
 
@@ -41,6 +43,15 @@
   let enDirect = $state(false);
   let ouverts = $state(new Set<string>());
   let kubectl = $state(false);
+
+  /// **DEUX VUES DANS L'ONGLET, ET IL Y EN AURA D'AUTRES.** Les pods d'un cote, les ressources
+  /// de l'autre : ajouter une vue ne coute qu'une entree ici.
+  let vue: "pods" | "ressources" = $state("pods");
+  /// L'historique des mesures, tenu par Cockpit : le cluster ne rend qu'un instantane.
+  let historique: Historique = $state(new Map());
+  let fenetreSecondes = $state(300);
+  let rafraichissement = $state(5);
+  let focus: string | null = $state(null);
 
   let ouvert: "cluster" | "namespace" | null = $state(null);
   let chercheNamespace = $state("");
@@ -116,9 +127,16 @@
       return;
     }
     const reglages = await getAppSettings().catch(() => ({}) as Record<string, string>);
-    let vise: { contexte?: string; namespace?: string } = {};
+    let vise: {
+      contexte?: string;
+      namespace?: string;
+      fenetre?: number;
+      rythme?: number;
+    } = {};
     try {
       vise = JSON.parse(reglages[cle] ?? "{}");
+      if (typeof vise.fenetre === "number") fenetreSecondes = vise.fenetre;
+      if (typeof vise.rythme === "number") rafraichissement = vise.rythme;
     } catch {
       // Un reglage illisible ne doit pas empecher d'ouvrir l'ecran : on repart du defaut.
       vise = {};
@@ -167,13 +185,21 @@
     chercheNamespace = "";
     choisi = null;
     ouverts = new Set();
+    historique = new Map();
+    focus = null;
     detacher();
     if (enregistrer) {
-      void setAppSetting(cle, JSON.stringify({ contexte, namespace })).catch((e) =>
-        signalerErreur("k8s.reglage", String(e)),
-      );
+      enregistrerLaCible();
     }
     await charger();
+  }
+
+  /// Ce qu'on retient d'un projet : ou l'on regarde, et comment.
+  function enregistrerLaCible() {
+    void setAppSetting(
+      cle,
+      JSON.stringify({ contexte, namespace, fenetre: fenetreSecondes, rythme: rafraichissement }),
+    ).catch((e) => signalerErreur("k8s.reglage", String(e)));
   }
 
   /// Lit la liste ENTIERE, puis passe le relais au flux. C'est la seule lecture complete.
@@ -182,10 +208,10 @@
     chargement = true;
     panne = null;
     try {
-      const vue = await k8sPods(contexte, namespace);
-      pods = vue.pods;
-      sansMesures = vue.sans_mesures;
-      suivre(vue.version);
+      const lu = await k8sPods(contexte, namespace);
+      pods = lu.pods;
+      sansMesures = lu.sans_mesures;
+      suivre(lu.version);
     } catch (e) {
       panne = String(e);
       pods = [];
@@ -205,6 +231,7 @@
       }),
       ecouter<Mesure[]>("k8s_mesures", (e) => {
         pods = appliquerLesMesures(pods, e.payload);
+        historique = noter(historique, e.payload, Date.now());
       }),
       // Notre point de reprise n'est plus valable : le cluster nous le dit, on relit.
       ecouter<null>("k8s_relire", () => void charger()),
@@ -213,6 +240,7 @@
         panne = e.payload;
       }),
     ];
+    void invoke("k8s_periode_des_mesures", { secondes: rafraichissement }).catch(() => {});
     void invoke("k8s_suivre", { contexte, namespace, version })
       .then(() => (enDirect = true))
       .catch((e) => {
@@ -311,6 +339,20 @@
     }
   }
 
+  function reglerLaFenetre(secondes: number) {
+    fenetreSecondes = secondes;
+    enregistrerLaCible();
+  }
+
+  function reglerLeRafraichissement(secondes: number) {
+    rafraichissement = secondes;
+    enregistrerLaCible();
+    // Le flux n'est pas coupe : la courbe garde son historique quand on change de rythme.
+    void invoke("k8s_periode_des_mesures", { secondes }).catch((e) =>
+      signalerErreur("k8s.periode", String(e)),
+    );
+  }
+
   function couleurDe(pod: Pod): string {
     if (pod.ennuyeux) return "mauvais";
     if (pod.etat === "Succeeded") return "fini";
@@ -364,6 +406,18 @@
   </div>
 
   {#if pods.length > 0}
+    <div class="vues">
+      {#each [["pods", $trad("k8s.ongletPods")], ["ressources", $trad("k8s.ongletRessources")]] as [id, libelle] (id)}
+        <button
+          class="vue"
+          class:actif={vue === id}
+          onclick={() => (vue = id as typeof vue)}
+        >{libelle}</button>
+      {/each}
+    </div>
+  {/if}
+
+  {#if pods.length > 0 && vue === "pods"}
     <div class="filtres">
       {#each LIBELLES as f (f.id)}
         {@const n = comptes[f.id]}
@@ -477,6 +531,18 @@
     </div>
   {:else}
     <div class="corps">
+      {#if vue === "ressources"}
+        <VueRessources
+          {pods}
+          {historique}
+          {fenetreSecondes}
+          {rafraichissement}
+          {focus}
+          surFenetre={reglerLaFenetre}
+          surRafraichissement={reglerLeRafraichissement}
+          surFocus={(nom) => (focus = nom)}
+        />
+      {:else}
       <div class="liste">
         {#if sansMesures}
           <p class="avis" title={sansMesures}>{$trad("k8s.sansMesures")}</p>
@@ -585,8 +651,9 @@
           {/if}
         {/each}
       </div>
+      {/if}
 
-      {#if choisi}
+      {#if choisi && vue === "pods"}
         <aside class="detail">
           <div class="detail-tete">
             <div class="detail-titre">
@@ -643,6 +710,11 @@
     min-height: 0;
     gap: 0.55rem;
   }
+  /* **RIEN NE SE COMPRIME DANS CETTE COLONNE, SAUF LE CORPS.** Sans cette regle, une rangee de
+     trente pixels est ecrasee jusqu'a disparaitre quand la place manque : la barre d'onglets
+     ne s'affichait plus du tout, et rien ne le signalait. */
+  .k8s > * { flex: none; }
+  .k8s > .corps { flex: 1; }
 
   /* ── La barre du haut ─────────────────────────────────────────────────────── */
   .barre { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
@@ -673,6 +745,20 @@
   .direct { color: var(--text-muted); font-size: 0.76rem; }
   .direct.actif { color: var(--success); }
   .direct.actif::before { content: "● "; }
+
+  .vues { display: flex; gap: 0.2rem; border-bottom: 1px solid var(--border); }
+  .vue {
+    padding: 0.3rem 0.8rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.84rem;
+  }
+  .vue:hover { color: var(--text-primary); }
+  .vue.actif { color: var(--text-primary); border-bottom-color: var(--accent); }
 
   /* ── Les filtres ──────────────────────────────────────────────────────────── */
   .filtres { display: flex; gap: 0.35rem; flex-wrap: wrap; }

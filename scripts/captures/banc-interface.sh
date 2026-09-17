@@ -22,6 +22,19 @@ ENV_CONSTRUCTION="$(cd "$(dirname "$0")/../.." && pwd)/../.claude/env-constructi
 source "$ENV_CONSTRUCTION"
 
 BINAIRE="${1:?chemin de l AppImage attendu}"
+# **UN BANC QUI LANCE UN PAQUET PERIME MENT SANS UN MOT.** Apres une release, le numero de
+# version change : le paquet frais s'appelle autrement, et un chemin tape de memoire fait
+# regarder l'AVANT-DERNIERE construction. Constate le 2026-09-17 : une demi-heure passee a
+# chercher pourquoi une barre d'onglets ne s'affichait pas, alors qu'elle etait dans un fichier
+# que l'on ne lancait pas. On refuse donc, sauf mention explicite.
+DERNIER="$(ls -t "$(dirname "$BINAIRE")"/*.AppImage 2>/dev/null | head -1)"
+if [ -n "$DERNIER" ] && [ "$DERNIER" != "$BINAIRE" ] && [ -z "${COCKPIT_BANC_VIEUX:-}" ]; then
+  echo "ce paquet n'est pas le plus recent du dossier :" >&2
+  echo "  demande : $BINAIRE" >&2
+  echo "  le plus recent : $DERNIER" >&2
+  echo "  (COCKPIT_BANC_VIEUX=1 pour l'ignorer)" >&2
+  exit 2
+fi
 TRAVAIL="${2:-/tmp/cockpit-banc-interface}"
 ECRAN=:93
 ICI="$(cd "$(dirname "$0")" && pwd)"
@@ -146,6 +159,14 @@ if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   image k8s-3-detail
   sleep 6                 # de quoi voir arriver des lignes en direct
   image k8s-4-logs
+  # L'onglet Ressources : les courbes se remplissent au rythme des mesures.
+  clic 1351 311 1         # fermer le detail
+  python3 "$OUTILS" taper "" 2>/dev/null || true
+  clic 420 268 3          # l onglet « Ressources »
+  sleep 25                # cinq mesures a cinq secondes
+  image k8s-5-ressources
+  clic 600 620 4          # le premier pod du classement : on le suit de pres
+  image k8s-6-focus
   clic 1351 311 1         # fermer le detail
   clic 419 228 2          # le selecteur de cluster
   image k8s-4-clusters

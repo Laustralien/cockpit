@@ -33,13 +33,28 @@ const TENTATIVES: u32 = 3;
 /// Entre deux tentatives. Un cluster qui redemarre met plus que ca, et l'ecran garde son
 /// bouton pour reessayer : c'est un refus qui se voit, pas une boucle invisible.
 const REPOS: Duration = Duration::from_secs(3);
-/// Les mesures n'ont pas de flux : elles se redemandent. 0,08 s mesuree pour 300 pods.
-const PERIODE_DES_MESURES: Duration = Duration::from_secs(15);
+/// Les mesures n'ont pas de flux : elles se redemandent. 0,08 s mesuree pour 300 pods, ce qui
+/// laisse le choix du rythme a l'utilisateur — c'est lui qui regarde les courbes.
+const PERIODE_PAR_DEFAUT: u64 = 5;
+/// En dessous, on interrogerait le cluster plus vite qu'il ne mesure : ses propres mesures sont
+/// rafraichies toutes les quinze secondes environ, et rien ne bougerait de plus.
+const PERIODE_MINIMUM: u64 = 5;
 
 /// Le suivi en cours. Un seul, parce qu'un seul ecran regarde.
-#[derive(Default)]
 pub struct Suivi {
     arret: std::sync::Mutex<Option<Arc<AtomicBool>>>,
+    /// Le rythme des mesures, en secondes. Change sans couper le flux en cours : la boucle le
+    /// relit a chaque tour, donc regler le rafraichissement ne fait pas repartir la courbe.
+    periode: Arc<std::sync::atomic::AtomicU64>,
+}
+
+impl Default for Suivi {
+    fn default() -> Self {
+        Self {
+            arret: std::sync::Mutex::new(None),
+            periode: Arc::new(std::sync::atomic::AtomicU64::new(PERIODE_PAR_DEFAUT)),
+        }
+    }
 }
 
 impl Suivi {
@@ -48,6 +63,12 @@ impl Suivi {
         if let Some(drapeau) = self.arret.lock().ok().and_then(|mut v| v.take()) {
             drapeau.store(true, Ordering::Relaxed);
         }
+    }
+
+    /// Le rythme des mesures, en secondes.
+    pub fn regler_la_periode(&self, secondes: u64) {
+        self.periode
+            .store(secondes.max(PERIODE_MINIMUM), Ordering::Relaxed);
     }
 
     /// Demarre le suivi d'un namespace. Le precedent s'arrete.
@@ -65,7 +86,14 @@ impl Suivi {
         let drapeau = Arc::new(AtomicBool::new(false));
         *self.arret.lock().map_err(|_| "suivi inaccessible")? = Some(drapeau.clone());
 
-        tokio::spawn(boucle(emetteur, contexte, namespace, depuis, drapeau));
+        tokio::spawn(boucle(
+            emetteur,
+            contexte,
+            namespace,
+            depuis,
+            drapeau,
+            self.periode.clone(),
+        ));
         Ok(())
     }
 }
@@ -76,12 +104,14 @@ async fn boucle(
     namespace: String,
     depuis: String,
     arret: Arc<AtomicBool>,
+    periode: Arc<std::sync::atomic::AtomicU64>,
 ) {
     let mesures = tokio::spawn(boucle_des_mesures(
         emetteur.clone(),
         contexte.clone(),
         namespace.clone(),
         arret.clone(),
+        periode,
     ));
 
     let mut version = depuis;
@@ -195,9 +225,14 @@ async fn boucle_des_mesures(
     contexte: String,
     namespace: String,
     arret: Arc<AtomicBool>,
+    periode: Arc<std::sync::atomic::AtomicU64>,
 ) {
+    // Une premiere mesure tout de suite : sans elle, la courbe reste vide le temps d'un tour,
+    // et sur un rythme lent ce serait long avant de voir quoi que ce soit.
+    let mut attente = Duration::from_millis(50);
     while !arret.load(Ordering::Relaxed) {
-        tokio::time::sleep(PERIODE_DES_MESURES).await;
+        tokio::time::sleep(attente).await;
+        attente = Duration::from_secs(periode.load(Ordering::Relaxed).max(PERIODE_MINIMUM));
         if arret.load(Ordering::Relaxed) {
             return;
         }
@@ -350,4 +385,20 @@ mod tests {
         assert!(erreur.contains("refuse"), "{erreur}");
     }
 
+}
+
+#[cfg(test)]
+mod tests_periode {
+    use super::*;
+
+    #[test]
+    fn le_rythme_des_mesures_ne_descend_pas_sous_le_plancher() {
+        // En dessous, on interrogerait le cluster plus vite qu'il ne mesure : rien ne bougerait
+        // de plus, et on paierait la question a chaque tour.
+        let suivi = Suivi::default();
+        suivi.regler_la_periode(0);
+        assert_eq!(suivi.periode.load(Ordering::Relaxed), PERIODE_MINIMUM);
+        suivi.regler_la_periode(3600);
+        assert_eq!(suivi.periode.load(Ordering::Relaxed), 3600);
+    }
 }

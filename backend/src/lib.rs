@@ -378,6 +378,15 @@ async fn k8s_arreter_les_logs(state: &AppState) -> Result<(), String> {
     Ok(())
 }
 
+/// Le rythme des mesures, en secondes : c'est le reglage « rafraichissement » de l'ecran.
+///
+/// Il ne coupe pas le flux en cours : la courbe garde son historique quand on change de rythme.
+#[commande]
+async fn k8s_periode_des_mesures(state: &AppState, secondes: u64) -> Result<(), String> {
+    state.k8s.regler_la_periode(secondes);
+    Ok(())
+}
+
 /// **A APPELER EN QUITTANT L'ECRAN.** Un flux oublie garde une connexion ouverte sur le
 /// cluster et continue de faire travailler l'interface pour un ecran que personne ne regarde.
 #[commande]

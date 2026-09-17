@@ -199,6 +199,13 @@ pub async fn appeler(
             ).await?))
         })
         .await,
+        "k8s_periode_des_mesures" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_periode_des_mesures(etat,
+                serde_json::from_value(prendre(a, "secondes", "secondes"))
+                    .map_err(|e| format!("argument secondes : {e}"))?,
+            ).await?))
+        })
+        .await,
         "k8s_arreter_le_suivi" => typer(async {
             valeur(serde_json::to_value(crate::k8s_arreter_le_suivi(etat, 
             ).await?))

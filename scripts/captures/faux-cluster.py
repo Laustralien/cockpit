@@ -20,6 +20,7 @@ Il sert ce dont l'ecran a besoin, et rien de plus :
 Lancement :  python3 faux-cluster.py <port> <dossier ou ecrire le kubeconfig>
 """
 import json
+import math
 import random
 import sys
 import threading
@@ -157,21 +158,25 @@ class Faux(BaseHTTPRequestHandler):
         if "watch=1" in chemin:
             return self._flux()
         if "/metrics.k8s.io/" in chemin:
-            return self._json(
-                {
-                    "items": [
-                        {
-                            "metadata": {"name": p["metadata"]["name"]},
-                            "containers": [
-                                {"usage": {"cpu": f"{abs(hash(p['metadata']['name'])) % 400}m",
-                                           "memory": f"{abs(hash(p['metadata']['name'])) % 700 + 60}Mi"}}
-                            ],
-                        }
-                        for p in PODS
-                        if p["status"]["phase"] == "Running"
-                    ]
-                }
-            )
+            # **LES MESURES VARIENT DANS LE TEMPS**, sinon les courbes de l'ecran sont plates et
+            # ne prouvent rien : chaque pod suit sa propre onde, avec un peu de bruit.
+            t = time.time() - DEBUT
+            items = []
+            for p in PODS:
+                if p["status"]["phase"] != "Running":
+                    continue
+                nom = p["metadata"]["name"]
+                graine = abs(hash(nom)) % 1000
+                onde = math.sin((t + graine) / 22.0) * 0.5 + 0.5
+                cpu = int(40 + graine % 260 * onde + random.randint(0, 25))
+                ram = int(120 + graine % 500 * (0.6 + 0.4 * onde) + random.randint(0, 20))
+                items.append(
+                    {
+                        "metadata": {"name": nom},
+                        "containers": [{"usage": {"cpu": f"{cpu}m", "memory": f"{ram}Mi"}}],
+                    }
+                )
+            return self._json({"items": items})
         if chemin.startswith("/api/v1/namespaces?") or chemin == "/api/v1/namespaces":
             return self._json(
                 {"items": [{"metadata": {"name": n}} for n in NAMESPACES]}

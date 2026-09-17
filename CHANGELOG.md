@@ -12,6 +12,13 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- L'onglet Kubernetes se divise en deux vues : **Pods**, et une nouvelle vue **Ressources** qui
+  trace le processeur et la mémoire. Tu choisis la période affichée et le rythme de
+  rafraîchissement, et les pods sont classés du plus gourmand au moins gourmand : cliquer sur
+  l'un d'eux montre ses propres courbes. Le choix est retenu pour le projet.
+
 ## [0.76.0] — 2026-09-17
 
 ### Added
