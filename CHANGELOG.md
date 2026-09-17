@@ -12,6 +12,17 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Nouvel onglet **Kubernetes** dans un projet : choisis un cluster et un namespace, et vois les
+  pods qui tournent, ceux qui redémarrent en boucle et ceux qui ont fini. Les pods sont groupés
+  par service, avec leur version livrée, leur CPU et leur mémoire, et la liste se met à jour
+  toute seule. Recherche en direct, logs, événements et YAML d'un pod, et un bouton qui ouvre un
+  shell dans le conteneur, dans un terminal Cockpit.
+- Ajouter un cluster se fait depuis Cockpit : colle ou dépose le fichier kubeconfig que ton
+  Rancher fait télécharger, et il est ajouté à `~/.kube/config` sans rien écraser, avec une
+  copie de l'ancien. `kubectl` en profite aussi.
+
 ## [0.74.1] — 2026-09-16
 
 ### Fixed

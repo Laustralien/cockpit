@@ -37,6 +37,11 @@ mkdir -p "$TRAVAIL/run" "$TRAVAIL/home/projets" "$TRAVAIL/img" "$TRAVAIL/bin"
 touch "$TRAVAIL/home/.zshrc" 
 chmod 700 "$TRAVAIL/run"
 
+# **UN VRAI CLUSTER SE PRETE, IL NE SE COPIE PAS.** Pour eprouver l'ecran Kubernetes, on
+# pointe le kubeconfig de la machine SANS le recopier dans le dossier du banc : un jeton
+# d'acces a une production n'a rien a faire dans /tmp. Vide, l'ecran dit qu'il n'a pas de
+# cluster, ce qui est aussi un cas a regarder.
+export KUBECONFIG="${COCKPIT_BANC_KUBECONFIG:-}"
 export XDG_RUNTIME_DIR="$TRAVAIL/run" XDG_DATA_HOME="$TRAVAIL/home/.local/share"
 export XDG_CONFIG_HOME="$TRAVAIL/home/.config" XDG_CACHE_HOME="$TRAVAIL/home/.cache"
 export HOME="$TRAVAIL/home" DISPLAY="$ECRAN" GIO_USE_VFS=local COCKPIT_LANGUE=fr
@@ -82,6 +87,24 @@ lancer
 clic 105 296 3            # le projet « boutique-vinyles » (le premier de la liste)
 clic 727 127 10           # l onglet Terminal
 image 1-avant
+
+if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
+  clic 941 127 14         # l onglet Kubernetes (a droite de Git)
+  image k8s-1-liste
+  clic 1000 228 1         # le champ de recherche
+  python3 "$OUTILS" taper "auth" 2>/dev/null || true
+  sleep 3
+  image k8s-2-recherche
+  clic 500 340 5          # le premier pod trouve : ouvre son detail
+  image k8s-3-detail
+  clic 1351 311 1         # fermer le detail
+  clic 419 228 2          # le selecteur de cluster
+  image k8s-4-clusters
+  clic 402 355 2          # « + Ajouter un cluster » (sous la liste)
+  image k8s-5-ajout
+  echo "images kubernetes : $TRAVAIL/img"
+  exit 0
+fi
 
 # On lance le faux agent dans le terminal affiche.
 clic 900 500 1

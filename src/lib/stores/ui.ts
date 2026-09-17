@@ -12,7 +12,7 @@ export const selectedProject = writable<string | null>(null);
 
 /// Onglets de la vue projet. Ajouter un onglet = une entree ici + une entree dans la map
 /// `tabs` de ProjectDetail.svelte.
-export type ProjectTab = "workspace" | "docker" | "terminal" | "files" | "git" | "settings" | "plugins";
+export type ProjectTab = "workspace" | "docker" | "terminal" | "files" | "git" | "kubernetes" | "settings" | "plugins";
 
 /// Onglet d'arrivee sur un projet dont on ne sait rien (jamais visite, ou fraichement
 /// cree : sans compose ni depot git, Docker et Git n'auraient rien a montrer).

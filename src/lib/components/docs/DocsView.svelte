@@ -8,7 +8,7 @@
    * elles suivent le theme. Chaque bloc = une legende d'une ligne + une maquette.
    */
   type SectionId =
-    | "demarrer" | "terminaux" | "fichiers" | "git" | "docker"
+    | "demarrer" | "terminaux" | "fichiers" | "git" | "docker" | "kubernetes"
     | "taches" | "palette" | "dashboard" | "apparence" | "compte" | "maj" | "raccourcis";
 
   const MENU: { id: SectionId; labelKey: Parameters<typeof translate>[0]; icon: string }[] = [
@@ -18,6 +18,7 @@
     { id: "fichiers", labelKey: "docs.menu.files", icon: "📄" },
     { id: "git", labelKey: "docs.menu.git", icon: "⎇" },
     { id: "docker", labelKey: "docs.menu.docker", icon: "🐳" },
+    { id: "kubernetes", labelKey: "docs.menu.kubernetes", icon: "☸" },
     { id: "taches", labelKey: "docs.menu.tasks", icon: "✓" },
     { id: "palette", labelKey: "docs.menu.palette", icon: "⌘" },
     { id: "apparence", labelKey: "docs.menu.appearance", icon: "🎨" },
@@ -203,6 +204,40 @@
         <p>{@html $trad("docs.files.images")}</p>
         <div class="demo">
           <div class="d-checker"><span class="d-imgbox">logo.png</span></div>
+        </div>
+      </div>
+
+    {:else if section === "kubernetes"}
+      <h3>{$trad("docs.k8s.heading")}</h3>
+
+      <div class="block">
+        <p>{@html $trad("docs.k8s.liste")}</p>
+        <div class="demo">
+          <div class="d-tabs">
+            <span class="d-btn small">{$trad("k8s.cluster")} {$trad("docs.k8s.demoCluster")}</span>
+            <span class="d-btn small">{$trad("k8s.namespace")} {$trad("docs.k8s.demoNamespace")}</span>
+            <span class="d-spring"></span>
+            <span class="d-count">{$trad("docs.k8s.demoDirect")}</span>
+          </div>
+          <div class="d-row"><strong>{$trad("docs.k8s.demoService1")}</strong> <span class="d-stat">0/3</span> <span class="d-badge mod">{$trad("docs.k8s.demoEtat")}</span></div>
+          <div class="d-row"><strong>{$trad("docs.k8s.demoService2")}</strong> <span class="d-stat">7/7</span> <span class="d-count">{$trad("docs.k8s.demoVersion")}</span> <span class="d-stat">{$trad("docs.k8s.demoMesures")}</span></div>
+          <div class="d-row"><strong>{$trad("docs.k8s.demoService3")}</strong> <span class="d-stat">0/258</span> <span class="d-stat">{$trad("docs.k8s.demoFinis")}</span></div>
+        </div>
+      </div>
+
+      <div class="block">
+        <p>{@html $trad("docs.k8s.detail")}</p>
+        <div class="demo">
+          <div class="d-tabs"><span class="d-tab active">{$trad("k8s.logs")}</span><span class="d-tab">{$trad("k8s.evenements")}</span><span class="d-tab">{$trad("k8s.yaml")}</span><span class="d-spring"></span><span class="d-btn small">{$trad("k8s.shell")}</span></div>
+          <div class="d-term">{$trad("docs.k8s.demoLog")}</div>
+        </div>
+      </div>
+
+      <div class="block">
+        <p>{@html $trad("docs.k8s.ajout")}</p>
+        <div class="demo">
+          <div class="d-section">{$trad("k8s.ajouter")}</div>
+          <div class="d-row">{$trad("docs.k8s.demoAjout")}</div>
         </div>
       </div>
 

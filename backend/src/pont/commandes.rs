@@ -96,6 +96,94 @@ pub async fn appeler(
             ).await?))
         })
         .await,
+        "k8s_contextes" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_contextes(
+            ).await?))
+        })
+        .await,
+        "k8s_namespaces" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_namespaces(
+                serde_json::from_value(prendre(a, "contexte", "contexte"))
+                    .map_err(|e| format!("argument contexte : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "k8s_pods" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_pods(
+                serde_json::from_value(prendre(a, "contexte", "contexte"))
+                    .map_err(|e| format!("argument contexte : {e}"))?,
+                serde_json::from_value(prendre(a, "namespace", "namespace"))
+                    .map_err(|e| format!("argument namespace : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "k8s_logs" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_logs(
+                serde_json::from_value(prendre(a, "contexte", "contexte"))
+                    .map_err(|e| format!("argument contexte : {e}"))?,
+                serde_json::from_value(prendre(a, "namespace", "namespace"))
+                    .map_err(|e| format!("argument namespace : {e}"))?,
+                serde_json::from_value(prendre(a, "pod", "pod"))
+                    .map_err(|e| format!("argument pod : {e}"))?,
+                serde_json::from_value(prendre(a, "conteneur", "conteneur"))
+                    .map_err(|e| format!("argument conteneur : {e}"))?,
+                serde_json::from_value(prendre(a, "lignes", "lignes"))
+                    .map_err(|e| format!("argument lignes : {e}"))?,
+                serde_json::from_value(prendre(a, "precedent", "precedent"))
+                    .map_err(|e| format!("argument precedent : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "k8s_evenements" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_evenements(
+                serde_json::from_value(prendre(a, "contexte", "contexte"))
+                    .map_err(|e| format!("argument contexte : {e}"))?,
+                serde_json::from_value(prendre(a, "namespace", "namespace"))
+                    .map_err(|e| format!("argument namespace : {e}"))?,
+                serde_json::from_value(prendre(a, "pod", "pod"))
+                    .map_err(|e| format!("argument pod : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "k8s_yaml" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_yaml(
+                serde_json::from_value(prendre(a, "contexte", "contexte"))
+                    .map_err(|e| format!("argument contexte : {e}"))?,
+                serde_json::from_value(prendre(a, "namespace", "namespace"))
+                    .map_err(|e| format!("argument namespace : {e}"))?,
+                serde_json::from_value(prendre(a, "pod", "pod"))
+                    .map_err(|e| format!("argument pod : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "k8s_kubectl_present" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_kubectl_present(
+            ).await?))
+        })
+        .await,
+        "k8s_suivre" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_suivre(etat,
+                serde_json::from_value(prendre(a, "contexte", "contexte"))
+                    .map_err(|e| format!("argument contexte : {e}"))?,
+                serde_json::from_value(prendre(a, "namespace", "namespace"))
+                    .map_err(|e| format!("argument namespace : {e}"))?,
+                serde_json::from_value(prendre(a, "version", "version"))
+                    .map_err(|e| format!("argument version : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "k8s_ajouter_un_cluster" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_ajouter_un_cluster(
+                serde_json::from_value(prendre(a, "kubeconfig", "kubeconfig"))
+                    .map_err(|e| format!("argument kubeconfig : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "k8s_arreter_le_suivi" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_arreter_le_suivi(etat, 
+            ).await?))
+        })
+        .await,
         "docker_disk_usage" => typer(async {
             valeur(serde_json::to_value(crate::docker_disk_usage(
             ).await?))
@@ -182,54 +270,6 @@ pub async fn appeler(
                 serde_json::from_value(prendre(a, "id", "id"))
                     .map_err(|e| format!("argument id : {e}"))?,
             )?))
-        })
-        .await,
-        "git_worktree_prune" => typer(async {
-            valeur(serde_json::to_value(crate::git_worktree_prune(
-                serde_json::from_value(prendre(a, "projectPath", "project_path"))
-                    .map_err(|e| format!("argument projectPath : {e}"))?,
-            ).await?))
-        })
-        .await,
-        "llm_ouvrir_dossier" => typer(async {
-            valeur(serde_json::to_value(crate::llm_ouvrir_dossier(
-                serde_json::from_value(prendre(a, "id", "id"))
-                    .map_err(|e| format!("argument id : {e}"))?,
-                serde_json::from_value(prendre(a, "skill", "skill"))
-                    .map_err(|e| format!("argument skill : {e}"))?,
-            ).await?))
-        })
-        .await,
-        "llm_lire_skill" => typer(async {
-            valeur(serde_json::to_value(crate::llm_lire_skill(
-                serde_json::from_value(prendre(a, "id", "id"))
-                    .map_err(|e| format!("argument id : {e}"))?,
-                serde_json::from_value(prendre(a, "skill", "skill"))
-                    .map_err(|e| format!("argument skill : {e}"))?,
-            ).await?))
-        })
-        .await,
-        "llm_consignes" => typer(async {
-            valeur(serde_json::to_value(crate::llm_consignes(
-                serde_json::from_value(prendre(a, "id", "id"))
-                    .map_err(|e| format!("argument id : {e}"))?,
-            ).await?))
-        })
-        .await,
-        "llm_ecrire_consignes" => typer(async {
-            valeur(serde_json::to_value(crate::llm_ecrire_consignes(
-                serde_json::from_value(prendre(a, "id", "id"))
-                    .map_err(|e| format!("argument id : {e}"))?,
-                serde_json::from_value(prendre(a, "contenu", "contenu"))
-                    .map_err(|e| format!("argument contenu : {e}"))?,
-            ).await?))
-        })
-        .await,
-        "llm_skills" => typer(async {
-            valeur(serde_json::to_value(crate::llm_skills(
-                serde_json::from_value(prendre(a, "id", "id"))
-                    .map_err(|e| format!("argument id : {e}"))?,
-            ).await?))
         })
         .await,
         "reorder_terminals" => typer(async {
@@ -905,6 +945,47 @@ pub async fn appeler(
             )?))
         })
         .await,
+        "llm_consignes" => typer(async {
+            valeur(serde_json::to_value(crate::llm_consignes(
+                serde_json::from_value(prendre(a, "id", "id"))
+                    .map_err(|e| format!("argument id : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "llm_ecrire_consignes" => typer(async {
+            valeur(serde_json::to_value(crate::llm_ecrire_consignes(
+                serde_json::from_value(prendre(a, "id", "id"))
+                    .map_err(|e| format!("argument id : {e}"))?,
+                serde_json::from_value(prendre(a, "contenu", "contenu"))
+                    .map_err(|e| format!("argument contenu : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "llm_skills" => typer(async {
+            valeur(serde_json::to_value(crate::llm_skills(
+                serde_json::from_value(prendre(a, "id", "id"))
+                    .map_err(|e| format!("argument id : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "llm_ouvrir_dossier" => typer(async {
+            valeur(serde_json::to_value(crate::llm_ouvrir_dossier(
+                serde_json::from_value(prendre(a, "id", "id"))
+                    .map_err(|e| format!("argument id : {e}"))?,
+                serde_json::from_value(prendre(a, "skill", "skill"))
+                    .map_err(|e| format!("argument skill : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "llm_lire_skill" => typer(async {
+            valeur(serde_json::to_value(crate::llm_lire_skill(
+                serde_json::from_value(prendre(a, "id", "id"))
+                    .map_err(|e| format!("argument id : {e}"))?,
+                serde_json::from_value(prendre(a, "skill", "skill"))
+                    .map_err(|e| format!("argument skill : {e}"))?,
+            ).await?))
+        })
+        .await,
         "llm_consommation" => typer(async {
             valeur(serde_json::to_value(crate::llm_consommation(etat,
                 serde_json::from_value(prendre(a, "id", "id"))
@@ -1194,6 +1275,13 @@ pub async fn appeler(
         .await,
         "git_worktrees" => typer(async {
             valeur(serde_json::to_value(crate::git_worktrees(
+                serde_json::from_value(prendre(a, "projectPath", "project_path"))
+                    .map_err(|e| format!("argument projectPath : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "git_worktree_prune" => typer(async {
+            valeur(serde_json::to_value(crate::git_worktree_prune(
                 serde_json::from_value(prendre(a, "projectPath", "project_path"))
                     .map_err(|e| format!("argument projectPath : {e}"))?,
             ).await?))

@@ -10,6 +10,7 @@ pub mod compte;
 mod commande;
 mod docker;
 mod gitdiff;
+mod k8s;
 mod llm;
 mod lsp;
 mod plugin;
@@ -46,6 +47,8 @@ pub struct AppState {
     /// l'`AppHandle` que se passaient les commandes** : l'enregistrement et la connexion
     /// guidee doivent emettre, et rien d'autre ne les liait a Tauri.
     pub emetteur: crate::evenements::Emetteurs,
+    /// Le flux des pods du cluster regarde. Un seul a la fois, arrete des qu'on quitte l'ecran.
+    pub k8s: k8s::suivi::Suivi,
 }
 
 /// Sert le pont si `--pont` est demande, et dit si ce processus lui appartient.
@@ -121,6 +124,7 @@ pub fn construire_etat(
         connexion_llm: llm::abonnement::SessionConnexion::default(),
         lsp: Arc::new(lsp::LspState::default()),
         emetteur,
+        k8s: k8s::suivi::Suivi::default(),
     }
 }
 
@@ -266,6 +270,91 @@ async fn container_logs(id: String, tail: u32) -> Result<String, String> {
 #[commande]
 async fn container_action_bulk(ids: Vec<String>, action: String) -> Result<(), String> {
     docker::containers::container_action_bulk(&ids, &action).await
+}
+
+// ─── Kubernetes ───────────────────────────────────────────────────────────────────────────
+//
+// **TOUTES CES COMMANDES SONT `async` : elles touchent le disque ET le reseau.** Une seule
+// d'entre elles ecrite sans `async` bloquerait le fil qui sert tout le reste, terminaux
+// compris, le temps qu'un cluster injoignable rende la main.
+
+#[commande]
+async fn k8s_contextes() -> Result<Vec<k8s::kubeconfig::Contexte>, String> {
+    k8s::contextes()
+}
+
+#[commande]
+async fn k8s_namespaces(contexte: String) -> Result<Vec<String>, String> {
+    k8s::namespaces(&contexte).await
+}
+
+#[commande]
+async fn k8s_pods(contexte: String, namespace: String) -> Result<k8s::Vue, String> {
+    k8s::vue(&contexte, &namespace).await
+}
+
+#[commande]
+async fn k8s_logs(
+    contexte: String,
+    namespace: String,
+    pod: String,
+    conteneur: Option<String>,
+    lignes: u32,
+    precedent: bool,
+) -> Result<String, String> {
+    k8s::logs(&contexte, &namespace, &pod, conteneur.as_deref(), lignes, precedent).await
+}
+
+#[commande]
+async fn k8s_evenements(
+    contexte: String,
+    namespace: String,
+    pod: String,
+) -> Result<Vec<serde_json::Value>, String> {
+    k8s::evenements(&contexte, &namespace, &pod).await
+}
+
+#[commande]
+async fn k8s_yaml(contexte: String, namespace: String, pod: String) -> Result<String, String> {
+    k8s::yaml(&contexte, &namespace, &pod).await
+}
+
+/// `kubectl` est-il installe ? Le bouton « ouvrir un shell » en depend, et lui seul : l'ecran
+/// entier fonctionne sans. Un bouton qui promet ce qu'on ne sait pas faire est un mensonge.
+#[commande]
+async fn k8s_kubectl_present() -> Result<bool, String> {
+    Ok(commande::chemin_du_programme("kubectl").is_some())
+}
+
+/// Suit les changements du namespace. `version` vient de la vue deja chargee : le flux
+/// reprend EXACTEMENT ou elle s'arrete, sinon un pod qui change entre les deux passe inapercu.
+#[commande]
+async fn k8s_suivre(
+    state: &AppState,
+    contexte: String,
+    namespace: String,
+    version: String,
+) -> Result<(), String> {
+    state
+        .k8s
+        .demarrer(state.emetteur.clone(), contexte, namespace, version)
+}
+
+/// Ajoute un cluster a partir du kubeconfig que Rancher (ou un autre) fait telecharger.
+///
+/// **LE CONTENU NE VA NULLE PART AILLEURS** : il n'est ni journalise, ni renvoye a l'interface,
+/// ni recopie dans un message d'erreur. Il contient un jeton d'acces a une production.
+#[commande]
+async fn k8s_ajouter_un_cluster(kubeconfig: String) -> Result<k8s::ajout::Ajout, String> {
+    k8s::ajouter_un_cluster(kubeconfig).await
+}
+
+/// **A APPELER EN QUITTANT L'ECRAN.** Un flux oublie garde une connexion ouverte sur le
+/// cluster et continue de faire travailler l'interface pour un ecran que personne ne regarde.
+#[commande]
+async fn k8s_arreter_le_suivi(state: &AppState) -> Result<(), String> {
+    state.k8s.arreter();
+    Ok(())
 }
 
 #[commande]

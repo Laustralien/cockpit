@@ -8,6 +8,7 @@
   import type { Url, UrlHealth, Recording, ProjectCommand } from "../../types";
   import { onMount } from "svelte";
   import DockerTab from "./DockerTab.svelte";
+  import KubernetesTab from "./KubernetesTab.svelte";
   import WorkspaceTab from "./WorkspaceTab.svelte";
   import SettingsTab from "./SettingsTab.svelte";
   import PluginsTab from "./PluginsTab.svelte";
@@ -162,6 +163,7 @@
     { id: "terminal" as const, labelKey: "tab.terminal" as const, component: TerminalTab },
     { id: "files" as const, labelKey: "tab.files" as const, component: FilesTab },
     { id: "git" as const, labelKey: "tab.git" as const, component: GitTab },
+    { id: "kubernetes" as const, labelKey: "tab.kubernetes" as const, component: KubernetesTab },
     { id: "plugins" as const, labelKey: "tab.plugins" as const, component: PluginsTab, capacite: "plugins" as const },
     { id: "settings" as const, labelKey: "tab.settings" as const, component: SettingsTab },
   ];

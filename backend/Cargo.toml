@@ -64,6 +64,7 @@ unicode-width = "0.2"
 # le service est fait de threads bloquants, un par PTY, ce qui suffit pour une dizaine de
 # terminaux et evite d'embarquer un second runtime a cote de celui de Tauri.
 interprocess = { version = "2.4.3", default-features = false }
+serde_yaml_ng = "0.10.0"
 
 # Deux appels, tous deux indispensables au service de terminaux :
 # `geteuid` (refuser de parler a un socket qui n'est pas le notre) et `setsid` (detacher
