@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.76.0] — 2026-09-17
+
 ### Added
 
 - L'onglet Kubernetes se lit d'un coup d'œil : des filtres en haut (services, tâches planifiées,
