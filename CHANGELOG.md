@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.77.0] — 2026-09-17
+
 ### Added
 
 - L'onglet Kubernetes se divise en deux vues : **Pods**, et une nouvelle vue **Ressources** qui
