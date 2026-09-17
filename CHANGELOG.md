@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.75.0] — 2026-09-17
+
 ### Added
 
 - Nouvel onglet **Kubernetes** dans un projet : choisis un cluster et un namespace, et vois les
