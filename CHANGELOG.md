@@ -12,6 +12,22 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- L'onglet Kubernetes se lit d'un coup d'œil : des filtres en haut (services, tâches planifiées,
+  à voir, en marche, terminés) avec leur nombre, et les services d'une même famille rassemblés
+  sous une seule ligne. Chaque service montre ses pods en pastilles, sa version livrée et ses
+  jauges de processeur et de mémoire.
+- Les logs d'un pod s'ouvrent sur les dernières lignes et défilent en direct, avec une recherche
+  qui surligne. Remonter dans les logs coupe le suivi, et un bouton ramène en bas quand tu veux.
+
+### Fixed
+
+- Le namespace choisi pour un projet est retrouvé au retour, même lorsque le cluster ne permet
+  pas de dresser la liste de ses namespaces. Dans ce cas, le nom peut aussi être saisi à la main.
+- L'onglet ne reste plus bloqué quand un cluster refuse de lister ses namespaces : les pods
+  s'affichent quand même.
+
 ## [0.75.0] — 2026-09-17
 
 ### Added

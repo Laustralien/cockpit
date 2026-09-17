@@ -9,6 +9,7 @@
 pub mod ajout;
 pub mod client;
 pub mod kubeconfig;
+pub mod logs;
 pub mod modele;
 pub mod suivi;
 
@@ -70,14 +71,16 @@ pub fn client_de(contexte: &str) -> Result<(Client, Option<String>), String> {
 
 /// Les namespaces qu'on peut proposer dans le selecteur.
 ///
-/// **DEUX SOURCES, ET IL FAUT LES DEUX.** Mesure sur un cluster Rancher reel : la liste des
-/// namespaces rend UN seul nom (le droit de liste n'est pas donne a l'echelle du cluster) alors
-/// que l'utilisateur a des droits nommes sur 67 d'entre eux. Ne garder que la premiere source
-/// donnerait un selecteur a une ligne ; ne garder que la seconde perdrait les clusters ou le
-/// droit de liste EST donne. On fusionne donc, et un refus sur l'une n'est pas une erreur.
+/// **DEUX SOURCES, ET AUCUNE N'EST GARANTIE.** Sur un cluster Rancher, la liste des namespaces
+/// rend un seul nom, ou rien du tout : le droit de lister a l'echelle du cluster n'est pas
+/// donne. La revue des droits en rendait 67 le matin et 403 l'apres-midi, les roles ayant
+/// change entre-temps. On fusionne donc ce qu'on obtient, et **ne pas pouvoir enumerer n'est
+/// PAS une erreur** : on garde l'acces aux pods du namespace qu'on vise, que l'interface laisse
+/// saisir a la main. Refuser d'ouvrir l'ecran parce qu'on ne sait pas dresser la liste serait
+/// interdire ce qui marche au nom de ce qui manque.
 pub async fn namespaces(contexte: &str) -> Result<Vec<String>, String> {
-    let (client, _) = client_de(contexte)?;
-    let mut noms: Vec<String> = Vec::new();
+    let (client, du_contexte) = client_de(contexte)?;
+    let mut noms: Vec<String> = du_contexte.into_iter().collect();
 
     if let Ok(liste) = client.json("/api/v1/namespaces?limit=500").await {
         for n in liste.pointer("/items").and_then(Value::as_array).into_iter().flatten() {
@@ -87,10 +90,13 @@ pub async fn namespaces(contexte: &str) -> Result<Vec<String>, String> {
         }
     }
 
+    // La revue des droits se demande DANS un namespace : celui qu'on vise, jamais `default`,
+    // ou l'on n'a le plus souvent aucun droit — et la demande y est alors refusee.
+    let ou = noms.first().cloned().unwrap_or_else(|| "default".to_string());
     let regles = client
         .poster(
             "/apis/authorization.k8s.io/v1/selfsubjectrulesreviews",
-            serde_json::json!({ "spec": { "namespace": "default" } }),
+            serde_json::json!({ "spec": { "namespace": ou } }),
         )
         .await;
     if let Ok(regles) = regles {
@@ -117,9 +123,6 @@ pub async fn namespaces(contexte: &str) -> Result<Vec<String>, String> {
 
     noms.sort();
     noms.dedup();
-    if noms.is_empty() {
-        return Err("aucun namespace visible avec cette identite".into());
-    }
     Ok(noms)
 }
 

@@ -179,6 +179,26 @@ pub async fn appeler(
             ).await?))
         })
         .await,
+        "k8s_suivre_les_logs" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_suivre_les_logs(etat,
+                serde_json::from_value(prendre(a, "contexte", "contexte"))
+                    .map_err(|e| format!("argument contexte : {e}"))?,
+                serde_json::from_value(prendre(a, "namespace", "namespace"))
+                    .map_err(|e| format!("argument namespace : {e}"))?,
+                serde_json::from_value(prendre(a, "pod", "pod"))
+                    .map_err(|e| format!("argument pod : {e}"))?,
+                serde_json::from_value(prendre(a, "conteneur", "conteneur"))
+                    .map_err(|e| format!("argument conteneur : {e}"))?,
+                serde_json::from_value(prendre(a, "lignes", "lignes"))
+                    .map_err(|e| format!("argument lignes : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "k8s_arreter_les_logs" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_arreter_les_logs(etat, 
+            ).await?))
+        })
+        .await,
         "k8s_arreter_le_suivi" => typer(async {
             valeur(serde_json::to_value(crate::k8s_arreter_le_suivi(etat, 
             ).await?))

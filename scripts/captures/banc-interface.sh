@@ -41,6 +41,20 @@ chmod 700 "$TRAVAIL/run"
 # pointe le kubeconfig de la machine SANS le recopier dans le dossier du banc : un jeton
 # d'acces a une production n'a rien a faire dans /tmp. Vide, l'ecran dit qu'il n'a pas de
 # cluster, ce qui est aussi un cas a regarder.
+# **L'ECRAN KUBERNETES S'EPROUVE SUR UN FAUX CLUSTER, PAS SUR UNE PRODUCTION.** Un banc qui
+# depend d'un vrai cluster ne se rejoue pas : le jour ou celui-ci a refuse toutes les requetes,
+# kubectl compris, il n'y avait plus aucun moyen de regarder l'interface. `faux-cluster.py`
+# sert ce dont l'ecran a besoin et ecrit son propre kubeconfig. `COCKPIT_BANC_KUBECONFIG`
+# reste possible pour viser un vrai cluster a la main, mais rien n'en depend.
+if [ -n "${COCKPIT_BANC_K8S:-}" ] && [ -z "${COCKPIT_BANC_KUBECONFIG:-}" ]; then
+  python3 "$ICI/faux-cluster.py" 18443 "$TRAVAIL" > "$TRAVAIL/faux-cluster.out" 2>&1 &
+  for _ in $(seq 20); do
+    [ -s "$TRAVAIL/faux-cluster.out" ] && break
+    sleep 0.3
+  done
+  COCKPIT_BANC_KUBECONFIG="$(head -1 "$TRAVAIL/faux-cluster.out")"
+  echo "faux cluster : $COCKPIT_BANC_KUBECONFIG"
+fi
 export KUBECONFIG="${COCKPIT_BANC_KUBECONFIG:-}"
 export XDG_RUNTIME_DIR="$TRAVAIL/run" XDG_DATA_HOME="$TRAVAIL/home/.local/share"
 export XDG_CONFIG_HOME="$TRAVAIL/home/.config" XDG_CACHE_HOME="$TRAVAIL/home/.cache"
@@ -88,15 +102,50 @@ clic 105 296 3            # le projet « boutique-vinyles » (le premier de la l
 clic 727 127 10           # l onglet Terminal
 image 1-avant
 
+if [ -n "${COCKPIT_BANC_NS:-}" ]; then
+  # **LE NAMESPACE CHOISI DOIT REVENIR.** Signale par le mainteneur : il choisit celui de son
+  # projet, part, revient, et retrouve celui du contexte. On pose le choix EN BASE, comme s'il
+  # datait de la session precedente : c'est la RELECTURE qu'on eprouve, pas le clic.
+  python3 - "$COCKPIT_DB" <<'SQL'
+import json, sqlite3, sys
+c = sqlite3.connect(sys.argv[1])
+c.execute("insert or replace into settings(key, value) values(?, ?)",
+          ("k8s.cible.api-facturation",
+           json.dumps({"contexte": "cluster-prod-02",
+                       "namespace": "core-akamai-logs-ccmbg-com-main"})))
+c.commit()
+print("reglage pose")
+SQL
+  clic 941 127 15         # l onglet Kubernetes
+  image ns-1-relecture
+  clic 862 127 4          # on part sur Git
+  clic 941 127 12         # et on revient
+  image ns-2-retour
+  echo "images namespace : $TRAVAIL/img"
+  exit 0
+fi
+
+if [ -n "${COCKPIT_BANC_MAJ:-}" ]; then
+  # La cloche des mises a jour : elle doit voir la derniere Release publiee.
+  clic 1063 55 3
+  image maj-1-cloche
+  clic 1342 101 15        # « Verifier »
+  image maj-2-verifie
+  echo "images mise a jour : $TRAVAIL/img"
+  exit 0
+fi
+
 if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   clic 941 127 14         # l onglet Kubernetes (a droite de Git)
   image k8s-1-liste
   clic 1000 228 1         # le champ de recherche
-  python3 "$OUTILS" taper "auth" 2>/dev/null || true
+  python3 "$OUTILS" taper "web" 2>/dev/null || true
   sleep 3
   image k8s-2-recherche
-  clic 500 340 5          # le premier pod trouve : ouvre son detail
+  clic 500 347 6          # le pod trouve : ouvre son detail et ses logs
   image k8s-3-detail
+  sleep 6                 # de quoi voir arriver des lignes en direct
+  image k8s-4-logs
   clic 1351 311 1         # fermer le detail
   clic 419 228 2          # le selecteur de cluster
   image k8s-4-clusters

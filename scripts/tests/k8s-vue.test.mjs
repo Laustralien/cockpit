@@ -8,7 +8,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  filtrer, grouper, compter, formaterCpu, formaterRam, age, grouperLesNamespaces, appliquer, appliquerLesMesures,
+  filtrer, grouper, compter, formaterCpu, formaterRam, age, grouperLesNamespaces, appliquer, appliquerLesMesures, cibleDeDemarrage, enFamilles, comptesDesFiltres, appliquerLeFiltre, peutAllerA,
 } from "../../src/lib/k8s/vue.ts";
 
 const T = Date.parse("2026-09-17T12:00:00Z");
@@ -185,4 +185,104 @@ test("les mesures se posent sur les pods connus et laissent les autres tranquill
   const apres = appliquerLesMesures(pods, [{ nom: "a", cpu: 40, ram: 100 }]);
   assert.equal(apres[0].cpu, 40);
   assert.equal(apres[1].cpu, null, "un pod sans mesure n'affiche pas zero");
+});
+
+// --- Le namespace d'ouverture ------------------------------------------------------------
+
+test("un namespace retenu s'utilise meme s'il n'est pas dans la liste", () => {
+  // La liste vient des DROITS et elle est incomplete par nature : sur un cluster Rancher,
+  // l'appel qui liste les namespaces n'en rend qu'un. Retomber sur un defaut ouvrait le
+  // mauvais namespace ET effacait le choix de l'utilisateur en l'enregistrant.
+  assert.equal(cibleDeDemarrage(["a", "b"], "discover-static", "a"), "discover-static");
+  assert.equal(cibleDeDemarrage([], "discover-static", null), "discover-static");
+});
+
+test("sans choix retenu, on prend celui du contexte, puis le premier", () => {
+  assert.equal(cibleDeDemarrage(["a", "b"], null, "b"), "b");
+  assert.equal(cibleDeDemarrage(["a", "b"], null, null), "a");
+  assert.equal(cibleDeDemarrage([], null, null), "");
+});
+
+// --- Les familles de services ------------------------------------------------------------
+
+function groupe(nom, sorte = "Deployment", pods = 1) {
+  return {
+    nom, sorte,
+    pods: Array.from({ length: pods }, (_, i) => pod({ nom: `${nom}-${i}`, groupe: nom, sorte })),
+    prets: pods, attendus: pods, versions: ["v1"], cpu: 10, ram: 100,
+    ennuyeux: false, termine: false,
+  };
+}
+
+test("les services qui partagent un prefixe se rangent ensemble", () => {
+  const familles = enFamilles([
+    groupe("post-create-ccmdffr-consumer"),
+    groupe("post-create-ccmfigaro-consumer"),
+    groupe("post-create-ccmfr-consumer"),
+    groupe("web"),
+  ]);
+  assert.deepEqual(familles.map((f) => f.nom), ["post-create-*", ""]);
+  assert.equal(familles[0].groupes.length, 3);
+  assert.equal(familles[0].pods, 3);
+  assert.equal(familles[0].cpu, 30, "les mesures d'une famille s'additionnent");
+  assert.equal(familles[1].groupes[0].nom, "web", "un service seul reste seul");
+});
+
+test("un prefixe partage par un SEUL service ne fabrique pas une famille", () => {
+  const familles = enFamilles([groupe("url-change-consumer"), groupe("web")]);
+  assert.deepEqual(familles.map((f) => f.nom), ["", ""], "rien a regrouper");
+});
+
+test("deux sortes ne se melangent jamais dans une famille", () => {
+  const familles = enFamilles([
+    groupe("delete-old-topics-ccmfr", "CronJob"),
+    groupe("delete-old-topics-ccmdffr", "CronJob"),
+    groupe("delete-old-topics-consumer", "Deployment"),
+  ]);
+  assert.equal(familles.length, 2);
+  assert.equal(familles.find((f) => f.sorte === "CronJob").groupes.length, 2);
+  assert.equal(familles.find((f) => f.sorte === "Deployment").nom, "", "seul de sa sorte");
+});
+
+test("aucun service ne se perd au passage en familles", () => {
+  const groupes = [
+    groupe("a-b-un"), groupe("a-b-deux"), groupe("seul"), groupe("c-d-un"), groupe("c-d-deux"),
+  ];
+  const familles = enFamilles(groupes);
+  const total = familles.reduce((n, f) => n + f.groupes.length, 0);
+  assert.equal(total, groupes.length);
+});
+
+// --- Les filtres du haut -----------------------------------------------------------------
+
+test("les filtres comptent ce qu'ils montrent", () => {
+  const pods = [
+    pod({ nom: "w", sorte: "Deployment" }),
+    pod({ nom: "c", sorte: "CronJob", etat: "Succeeded" }),
+    pod({ nom: "k", sorte: "Deployment", etat: "CrashLoopBackOff", ennuyeux: true }),
+  ];
+  const c = comptesDesFiltres(pods);
+  assert.equal(c.tout, 3);
+  assert.equal(c.deployments, 2);
+  assert.equal(c.cronjobs, 1);
+  assert.equal(c.avoir, 1);
+  assert.equal(c.marche, 1);
+  assert.equal(c.termines, 1);
+  assert.equal(appliquerLeFiltre(pods, "cronjobs").length, 1);
+  assert.equal(appliquerLeFiltre(pods, "avoir")[0].nom, "k");
+  assert.equal(appliquerLeFiltre(pods, "tout").length, 3, "« tout » ne retire jamais rien");
+});
+
+test("un namespace absent de la liste reste atteignable a la main", () => {
+  // La liste vient des droits et peut etre vide alors que l'acces aux pods marche.
+  assert.equal(peutAllerA("discover-static", ["ccm-main"]), true);
+  assert.equal(peutAllerA("ccm-main", ["ccm-main"]), false, "deja dans la liste : le bouton n'a rien a dire");
+  assert.equal(peutAllerA("  ", []), false);
+});
+
+test("une saisie qui n'est pas un nom de namespace est refusee", () => {
+  assert.equal(peutAllerA("../secrets", []), false);
+  assert.equal(peutAllerA("MAJUSCULES", []), false);
+  assert.equal(peutAllerA("-tiret", []), false);
+  assert.equal(peutAllerA("a".repeat(254), []), false);
 });

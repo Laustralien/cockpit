@@ -49,6 +49,8 @@ pub struct AppState {
     pub emetteur: crate::evenements::Emetteurs,
     /// Le flux des pods du cluster regarde. Un seul a la fois, arrete des qu'on quitte l'ecran.
     pub k8s: k8s::suivi::Suivi,
+    /// Le flux des logs du pod ouvert. Un seul : une seule vue de logs a la fois.
+    pub k8s_logs: k8s::logs::SuiviDesLogs,
 }
 
 /// Sert le pont si `--pont` est demande, et dit si ce processus lui appartient.
@@ -125,6 +127,7 @@ pub fn construire_etat(
         lsp: Arc::new(lsp::LspState::default()),
         emetteur,
         k8s: k8s::suivi::Suivi::default(),
+        k8s_logs: k8s::logs::SuiviDesLogs::default(),
     }
 }
 
@@ -347,6 +350,32 @@ async fn k8s_suivre(
 #[commande]
 async fn k8s_ajouter_un_cluster(kubeconfig: String) -> Result<k8s::ajout::Ajout, String> {
     k8s::ajouter_un_cluster(kubeconfig).await
+}
+
+/// Ouvre les logs d'un conteneur et les SUIT.
+///
+/// Le meme appel rend les dernieres lignes puis tout ce qui s'ecrit ensuite : la vue s'ouvre
+/// donc sur la fin des logs, ce qu'on vient y chercher.
+#[commande]
+async fn k8s_suivre_les_logs(
+    state: &AppState,
+    contexte: String,
+    namespace: String,
+    pod: String,
+    conteneur: Option<String>,
+    lignes: u32,
+) -> Result<(), String> {
+    state
+        .k8s_logs
+        .demarrer(state.emetteur.clone(), contexte, namespace, pod, conteneur, lignes)
+}
+
+/// **A APPELER EN FERMANT LA VUE DES LOGS.** Un flux oublie garde une connexion ouverte sur le
+/// cluster et continue de faire travailler l'interface pour ce que personne ne lit.
+#[commande]
+async fn k8s_arreter_les_logs(state: &AppState) -> Result<(), String> {
+    state.k8s_logs.arreter();
+    Ok(())
 }
 
 /// **A APPELER EN QUITTANT L'ECRAN.** Un flux oublie garde une connexion ouverte sur le

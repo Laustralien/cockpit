@@ -18,6 +18,8 @@
  * d'erreur lisible. Un demarrage muet est le pire des etats — ici il a coute une
  * reconstruction complete du paquet pour etre nomme.
  */
+const { journaliser } = require('./journal')
+
 let cache = null
 function updater() {
   if (cache) return cache
@@ -83,6 +85,7 @@ async function traiterUneCommandeDeMiseAJour(commande, arguments_, pousser) {
         // passer une situation NORMALE pour une erreur.
         // Tout autre echec (reseau, jeton, release corrompue) remonte, lui : le magasin de
         // l'interface sait les nommer.
+        journaliser('coquille.maj', `verification en echec : ${e?.code ?? ''} ${e?.message ?? e}`)
         if (e?.code === 'ERR_UPDATER_CHANNEL_FILE_NOT_FOUND') {
           trouvee = null
           return { traite: true, valeur: null }
@@ -90,6 +93,17 @@ async function traiterUneCommandeDeMiseAJour(commande, arguments_, pousser) {
         throw e
       }
       const info = resultat?.updateInfo
+      // **UNE VERIFICATION QUI NE TROUVE RIEN DOIT LAISSER UNE TRACE.** « Rien de neuf »
+      // couvre trois situations qui ne se ressemblent pas : la Release est bien la derniere,
+      // elle n'est pas encore publiee (le workflow la termine par Windows, plusieurs minutes
+      // apres l'AppImage), ou le manifeste est introuvable. Sans cette ligne, il n'y a aucun
+      // moyen de savoir laquelle, et on cherche une panne dans l'application alors que la
+      // Release n'existait pas encore au moment du clic.
+      journaliser(
+        'coquille.maj',
+        `verification : courante ${updater().currentVersion.version}, `
+          + `publiee ${info?.version ?? 'aucune'}`
+      )
       // Pas de version plus recente : `null`, et c'est ce que l'interface teste.
       if (!info || info.version === updater().currentVersion.version) {
         trouvee = null

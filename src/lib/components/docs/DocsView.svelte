@@ -219,6 +219,12 @@
             <span class="d-spring"></span>
             <span class="d-count">{$trad("docs.k8s.demoDirect")}</span>
           </div>
+          <div class="d-tabs">
+            <span class="d-tab active">{$trad("k8s.filtreTout")}</span>
+            <span class="d-tab">{$trad("k8s.filtreServices")}</span>
+            <span class="d-tab">{$trad("k8s.filtreTaches")}</span>
+            <span class="d-tab">{$trad("k8s.filtreAvoir")}</span>
+          </div>
           <div class="d-row"><strong>{$trad("docs.k8s.demoService1")}</strong> <span class="d-stat">0/3</span> <span class="d-badge mod">{$trad("docs.k8s.demoEtat")}</span></div>
           <div class="d-row"><strong>{$trad("docs.k8s.demoService2")}</strong> <span class="d-stat">7/7</span> <span class="d-count">{$trad("docs.k8s.demoVersion")}</span> <span class="d-stat">{$trad("docs.k8s.demoMesures")}</span></div>
           <div class="d-row"><strong>{$trad("docs.k8s.demoService3")}</strong> <span class="d-stat">0/258</span> <span class="d-stat">{$trad("docs.k8s.demoFinis")}</span></div>
