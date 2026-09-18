@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.80.0] — 2026-09-18
+
 ### Added
 
 - Les heures se lisent sous les courbes de l'onglet Ressources, sur des repères ronds (14:15,
