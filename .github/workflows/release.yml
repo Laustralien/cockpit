@@ -212,18 +212,63 @@ jobs:
         working-directory: coquille
         run: npm ci
 
-      # Empaquete et publie sur la MEME release que les autres plateformes. En BROUILLON :
-      # les trois jobs y deposent leurs artefacts, et le premier a finir exposerait sinon une
-      # release incomplete. Le job `publier` leve le brouillon quand Linux est bien la.
-      - name: Empaqueter et publier
+      # **ON CONSTRUIT ICI, ON TELEVERSE A L'ETAPE SUIVANTE.** electron-builder sait publier
+      # lui-meme, mais son client HTTP n'a AUCUN reessai : un fichier de 110 Mo qui depasse le
+      # delai fait echouer tout le job, et la release reste incomplete. Constate deux fois de
+      # suite (v0.76.0 cote macOS, v0.77.0 cote Linux) avec le meme « Request timed out ».
+      - name: Empaqueter
         working-directory: coquille
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Pas de compte developpeur Apple : on ne signe ni ne notarise, comme la version
           # precedente. Sans cette ligne, electron-builder cherche une identite et echoue.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         shell: bash
-        run: npx electron-builder --publish always
+        run: npx electron-builder --publish never
+
+      # Depose les artefacts sur la MEME release que les autres plateformes, en BROUILLON :
+      # le premier job a finir exposerait sinon une release incomplete. Le job `publier` leve
+      # le brouillon quand Linux est bien la.
+      - name: Deposer les artefacts sur le brouillon
+        working-directory: coquille
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # **LES MANIFESTES PARTENT EN DERNIER.** `latest*.yml` designe un binaire par son
+          # empreinte : publie avant lui, il annonce une mise a jour qu'on ne peut pas encore
+          # telecharger.
+          mapfile -t BINAIRES < <(find paquet -maxdepth 1 -type f \
+            \( -name '*.AppImage' -o -name '*.exe' -o -name '*.dmg' -o -name '*.zip' \
+               -o -name '*.blockmap' \) | sort)
+          mapfile -t MANIFESTES < <(find paquet -maxdepth 1 -type f -name 'latest*.yml' | sort)
+
+          if [ "${#BINAIRES[@]}" -eq 0 ]; then
+            echo "::error::aucun binaire construit — rien a deposer."
+            exit 1
+          fi
+
+          # Trois tentatives espacees : un televersement qui depasse le delai reussit souvent
+          # au coup suivant, et rater la release entiere pour ca coute une version.
+          televerser() {
+            local fichier="$1"
+            for essai in 1 2 3; do
+              if gh release upload "$TAG" "$fichier" --clobber; then
+                return 0
+              fi
+              echo "::warning::televersement de $(basename "$fichier") en echec (essai $essai/3)"
+              sleep $((essai * 20))
+            done
+            echo "::error::$(basename "$fichier") n'a pas pu etre depose apres trois tentatives."
+            return 1
+          }
+
+          for fichier in "${BINAIRES[@]}" "${MANIFESTES[@]}"; do
+            echo "depot de $(basename "$fichier")"
+            televerser "$fichier"
+          done
 
   # Leve le brouillon UNE FOIS la version Linux verifiee. Separe du build pour s'executer
   # meme si le job macOS a echoue : un echec la-bas ne doit pas priver les utilisateurs
