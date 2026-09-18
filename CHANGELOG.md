@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.77.1] — 2026-09-18
+
 ### Fixed
 
 - La vue Ressources ne propose plus une période qu'elle ne peut pas remplir : elle n'offre que
