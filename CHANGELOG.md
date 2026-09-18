@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.78.0] — 2026-09-18
+
 ### Added
 
 - Un nouveau menu **Paramètres → Kubernetes** : tu y déclares les namespaces que Cockpit doit
