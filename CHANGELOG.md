@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.78.2] — 2026-09-18
+
 ### Fixed
 
 - La vue Ressources occupe toute la largeur de l'écran : elle s'arrêtait aux deux tiers et
