@@ -240,10 +240,17 @@ jobs:
           # **LES MANIFESTES PARTENT EN DERNIER.** `latest*.yml` designe un binaire par son
           # empreinte : publie avant lui, il annonce une mise a jour qu'on ne peut pas encore
           # telecharger.
-          mapfile -t BINAIRES < <(find paquet -maxdepth 1 -type f \
-            \( -name '*.AppImage' -o -name '*.exe' -o -name '*.dmg' -o -name '*.zip' \
-               -o -name '*.blockmap' \) | sort)
-          mapfile -t MANIFESTES < <(find paquet -maxdepth 1 -type f -name 'latest*.yml' | sort)
+          # **PAS DE `mapfile` ICI : macOS EST EN BASH 3.2** et ne le connait pas. Le job y
+          # est tombe en « command not found » apres avoir tout construit, donc sans deposer
+          # un seul fichier. Une boucle `read` marche partout.
+          BINAIRES=()
+          while IFS= read -r fichier; do BINAIRES+=("$fichier"); done < <(
+            find paquet -maxdepth 1 -type f \
+              \( -name '*.AppImage' -o -name '*.exe' -o -name '*.dmg' -o -name '*.zip' \
+                 -o -name '*.blockmap' \) | sort)
+          MANIFESTES=()
+          while IFS= read -r fichier; do MANIFESTES+=("$fichier"); done < <(
+            find paquet -maxdepth 1 -type f -name 'latest*.yml' | sort)
 
           if [ "${#BINAIRES[@]}" -eq 0 ]; then
             echo "::error::aucun binaire construit — rien a deposer."
