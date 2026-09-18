@@ -357,7 +357,7 @@ jobs:
           # l'ajouter ici, sinon son absence redevient silencieuse.
           export NOMS TAG
           MANIFESTES="latest-linux.yml latest-mac.yml latest.yml" python3 - <<'EOF'
-          import json, os, subprocess, sys, urllib.request
+          import os, subprocess, sys
           noms = set(os.environ["NOMS"].split())
           attendus = os.environ["MANIFESTES"].split()
           manquants = [m for m in attendus if m not in noms]
@@ -372,11 +372,20 @@ jobs:
           # v0.77.1 — le manifeste Windows nommait « Cockpit-Setup-0.77.1.exe » quand l'asset
           # depose s'appelait « Cockpit.Setup.0.77.1.exe », GitHub ayant remplace les espaces
           # du nom de fichier par des points.
+          # **CE JOB NE CLONE PAS LE DEPOT** : `gh` ne peut pas deviner sur lequel travailler,
+          # d'ou `--repo`. Sans lui, la commande echoue et on ne sait pas pourquoi — son
+          # stderr est donc repris tel quel dans le message.
           rate = []
           for manifeste in attendus:
-              texte = subprocess.run(
-                  ["gh", "release", "download", os.environ["TAG"], "--pattern", manifeste, "-O", "-"],
-                  capture_output=True, text=True, check=True).stdout
+              lu = subprocess.run(
+                  ["gh", "release", "download", os.environ["TAG"],
+                   "--repo", os.environ["GITHUB_REPOSITORY"],
+                   "--pattern", manifeste, "--output", "-"],
+                  capture_output=True, text=True)
+              if lu.returncode != 0:
+                  print(f"::error::{manifeste} illisible : {lu.stderr.strip()[:200]}")
+                  sys.exit(1)
+              texte = lu.stdout
               for ligne in texte.splitlines():
                   ligne = ligne.strip()
                   if ligne.startswith("- url:") or ligne.startswith("url:"):
