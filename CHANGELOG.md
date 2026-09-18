@@ -12,6 +12,28 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Les heures se lisent sous les courbes de l'onglet Ressources, sur des repères ronds (14:15,
+  14:30…). Il fallait jusqu'ici promener la souris point par point pour savoir quand une valeur
+  était montée.
+
+### Changed
+
+- Les deux réglages de rythme de l'onglet Ressources ne s'appellent plus tous les deux
+  « Rafraîchir » : **Mesure en direct** dit à quelle cadence l'écran interroge le cluster pendant
+  que tu le regardes, **Une mesure toutes les** à quelle cadence l'enregistrement écrit, même
+  quand tu es ailleurs. Chacun porte une bulle d'aide qui le dit.
+- Le bandeau de l'onglet Ressources annonce l'état en premier (« Enregistrement en cours »,
+  « Enregistrement désactivé ») avant de l'expliquer, et ses contrôles restent groupés.
+- Paramètres → Kubernetes emploie les mêmes mots que l'onglet Ressources : on y enregistre un
+  namespace, on ne le « surveille » plus.
+
+### Fixed
+
+- Le texte ne colle plus au bord des cartes : Paramètres → Kubernetes affichait son titre, son
+  paragraphe et ses lignes contre le trait arrondi.
+
 ## [0.79.0] — 2026-09-18
 
 ### Added

@@ -248,9 +248,10 @@
             <span class="d-tab active">{$trad("k8s.ongletRessources")}</span>
             <span class="d-spring"></span>
             <span class="d-btn small">{$trad("k8s.fenetre")} {$trad("docs.k8s.demoPeriode")}</span>
-            <span class="d-btn small">{$trad("k8s.rafraichissement")} {$trad("docs.k8s.demoRythme")}</span>
+            <span class="d-btn small">{$trad("k8s.mesureEnDirect")} {$trad("docs.k8s.demoRythme")}</span>
           </div>
           <div class="d-row"><strong>{$trad("k8s.cpu")}</strong> <span class="d-stat">{$trad("docs.k8s.demoCourbe")}</span></div>
+          <div class="d-row"><span class="d-stat">{$trad("docs.k8s.demoHeures")}</span></div>
           <div class="d-row">{$trad("docs.k8s.demoPod1")} <span class="d-stat">268m</span></div>
           <div class="d-row">{$trad("docs.k8s.demoPod2")} <span class="d-stat">143m</span></div>
         </div>

@@ -188,3 +188,63 @@ test("la periode choisie figure toujours parmi celles proposees", () => {
   const avecLaChoisie = [...new Set([...offertes, 900])].sort((a, b) => a - b);
   assert.ok(avecLaChoisie.includes(900), "mais elle doit rester dans la liste affichee");
 });
+
+// ── Les heures sous la courbe ────────────────────────────────────────────────────────────────
+
+test("les reperes tombent sur des instants ronds", async () => {
+  const { graduationsDeTemps } = await import("../../src/lib/k8s/mesures.ts");
+  // Une fenetre d'une heure qui commence a 14:07:23 : on ne veut pas lire « 14:07 », « 14:16 »,
+  // « 14:25 ». Le pas choisi doit diviser l'heure, et chaque repere tomber dessus.
+  const debut = new Date(2026, 8, 18, 14, 7, 23).getTime();
+  const reperes = graduationsDeTemps(debut, debut + 3_600_000, 640);
+  assert.ok(reperes.length >= 3, `trop peu de reperes : ${reperes.length}`);
+  const pasMinutes = (reperes[1].t - reperes[0].t) / 60_000;
+  assert.equal(60 % pasMinutes, 0, `le pas (${pasMinutes} min) ne divise pas l'heure`);
+  for (const r of reperes) {
+    const d = new Date(r.t);
+    assert.equal(d.getSeconds(), 0, `${r.libelle} ne tombe pas sur une minute ronde`);
+    assert.equal(d.getMinutes() % pasMinutes, 0, `${r.libelle} ne tombe pas sur le pas`);
+  }
+  assert.match(reperes[0].libelle, /^\d{2}:\d{2}$/, "pas de secondes toujours nulles sur une heure");
+});
+
+test("le pas s'adapte a la largeur, jamais de libelles qui se touchent", async () => {
+  const { graduationsDeTemps } = await import("../../src/lib/k8s/mesures.ts");
+  const debut = new Date(2026, 8, 18, 14, 0, 0).getTime();
+  const large = graduationsDeTemps(debut, debut + 3_600_000, 1200);
+  const etroit = graduationsDeTemps(debut, debut + 3_600_000, 240);
+  assert.ok(large.length > etroit.length, "un cadre large porte plus de reperes");
+  for (const liste of [large, etroit]) {
+    for (let i = 1; i < liste.length; i++) {
+      assert.ok(liste[i].x - liste[i - 1].x >= 80, `reperes trop serres : ${liste[i].libelle}`);
+    }
+  }
+});
+
+test("une fenetre courte montre les secondes", async () => {
+  const { graduationsDeTemps } = await import("../../src/lib/k8s/mesures.ts");
+  const debut = new Date(2026, 8, 18, 14, 0, 0).getTime();
+  const reperes = graduationsDeTemps(debut, debut + 120_000, 900);
+  assert.match(reperes[0].libelle, /^\d{2}:\d{2}:\d{2}$/);
+});
+
+test("chaque repere est dans le cadre, a sa place", async () => {
+  const { graduationsDeTemps } = await import("../../src/lib/k8s/mesures.ts");
+  const debut = new Date(2026, 8, 18, 14, 0, 0).getTime();
+  const largeur = 600;
+  const reperes = graduationsDeTemps(debut, debut + 3_600_000, largeur);
+  for (const r of reperes) {
+    assert.ok(r.x >= 0 && r.x <= largeur, `${r.libelle} sort du cadre : ${r.x}`);
+  }
+  // Le repere de 14:30 est a la moitie du cadre, parce que l'abscisse suit le TEMPS.
+  const demi = reperes.find((r) => r.libelle.endsWith(":30"));
+  assert.ok(demi);
+  assert.equal(Math.round(demi.x), largeur / 2);
+});
+
+test("un cadre pas encore mesure ne rend rien", async () => {
+  const { graduationsDeTemps } = await import("../../src/lib/k8s/mesures.ts");
+  // Au premier rendu, la largeur vaut zero : sans cette garde, la boucle tourne sans fin.
+  assert.deepEqual(graduationsDeTemps(1000, 2000, 0), []);
+  assert.deepEqual(graduationsDeTemps(2000, 2000, 500), []);
+});

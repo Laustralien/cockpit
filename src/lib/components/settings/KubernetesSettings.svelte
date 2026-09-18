@@ -115,15 +115,21 @@
   }
 </script>
 
-<div class="k8s-reglages">
-  <h3>{$trad("settings.k8s.titre")}</h3>
-  <p class="intro">{$trad("settings.k8s.intro")}</p>
+<div class="k8s-reglages stack">
+  <section class="card">
+    <div class="card-head">
+      <h3>{$trad("settings.k8s.titre")}</h3>
+      <p>{$trad("settings.k8s.intro")}</p>
+    </div>
 
-  {#if panne}
-    <p class="erreur">{panne}</p>
-  {:else if chargement}
-    <p class="doux">{$trad("k8s.chargement")}</p>
-  {:else}
+    {#if panne}
+      <p class="erreur">{panne}</p>
+    {:else if chargement}
+      <p class="doux">{$trad("k8s.chargement")}</p>
+    {/if}
+  </section>
+
+  {#if !panne && !chargement}
     <section class="card">
       <div class="entete">
         <span class="titre">{$trad("settings.k8s.surveilles")}</span>
@@ -148,8 +154,8 @@
           </label>
           <span class="cluster">{cible.contexte}</span>
           <span class="espace"></span>
-          <label class="inline petit-libelle">
-            {$trad("k8s.rafraichissement")}
+          <label class="inline petit-libelle" title={$trad("k8s.uneMesureToutesLesAide")}>
+            {$trad("k8s.uneMesureToutesLes")}
             <select
               class="input petit"
               value={cible.periode}
@@ -182,8 +188,8 @@
                 {/each}
               </select>
             </label>
-            <label class="inline petit-libelle">
-              {$trad("k8s.rafraichissement")}
+            <label class="inline petit-libelle" title={$trad("k8s.uneMesureToutesLesAide")}>
+              {$trad("k8s.uneMesureToutesLes")}
               <select class="input petit" bind:value={periodeChoisie}>
                 {#each RYTHMES as r (r)}
                   <option value={r}>{dureeCourte(r)}</option>
@@ -238,9 +244,8 @@
 </div>
 
 <style>
-  .k8s-reglages { display: flex; flex-direction: column; gap: 0.9rem; }
-  h3 { margin: 0; font-size: 1rem; }
-  .intro { margin: 0; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; }
+  /* La mise en page et les marges viennent de `.stack` et `.card` (components.css) : les
+     redefinir ici les ferait diverger du reste des reglages. */
   .doux { margin: 0; color: var(--text-muted); font-size: 0.8rem; line-height: 1.5; }
   .erreur { color: var(--error); font-size: 0.85rem; }
 

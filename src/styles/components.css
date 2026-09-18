@@ -52,11 +52,17 @@
 .icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* --- Surfaces --- */
+/* **UNE SURFACE QUI PORTE DU TEXTE PORTE SA MARGE INTERIEURE.** Le padding a longtemps ete
+   laisse a la charge de chaque composant : une carte posee hors d'un `.stack` n'en avait donc
+   aucun, et son texte touchait le bord arrondi. Signale sur l'ecran Kubernetes des reglages,
+   ou le titre, le paragraphe et les lignes collaient tous les trois au trait. Une carte sans
+   marge est un defaut, pas un choix : elle est ici, pas chez l'appelant. */
 .card {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+  padding: 1.35rem 1.4rem;
 }
 
 /* --- Inputs --- */
@@ -239,7 +245,8 @@ html.has-wallpaper:root input[type="color"] {
    c'est discret, sur une image de fond ce sont des trous en plein milieu de l'interface —
    un ecran de parametres devient illisible. Un panneau continu n'a aucun interstice.
 
-   Le padding reste a la charge du composant : `.card` ne le definit pas. */
+   Le padding vient de `.card` ; il est REDEFINI ici pour que la valeur reste la meme quelle
+   que soit la pile, y compris pour une section venue d'un composant enfant. */
 .stack {
   display: flex;
   flex-direction: column;

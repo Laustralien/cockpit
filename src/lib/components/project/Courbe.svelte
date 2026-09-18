@@ -14,7 +14,8 @@
    * mesure donc la largeur disponible et on dessine dedans.
    */
   import {
-    aire, borneHaute, graduations, heureDe, leplusProche, ligne, points, type Point,
+    aire, borneHaute, graduations, graduationsDeTemps, heureDe, leplusProche, ligne, points,
+    type Point,
   } from "../../k8s/mesures";
 
   interface Props {
@@ -43,6 +44,9 @@
   const dessous = $derived(aire(coords, cadre));
   const derniere = $derived(serie.length > 0 ? serie[serie.length - 1][valeur] : null);
   const identifiant = `courbe-${(compteur += 1)}`;
+  /// **LES HEURES SE LISENT SOUS LA COURBE, SANS PROMENER LA SOURIS.** « Ca a grimpe vers
+  /// 14 h 30 » est ce qu'on vient chercher ; l'infobulle ne le donnait qu'un point a la fois.
+  const heures = $derived(graduationsDeTemps(depuis, jusqua, cadre.largeur));
 
   function surLaSouris(e: MouseEvent) {
     const boite = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -81,6 +85,10 @@
         <line class="grille" x1="0" y1={y} x2={cadre.largeur} y2={y} />
       {/each}
 
+      {#each heures as h (h.t)}
+        <line class="grille verticale" x1={h.x} y1="0" x2={h.x} y2={hauteur} />
+      {/each}
+
       {#if dessous}
         <path class="aire" d={dessous} fill="url(#{identifiant})" />
         <path class="trait" d={trace} />
@@ -114,6 +122,16 @@
       <p class="attente">—</p>
     {/if}
   </div>
+
+  <!-- Sous le cadre, pas dedans : pose sur la courbe, un libelle devient illisible des que le
+       trace passe derriere lui. -->
+  <div class="heures" style="height:{serie.length === 0 ? 0 : 14}px">
+    {#each heures as h (h.t)}
+      <!-- Le dernier repere tombe souvent sur le bord droit : centre, il serait coupe en deux. -->
+      {@const bord = h.x > cadre.largeur - 26 ? "droite" : h.x < 26 ? "gauche" : ""}
+      <span class={bord} style="left:{h.x}px">{h.libelle}</span>
+    {/each}
+  </div>
 </div>
 
 <style>
@@ -137,6 +155,8 @@
   svg { display: block; }
 
   .grille { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.7; }
+  /* Plus discrete que l'horizontale : elle sert de repere, elle ne quadrille pas le fond. */
+  .grille.verticale { opacity: 0.4; }
   .aire { stroke: none; }
   .trait { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
   .repere { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 3; }
@@ -163,6 +183,24 @@
     font-variant-numeric: tabular-nums;
     pointer-events: none;
   }
+
+  /* **UNE HEURE NE SE COUPE PAS EN DEUX AU BORD DU CADRE.** Le libelle est centre sur son
+     repere, sauf aux extremites ou il se cale a l'interieur. */
+  .heures {
+    position: relative;
+    color: var(--text-muted);
+    font-size: 0.64rem;
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+  }
+  .heures span {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .heures span.gauche { transform: none; }
+  .heures span.droite { transform: translateX(-100%); }
 
   .infobulle {
     position: absolute;

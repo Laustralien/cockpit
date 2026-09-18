@@ -195,6 +195,10 @@ if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   clic 600 620 4          # le premier pod du classement : on le suit de pres
   image k8s-11-focus
   # Les reglages : c'est la qu'on declare ce que Cockpit suit en continu.
+  # On enregistre le namespace affiche AVANT d'aller aux reglages : sans cible, l'ecran des
+  # reglages ne montre ni le rythme ni le cout par jour, donc rien de ce qu'on veut relire.
+  clic 1264 368 4         # « Enregistrer ce namespace », a droite du bandeau
+  image k8s-11b-enregistre
   clic 1275 55 3          # l engrenage
   clic 380 300 3          # l entree « Kubernetes » du menu
   image k8s-12-reglages

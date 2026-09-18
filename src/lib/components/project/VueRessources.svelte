@@ -86,7 +86,7 @@
 
     <span class="espace"></span>
 
-    <label class="choix">
+    <label class="choix" title={$trad("k8s.fenetreAide")}>
       {$trad("k8s.fenetre")}
       <select class="input petit" value={fenetreSecondes} onchange={(e) => surFenetre(Number(e.currentTarget.value))}>
         {#each offertes as f (f)}
@@ -96,8 +96,12 @@
       <span class="couvert">{$trad("k8s.depuisOuvertureN", { duree: dureeCourte(couvert) })}</span>
     </label>
 
-    <label class="choix">
-      {$trad("k8s.rafraichissement")}
+    <!-- **DEUX REGLAGES DE RYTHME A L'ECRAN, DONC DEUX NOMS DIFFERENTS.** Les deux s'appelaient
+         « Rafraîchir » : l'un dit a quelle cadence CET ECRAN interroge le cluster, l'autre a
+         quelle cadence l'enregistrement de fond ecrit en base. Le mainteneur ne savait pas
+         lequel faisait quoi, et les valeurs affichees differaient. -->
+    <label class="choix" title={$trad("k8s.mesureEnDirectAide")}>
+      {$trad("k8s.mesureEnDirect")}
       <select class="input petit" value={rafraichissement} onchange={(e) => surRafraichissement(Number(e.currentTarget.value))}>
         {#each RAFRAICHISSEMENTS as r (r)}
           <option value={r}>{dureeCourte(r)}</option>
@@ -113,39 +117,49 @@
   {#if surveillee}
     <div class="bandeau actif">
       <span class="pastille"></span>
-      <span>{$trad("k8s.surveilleN", { duree: dureeCourte(retentionHeures * 3600) })}</span>
+      <span class="bandeau-texte">
+        <strong>{$trad("k8s.enregistrementActif")}</strong>
+        {$trad("k8s.enregistrementActifAide", { duree: dureeCourte(retentionHeures * 3600) })}
+      </span>
       <span class="espace"></span>
-      <label class="choix">
-        {$trad("k8s.rafraichissement")}
-        <select
-          class="input petit"
-          value={surveillee.periode}
-          onchange={(e) => surSurveillance(true, Number(e.currentTarget.value))}
-        >
-          {#each RYTHMES as r (r)}
-            <option value={r}>{dureeCourte(r)}</option>
-          {/each}
-        </select>
-      </label>
-      <button class="btn small ghost" onclick={() => surSurveillance(false, 0)}>
-        {$trad("k8s.arreterLaSurveillance")}
-      </button>
+      <span class="bandeau-actions">
+        <label class="choix" title={$trad("k8s.uneMesureToutesLesAide")}>
+          {$trad("k8s.uneMesureToutesLes")}
+          <select
+            class="input petit"
+            value={surveillee.periode}
+            onchange={(e) => surSurveillance(true, Number(e.currentTarget.value))}
+          >
+            {#each RYTHMES as r (r)}
+              <option value={r}>{dureeCourte(r)}</option>
+            {/each}
+          </select>
+        </label>
+        <button class="btn small ghost" onclick={() => surSurveillance(false, 0)}>
+          {$trad("k8s.arreterLEnregistrement")}
+        </button>
+      </span>
     </div>
   {:else}
     <div class="bandeau">
-      <span>{$trad("k8s.surveillanceEteinte")}</span>
+      <span class="bandeau-texte">
+        <strong>{$trad("k8s.enregistrementEteint")}</strong>
+        {$trad("k8s.enregistrementEteintAide")}
+      </span>
       <span class="espace"></span>
-      <label class="choix">
-        {$trad("k8s.rafraichissement")}
-        <select class="input petit" bind:value={periodeSurveillance}>
-          {#each RYTHMES as r (r)}
-            <option value={r}>{dureeCourte(r)}</option>
-          {/each}
-        </select>
-      </label>
-      <button class="btn small primary" onclick={() => surSurveillance(true, periodeSurveillance)}>
-        {$trad("k8s.activerLaSurveillance")}
-      </button>
+      <span class="bandeau-actions">
+        <label class="choix" title={$trad("k8s.uneMesureToutesLesAide")}>
+          {$trad("k8s.uneMesureToutesLes")}
+          <select class="input petit" bind:value={periodeSurveillance}>
+            {#each RYTHMES as r (r)}
+              <option value={r}>{dureeCourte(r)}</option>
+            {/each}
+          </select>
+        </label>
+        <button class="btn small primary" onclick={() => surSurveillance(true, periodeSurveillance)}>
+          {$trad("k8s.activerLEnregistrement")}
+        </button>
+      </span>
     </div>
   {/if}
 
@@ -240,6 +254,13 @@
     font-size: 0.78rem;
   }
   .bandeau.actif { border-style: solid; border-color: var(--success); }
+  /* Le nom de l'etat se lit d'abord, l'explication ensuite : sans cette difference, les deux
+     phrases se valent et on relit la ligne entiere pour savoir si c'est allume ou eteint. */
+  /* Le texte cede la place en se repliant ; les contrôles restent ensemble, sinon le bouton
+     part seul sur une deuxieme ligne et on ne le rattache plus a ce qu'il commande. */
+  .bandeau-texte { flex: 1 1 18rem; min-width: 0; }
+  .bandeau-actions { display: flex; align-items: center; gap: 0.6rem; flex: none; }
+  .bandeau-texte strong { color: var(--text-primary); font-weight: 600; margin-right: 0.3rem; }
   .bandeau .pastille {
     width: 7px;
     height: 7px;
