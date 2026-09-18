@@ -1,5 +1,6 @@
 pub mod db;
 pub mod import;
+pub mod k8s_mesures;
 pub mod project_commands;
 pub mod project_folders;
 pub mod projects;

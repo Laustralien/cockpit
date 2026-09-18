@@ -256,6 +256,15 @@
       </div>
 
       <div class="block">
+        <p>{@html $trad("docs.k8s.surveillance")}</p>
+        <div class="demo">
+          <div class="d-section">{$trad("settings.k8s.surveilles")}</div>
+          <div class="d-row">{$trad("docs.k8s.demoNamespace")} <span class="d-stat">{$trad("docs.k8s.demoRythme")}</span></div>
+          <div class="d-row">{$trad("settings.k8s.retention")} <span class="d-stat">24 h</span></div>
+        </div>
+      </div>
+
+      <div class="block">
         <p>{@html $trad("docs.k8s.ajout")}</p>
         <div class="demo">
           <div class="d-section">{$trad("k8s.ajouter")}</div>

@@ -12,6 +12,7 @@
   import { trad } from "../../i18n";
   import Courbe from "./Courbe.svelte";
   import { formaterCpu, formaterRam, type Pod } from "../../k8s/vue";
+  import type { Cible } from "../../api/k8s";
   import {
     couverture, dureeCourte, fenetre, lesPlusGourmands, periodesOffertes,
     RAFRAICHISSEMENTS, TOTAL, type Historique, type Mesure,
@@ -27,11 +28,20 @@
     /// Le pod suivi de pres, ou `null` pour tout le namespace.
     focus: string | null;
     surFocus: (nom: string | null) => void;
+    /// La cible affichee, si elle est surveillee en continu.
+    surveillee: Cible | null;
+    retentionHeures: number;
+    surSurveillance: (actif: boolean, periode: number) => void;
   }
   let {
     pods, historique, fenetreSecondes, rafraichissement,
     surFenetre, surRafraichissement, focus, surFocus,
+    surveillee, retentionHeures, surSurveillance,
   }: Props = $props();
+
+  /// Le rythme propose quand on active depuis cet ecran. Le meme choix que dans les reglages.
+  let periodeSurveillance = $state(60);
+  const RYTHMES = [15, 30, 60, 300, 900];
 
   let trierSur: "cpu" | "ram" = $state("cpu");
   let maintenant = $state(Date.now());
@@ -90,6 +100,49 @@
       </select>
     </label>
   </div>
+
+  <!-- **DESACTIVE PAR DEFAUT, ET ON DIT POURQUOI.** Sans surveillance declaree, l'ecran ne
+       connait que ce qu'il mesure pendant qu'on le regarde : une periode longue resterait vide,
+       et on croirait a une panne. Le bouton ici ecrit le MEME reglage que Parametres ->
+       Kubernetes, il n'y a pas deux verites. -->
+  {#if surveillee}
+    <div class="bandeau actif">
+      <span class="pastille"></span>
+      <span>{$trad("k8s.surveilleN", { duree: dureeCourte(retentionHeures * 3600) })}</span>
+      <span class="espace"></span>
+      <label class="choix">
+        {$trad("k8s.rafraichissement")}
+        <select
+          class="input petit"
+          value={surveillee.periode}
+          onchange={(e) => surSurveillance(true, Number(e.currentTarget.value))}
+        >
+          {#each RYTHMES as r (r)}
+            <option value={r}>{dureeCourte(r)}</option>
+          {/each}
+        </select>
+      </label>
+      <button class="btn small ghost" onclick={() => surSurveillance(false, 0)}>
+        {$trad("k8s.arreterLaSurveillance")}
+      </button>
+    </div>
+  {:else}
+    <div class="bandeau">
+      <span>{$trad("k8s.surveillanceEteinte")}</span>
+      <span class="espace"></span>
+      <label class="choix">
+        {$trad("k8s.rafraichissement")}
+        <select class="input petit" bind:value={periodeSurveillance}>
+          {#each RYTHMES as r (r)}
+            <option value={r}>{dureeCourte(r)}</option>
+          {/each}
+        </select>
+      </label>
+      <button class="btn small primary" onclick={() => surSurveillance(true, periodeSurveillance)}>
+        {$trad("k8s.activerLaSurveillance")}
+      </button>
+    </div>
+  {/if}
 
   <div class="courbes">
     <Courbe
@@ -164,6 +217,26 @@
     padding-right: 0.2rem;
   }
   .ressources > * { flex: none; }
+
+  .bandeau {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding: 0.45rem 0.6rem;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+  }
+  .bandeau.actif { border-style: solid; border-color: var(--success); }
+  .bandeau .pastille {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    flex: none;
+  }
 
   .reglages { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
   .espace { flex: 1; }

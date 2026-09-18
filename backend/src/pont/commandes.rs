@@ -199,6 +199,29 @@ pub async fn appeler(
             ).await?))
         })
         .await,
+        "k8s_surveillance_lire" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_surveillance_lire(etat, 
+            ).await?))
+        })
+        .await,
+        "k8s_surveillance_ecrire" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_surveillance_ecrire(etat,
+                serde_json::from_value(prendre(a, "reglages", "reglages"))
+                    .map_err(|e| format!("argument reglages : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "k8s_historique" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_historique(etat,
+                serde_json::from_value(prendre(a, "contexte", "contexte"))
+                    .map_err(|e| format!("argument contexte : {e}"))?,
+                serde_json::from_value(prendre(a, "namespace", "namespace"))
+                    .map_err(|e| format!("argument namespace : {e}"))?,
+                serde_json::from_value(prendre(a, "depuis", "depuis"))
+                    .map_err(|e| format!("argument depuis : {e}"))?,
+            ).await?))
+        })
+        .await,
         "k8s_periode_des_mesures" => typer(async {
             valeur(serde_json::to_value(crate::k8s_periode_des_mesures(etat,
                 serde_json::from_value(prendre(a, "secondes", "secondes"))

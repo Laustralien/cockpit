@@ -12,6 +12,15 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Un nouveau menu **Paramètres → Kubernetes** : tu y déclares les namespaces que Cockpit doit
+  suivre en continu, leur rythme de mesure et la durée gardée. Rien n'est surveillé tant que tu
+  ne l'as pas demandé, et la mesure s'arrête quand Cockpit est fermé.
+- L'onglet Ressources dit clairement quand la surveillance est éteinte, et permet de l'activer
+  sur place avec le rythme voulu : c'est le même réglage que dans les Paramètres. Une fois
+  activée, les courbes retrouvent les heures passées au lieu de repartir de zéro.
+
 ## [0.77.1] — 2026-09-18
 
 ### Fixed

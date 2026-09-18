@@ -8,7 +8,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   noter, fenetre, lesPlusGourmands, borneHaute, graduations, points, ligne, aire,
-  leplusProche, dureeCourte, heureDe, periodesOffertes, couverture, TOTAL,
+  leplusProche, dureeCourte, heureDe, periodesOffertes, couverture, depuisEnregistre, fusionner, TOTAL,
 } from "../../src/lib/k8s/mesures.ts";
 
 const T = 1_700_000_000_000;
@@ -147,4 +147,35 @@ test("la couverture dit depuis quand l'ecran mesure", () => {
   const T2 = 1_700_000_000_000;
   assert.equal(couverture([], T2), 0);
   assert.equal(couverture([{ t: T2 - 120_000, cpu: 0, ram: 0 }], T2), 120);
+});
+
+test("l'historique enregistre se relit, total recalcule", () => {
+  const h = depuisEnregistre([
+    { pod: "a", t: 1000, cpu: 10, ram: 100 },
+    { pod: "b", t: 1000, cpu: 5, ram: 50 },
+    { pod: "a", t: 2000, cpu: 20, ram: 200 },
+  ]);
+  assert.equal(h.get("a").length, 2);
+  assert.deepEqual(h.get(TOTAL), [
+    { t: 1000, cpu: 15, ram: 150 },
+    { t: 2000, cpu: 20, ram: 200 },
+  ]);
+});
+
+test("la base et le direct se fusionnent sans doublon", () => {
+  // Les deux peuvent porter le meme instant : un point par instant, sinon la courbe dessine
+  // des dents de scie.
+  const base = depuisEnregistre([{ pod: "a", t: 1000, cpu: 10, ram: 100 }]);
+  const direct = new Map([["a", [{ t: 1000, cpu: 11, ram: 110 }, { t: 2000, cpu: 12, ram: 120 }]]]);
+  const tout = fusionner(base, direct);
+  assert.equal(tout.get("a").length, 2);
+  assert.equal(tout.get("a")[0].cpu, 11, "le direct l'emporte sur le meme instant");
+  assert.equal(tout.get("a")[1].t, 2000);
+});
+
+test("fusionner garde ce que la base avait et que le direct n'a pas", () => {
+  const base = depuisEnregistre([{ pod: "vieux", t: 500, cpu: 1, ram: 1 }]);
+  const tout = fusionner(base, new Map([["neuf", [{ t: 900, cpu: 2, ram: 2 }]]]));
+  assert.equal(tout.get("vieux").length, 1);
+  assert.equal(tout.get("neuf").length, 1);
 });

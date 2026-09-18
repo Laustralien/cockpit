@@ -51,6 +51,8 @@ pub struct AppState {
     pub k8s: k8s::suivi::Suivi,
     /// Le flux des logs du pod ouvert. Un seul : une seule vue de logs a la fois.
     pub k8s_logs: k8s::logs::SuiviDesLogs,
+    /// Ce que l'utilisateur a demande de suivre en continu. Vide tant qu'il n'a rien declare.
+    pub k8s_surveillance: k8s::surveillance::Surveillance,
 }
 
 /// Sert le pont si `--pont` est demande, et dit si ce processus lui appartient.
@@ -114,7 +116,7 @@ pub fn construire_etat(
         })
         .collect();
 
-    AppState {
+    let etat = AppState {
         db,
         db_path,
         orchestrator: Arc::new(
@@ -128,7 +130,16 @@ pub fn construire_etat(
         emetteur,
         k8s: k8s::suivi::Suivi::default(),
         k8s_logs: k8s::logs::SuiviDesLogs::default(),
-    }
+        k8s_surveillance: k8s::surveillance::Surveillance::default(),
+    };
+
+    // **CE QUE L'UTILISATEUR A DECLARE REPREND AU DEMARRAGE.** Sans cette ligne, la
+    // surveillance ne repartirait qu'apres un passage dans les reglages : on croirait a des
+    // trous dans l'historique alors que personne n'a rien demande d'autre. Elle ne lance rien
+    // si aucune cible n'est active, ce qui est le cas par defaut.
+    etat.k8s_surveillance
+        .appliquer(&etat.db, etat.db_path.clone());
+    etat
 }
 
 
@@ -376,6 +387,43 @@ async fn k8s_suivre_les_logs(
 async fn k8s_arreter_les_logs(state: &AppState) -> Result<(), String> {
     state.k8s_logs.arreter();
     Ok(())
+}
+
+/// Ce que Cockpit suit en continu : les namespaces que l'utilisateur a declares.
+#[commande]
+async fn k8s_surveillance_lire(state: &AppState) -> Result<k8s::surveillance::Reglages, String> {
+    Ok(k8s::surveillance::lire(&state.db))
+}
+
+/// Enregistre les cibles et le rythme, puis met la boucle en accord : activer prend effet
+/// tout de suite, et retirer la derniere cible arrete la boucle.
+#[commande]
+async fn k8s_surveillance_ecrire(
+    state: &AppState,
+    reglages: k8s::surveillance::Reglages,
+) -> Result<k8s::surveillance::Reglages, String> {
+    let rendu = k8s::surveillance::ecrire(&state.db, reglages)?;
+    state
+        .k8s_surveillance
+        .appliquer(&state.db, state.db_path.clone());
+    Ok(rendu)
+}
+
+/// L'historique enregistre d'un namespace, depuis un instant donne.
+#[commande]
+async fn k8s_historique(
+    state: &AppState,
+    contexte: String,
+    namespace: String,
+    depuis: i64,
+) -> Result<Vec<crate::storage::k8s_mesures::Point>, String> {
+    if !k8s::kubeconfig::nom_valide(&namespace) {
+        return Err(format!("nom de namespace refuse : {namespace}"));
+    }
+    state
+        .db
+        .k8s_historique(&contexte, &namespace, depuis)
+        .map_err(|e| e.to_string())
 }
 
 /// Le rythme des mesures, en secondes : c'est le reglage « rafraichissement » de l'ecran.

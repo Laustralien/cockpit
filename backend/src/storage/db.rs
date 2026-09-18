@@ -279,6 +279,35 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_command_history_ts ON command_history(ts);",
         )?;
 
+        // Migration: l'historique des mesures d'un namespace Kubernetes.
+        //
+        // **LOCALE ET BORNEE.** Elle n'est pas dans `synchro::TYPES`, donc elle ne voyage pas :
+        // ces points ne decrivent que ce que CETTE machine a observe, et ils se comptent en
+        // dizaines de milliers par jour. `WITHOUT ROWID` parce que la cle est deja la ligne
+        // entiere ou presque : SQLite s'epargne un index de plus.
+        // **LE NOM DU POD EST RANGE UNE FOIS, PAS A CHAQUE POINT.** Mesure faite avant de
+        // choisir : une table plate ou chaque ligne repete cluster, namespace et nom de pod
+        // pese 160 octets par point, soit 5,5 Mo par jour et par namespace. Avec une table
+        // d'identifiants, le meme jour tient dans 0,7 Mo — 22 octets par point. C'est ce qui
+        // rend une retention de plusieurs jours tenable sur plusieurs namespaces.
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS k8s_cibles (
+                id        INTEGER PRIMARY KEY,
+                contexte  TEXT NOT NULL,
+                namespace TEXT NOT NULL,
+                pod       TEXT NOT NULL,
+                UNIQUE (contexte, namespace, pod)
+            );
+            CREATE TABLE IF NOT EXISTS k8s_mesures (
+                cible INTEGER NOT NULL,
+                t     INTEGER NOT NULL,
+                cpu   INTEGER NOT NULL,
+                ram   INTEGER NOT NULL,
+                PRIMARY KEY (cible, t)
+            ) WITHOUT ROWID;
+            CREATE INDEX IF NOT EXISTS idx_k8s_mesures_t ON k8s_mesures(t);",
+        )?;
+
         // Identifiants globaux et journal des changements. Pose EN DERNIER, quand toutes
         // les tables existent : les declencheurs portent sur elles.
         drop(conn);

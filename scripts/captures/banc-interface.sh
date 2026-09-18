@@ -167,6 +167,10 @@ if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   image k8s-5-ressources
   clic 600 620 4          # le premier pod du classement : on le suit de pres
   image k8s-6-focus
+  # Les reglages : c'est la qu'on declare ce que Cockpit suit en continu.
+  clic 1275 55 3          # l engrenage
+  clic 380 300 3          # l entree « Kubernetes » du menu
+  image k8s-7-reglages
   clic 1351 311 1         # fermer le detail
   clic 419 228 2          # le selecteur de cluster
   image k8s-4-clusters

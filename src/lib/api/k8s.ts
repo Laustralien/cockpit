@@ -52,3 +52,32 @@ export const k8sAjouterUnCluster = (kubeconfig: string) =>
 
 /** `kubectl` est-il installe ? Seul le bouton « ouvrir un shell » en depend. */
 export const k8sKubectlPresent = () => invoke<boolean>("k8s_kubectl_present");
+
+/** Un namespace suivi en continu, avec son rythme. */
+export interface Cible {
+  contexte: string;
+  namespace: string;
+  /** Secondes entre deux mesures. */
+  periode: number;
+  actif: boolean;
+}
+
+export interface ReglagesSurveillance {
+  cibles: Cible[];
+  retention_heures: number;
+}
+
+/** Un point d'historique, tel qu'il est range en base. */
+export interface PointEnregistre {
+  pod: string;
+  t: number;
+  cpu: number;
+  ram: number;
+}
+
+export const k8sSurveillanceLire = () => invoke<ReglagesSurveillance>("k8s_surveillance_lire");
+/** Rend les reglages TELS QU'ILS ONT ETE ENREGISTRES : le backend borne le rythme. */
+export const k8sSurveillanceEcrire = (reglages: ReglagesSurveillance) =>
+  invoke<ReglagesSurveillance>("k8s_surveillance_ecrire", { reglages });
+export const k8sHistorique = (contexte: string, namespace: string, depuis: number) =>
+  invoke<PointEnregistre[]>("k8s_historique", { contexte, namespace, depuis });

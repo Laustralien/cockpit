@@ -29,6 +29,7 @@
   import type { DbProject } from "../../types";
   import { onMount, onDestroy } from "svelte";
   import AppearanceSettings from "./AppearanceSettings.svelte";
+  import KubernetesSettings from "./KubernetesSettings.svelte";
   import CarteCompte from "../compte/CarteCompte.svelte";
   import FournisseurDetail from "./FournisseurDetail.svelte";
   import { marked } from "marked";
@@ -66,7 +67,7 @@
   const changelogHtml = $derived(rendre(MORCEAUX.tete, "tete", $locale));
   const resteHtml = $derived(toutLHistorique ? rendre(MORCEAUX.reste, "reste", $locale) : "");
 
-  type SettingsView = "general" | "appearance" | "ia" | "meetings" | "projects";
+  type SettingsView = "general" | "appearance" | "ia" | "kubernetes" | "meetings" | "projects";
   let view: SettingsView = $state("general");
 
   /// Le fournisseur dont on regarde le detail, ou `null` pour la liste.
@@ -104,6 +105,7 @@
     { id: "general", icon: "⚙", labelKey: "settings.menu.general" },
     { id: "appearance", icon: "◐", labelKey: "settings.menu.appearance" },
     { id: "ia", icon: "✳", labelKey: "settings.menu.ia" },
+    { id: "kubernetes", icon: "☸", labelKey: "settings.menu.kubernetes" },
     { id: "meetings", icon: "⏺", labelKey: "settings.menu.meetings" },
     { id: "projects", icon: "▤", labelKey: "settings.menu.projects" },
   ];
@@ -634,6 +636,9 @@
           </ul>
           <p class="field-hint">{$trad("settings.ia.ajouter")}</p>
         </section>
+
+      {:else if view === "kubernetes"}
+        <KubernetesSettings />
 
       {:else if view === "meetings"}
         <section class="card">

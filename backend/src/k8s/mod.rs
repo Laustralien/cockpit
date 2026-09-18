@@ -12,6 +12,7 @@ pub mod kubeconfig;
 pub mod logs;
 pub mod modele;
 pub mod suivi;
+pub mod surveillance;
 
 use client::Client;
 use kubeconfig::{Contexte, Fichier};

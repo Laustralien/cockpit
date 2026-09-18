@@ -19,14 +19,17 @@
   import VueRessources from "./VueRessources.svelte";
   import {
     k8sContextes, k8sNamespaces, k8sPods, k8sEvenements, k8sYaml,
-    k8sKubectlPresent, k8sAjouterUnCluster, type Contexte,
+    k8sKubectlPresent, k8sAjouterUnCluster, k8sSurveillanceLire, k8sSurveillanceEcrire,
+    k8sHistorique, type Contexte, type ReglagesSurveillance,
   } from "../../api/k8s";
   import {
     filtrer, grouper, formaterCpu, formaterRam, age, grouperLesNamespaces,
     appliquer, appliquerLesMesures, cibleDeDemarrage, enFamilles, comptesDesFiltres,
     appliquerLeFiltre, peutAllerA, type Pod, type Mesure, type Filtre,
   } from "../../k8s/vue";
-  import { noter, type Historique } from "../../k8s/mesures";
+  import {
+    noter, depuisEnregistre, fusionner, type Historique,
+  } from "../../k8s/mesures";
 
   let { name }: { name: string } = $props();
 
@@ -48,7 +51,12 @@
   /// de l'autre : ajouter une vue ne coute qu'une entree ici.
   let vue: "pods" | "ressources" = $state("pods");
   /// L'historique des mesures, tenu par Cockpit : le cluster ne rend qu'un instantane.
-  let historique: Historique = $state(new Map());
+  /// Ce que l'ecran mesure pendant qu'on le regarde.
+  let direct: Historique = $state(new Map());
+  /// Ce que la surveillance a enregistre avant qu'on arrive.
+  let enregistre: Historique = $state(new Map());
+  /// Ce que l'utilisateur a declare surveiller.
+  let surveillance: ReglagesSurveillance = $state({ cibles: [], retention_heures: 24 });
   let fenetreSecondes = $state(300);
   let rafraichissement = $state(5);
   let focus: string | null = $state(null);
@@ -86,6 +94,11 @@
   const ramMax = $derived(Math.max(1, ...familles.flatMap((f) => f.groupes.map((g) => g.ram ?? 0))));
   /// Une recherche ou un filtre ouvre ce qu'il trouve : un resultat replie ne se montre pas.
   const toutOuvert = $derived(recherche.trim().length > 0 || filtre !== "tout");
+  const historique = $derived(fusionner(enregistre, direct));
+  /// La cible affichee est-elle surveillee en continu ?
+  const surveillee = $derived(
+    surveillance.cibles.find((c) => c.contexte === contexte && c.namespace === namespace) ?? null,
+  );
 
   const LIBELLES: { id: Filtre; libelle: Parameters<typeof $trad>[0] }[] = [
     { id: "tout", libelle: "k8s.filtreTout" },
@@ -122,6 +135,7 @@
     try {
       contextes = await k8sContextes();
       kubectl = await k8sKubectlPresent();
+      surveillance = await k8sSurveillanceLire();
     } catch (e) {
       panne = String(e);
       return;
@@ -185,7 +199,8 @@
     chercheNamespace = "";
     choisi = null;
     ouverts = new Set();
-    historique = new Map();
+    direct = new Map();
+    enregistre = new Map();
     focus = null;
     detacher();
     if (enregistrer) {
@@ -208,6 +223,9 @@
     chargement = true;
     panne = null;
     try {
+      // **CE QUI A ETE ENREGISTRE ARRIVE AVANT LE DIRECT.** Sans ca, la courbe repart de zero
+      // a chaque ouverture, alors que la surveillance a peut-etre mesure toute la journee.
+      void relireLHistorique();
       const lu = await k8sPods(contexte, namespace);
       pods = lu.pods;
       sansMesures = lu.sans_mesures;
@@ -217,6 +235,36 @@
       pods = [];
     } finally {
       chargement = false;
+    }
+  }
+
+  async function relireLHistorique() {
+    if (!contexte || !namespace) return;
+    try {
+      const depuis = Date.now() - surveillance.retention_heures * 3_600_000;
+      enregistre = depuisEnregistre(await k8sHistorique(contexte, namespace, depuis));
+    } catch (e) {
+      // Un historique illisible ne doit pas empecher de voir le direct.
+      signalerErreur("k8s.historique", String(e));
+    }
+  }
+
+  /// Active ou coupe la surveillance du namespace affiche, avec le rythme demande.
+  ///
+  /// **C'EST LE MEME REGLAGE QUE DANS LES PARAMETRES**, pas un second : il n'y a qu'un endroit
+  /// ou la verite est rangee, et deux facons de l'atteindre.
+  async function reglerLaSurveillance(actif: boolean, periode: number) {
+    const autres = surveillance.cibles.filter(
+      (c) => !(c.contexte === contexte && c.namespace === namespace),
+    );
+    const cibles = actif
+      ? [...autres, { contexte, namespace, periode, actif: true }]
+      : autres;
+    try {
+      surveillance = await k8sSurveillanceEcrire({ ...surveillance, cibles });
+      if (actif) await relireLHistorique();
+    } catch (e) {
+      notify(String(e));
     }
   }
 
@@ -231,7 +279,7 @@
       }),
       ecouter<Mesure[]>("k8s_mesures", (e) => {
         pods = appliquerLesMesures(pods, e.payload);
-        historique = noter(historique, e.payload, Date.now());
+        direct = noter(direct, e.payload, Date.now());
       }),
       // Notre point de reprise n'est plus valable : le cluster nous le dit, on relit.
       ecouter<null>("k8s_relire", () => void charger()),
@@ -535,6 +583,9 @@
         <VueRessources
           {pods}
           {historique}
+          {surveillee}
+          retentionHeures={surveillance.retention_heures}
+          surSurveillance={reglerLaSurveillance}
           {fenetreSecondes}
           {rafraichissement}
           {focus}
