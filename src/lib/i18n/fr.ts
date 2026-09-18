@@ -796,6 +796,7 @@ export const fr = {
   "docs.k8s.demoRythme": "5 s",
   "docs.k8s.demoPod1": "web-5cb5677dcc-0xj40",
   "docs.k8s.demoPod2": "paiement-5cb5677dcc-1xj41",
+  "k8s.depuisOuvertureN": "mesuré depuis {duree}",
   "k8s.relire": "Relire",
   "k8s.reessayer": "Réessayer",
   "k8s.chargement": "Lecture en cours…",

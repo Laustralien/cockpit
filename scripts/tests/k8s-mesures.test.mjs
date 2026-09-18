@@ -8,7 +8,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   noter, fenetre, lesPlusGourmands, borneHaute, graduations, points, ligne, aire,
-  leplusProche, dureeCourte, heureDe, TOTAL,
+  leplusProche, dureeCourte, heureDe, periodesOffertes, couverture, TOTAL,
 } from "../../src/lib/k8s/mesures.ts";
 
 const T = 1_700_000_000_000;
@@ -133,4 +133,18 @@ test("les durees se lisent en un mot", () => {
 
 test("l'heure d'un point se lit a la seconde", () => {
   assert.match(heureDe(T), /^\d{2}:\d{2}:\d{2}$/);
+});
+
+test("l'ecran ne propose pas une periode qu'il ne peut pas remplir", () => {
+  // Choisir « 1 h » sur quatre minutes d'historique donnait un cadre vide et une courbe
+  // collee au bord : on croit a une panne.
+  assert.deepEqual(periodesOffertes(60), [300], "rien d'atteint : on offre le premier palier");
+  assert.deepEqual(periodesOffertes(400), [300, 900], "le palier atteint, et celui qui vient");
+  assert.deepEqual(periodesOffertes(4000), [300, 900, 3600, 10800]);
+});
+
+test("la couverture dit depuis quand l'ecran mesure", () => {
+  const T2 = 1_700_000_000_000;
+  assert.equal(couverture([], T2), 0);
+  assert.equal(couverture([{ t: T2 - 120_000, cpu: 0, ram: 0 }], T2), 120);
 });

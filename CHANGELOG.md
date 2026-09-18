@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- La vue Ressources ne propose plus une période qu'elle ne peut pas remplir : elle n'offre que
+  ce qui a été mesuré depuis l'ouverture de l'écran, s'étend au fur et à mesure, et affiche
+  depuis combien de temps elle mesure. Choisir « 1 h » donnait un cadre vide.
+
 ## [0.77.0] — 2026-09-17
 
 ### Added

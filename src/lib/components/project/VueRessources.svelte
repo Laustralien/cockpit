@@ -13,8 +13,8 @@
   import Courbe from "./Courbe.svelte";
   import { formaterCpu, formaterRam, type Pod } from "../../k8s/vue";
   import {
-    dureeCourte, fenetre, lesPlusGourmands, FENETRES, RAFRAICHISSEMENTS, TOTAL,
-    type Historique, type Mesure,
+    couverture, dureeCourte, fenetre, lesPlusGourmands, periodesOffertes,
+    RAFRAICHISSEMENTS, TOTAL, type Historique, type Mesure,
   } from "../../k8s/mesures";
 
   interface Props {
@@ -40,7 +40,12 @@
     return () => clearInterval(minuteur);
   });
 
-  const depuis = $derived(maintenant - fenetreSecondes * 1000);
+  /// Depuis combien de temps cet ecran mesure : c'est tout ce qu'on peut montrer.
+  const couvert = $derived(couverture(historique.get(TOTAL) ?? [], maintenant));
+  const offertes = $derived(periodesOffertes(couvert));
+  /// Une periode plus longue que ce qu'on a se ramene a ce qu'on a : on ne dessine pas du vide.
+  const utile = $derived(Math.min(fenetreSecondes, Math.max(60, couvert)));
+  const depuis = $derived(maintenant - utile * 1000);
   const serie = $derived(fenetre(historique.get(focus ?? TOTAL), depuis));
   /// Les mesures du dernier tour, pour le classement.
   const mesures = $derived<Mesure[]>(
@@ -69,10 +74,11 @@
     <label class="choix">
       {$trad("k8s.fenetre")}
       <select class="input petit" value={fenetreSecondes} onchange={(e) => surFenetre(Number(e.currentTarget.value))}>
-        {#each FENETRES as f (f)}
+        {#each offertes as f (f)}
           <option value={f}>{dureeCourte(f)}</option>
         {/each}
       </select>
+      <span class="couvert">{$trad("k8s.depuisOuvertureN", { duree: dureeCourte(couvert) })}</span>
     </label>
 
     <label class="choix">
@@ -171,6 +177,7 @@
     padding: 0;
   }
   .fil:hover { text-decoration: underline; }
+  .couvert { color: var(--text-muted); font-size: 0.72rem; }
   .choix { display: flex; align-items: center; gap: 0.35rem; color: var(--text-muted); font-size: 0.76rem; }
   .petit { width: auto; padding: 0.22rem 0.4rem; font-size: 0.78rem; }
 

@@ -787,6 +787,7 @@ export const en: Catalog = {
   "docs.k8s.demoRythme": "5 s",
   "docs.k8s.demoPod1": "web-5cb5677dcc-0xj40",
   "docs.k8s.demoPod2": "payment-5cb5677dcc-1xj41",
+  "k8s.depuisOuvertureN": "measured for {duree}",
   "k8s.relire": "Reload",
   "k8s.reessayer": "Try again",
   "k8s.chargement": "Reading…",
