@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Les mises à jour de Windows et de macOS repartent : depuis la 0.77.1, la release ne portait
+  pas les fichiers que ces deux systèmes attendent, et l'application ne trouvait donc rien à
+  installer. Linux n'était pas concerné.
+
 ## [0.78.0] — 2026-09-18
 
 ### Added

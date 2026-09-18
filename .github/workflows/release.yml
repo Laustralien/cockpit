@@ -237,6 +237,18 @@ jobs:
         run: |
           set -euo pipefail
 
+          # **UN BINAIRE PORTE LE NOM QUE SON MANIFESTE ANNONCE.** electron-builder ecrit
+          # « Cockpit Setup 0.78.0.exe » sur le disque, avec des espaces, mais son manifeste
+          # designe « Cockpit-Setup-0.78.0.exe ». Depose tel quel, GitHub remplace les espaces
+          # par des POINTS : l'asset existe, le manifeste pointe ailleurs, et la mise a jour
+          # Windows ne trouve rien. On renomme donc avant d'envoyer.
+          for fichier in paquet/*\ *; do
+            [ -e "$fichier" ] || continue
+            propre="$(printf '%s' "$fichier" | tr ' ' '-')"
+            mv "$fichier" "$propre"
+            echo "renomme : $(basename "$fichier") -> $(basename "$propre")"
+          done
+
           # **LES MANIFESTES PARTENT EN DERNIER.** `latest*.yml` designe un binaire par son
           # empreinte : publie avant lui, il annonce une mise a jour qu'on ne peut pas encore
           # telecharger.
@@ -343,16 +355,36 @@ jobs:
           # meme — les systemes qui ont reussi ne doivent pas attendre l'autre — puis on fait
           # ECHOUER le run en nommant ce qui manque. Ajouter une plateforme a la matrice =
           # l'ajouter ici, sinon son absence redevient silencieuse.
-          export NOMS
+          export NOMS TAG
           MANIFESTES="latest-linux.yml latest-mac.yml latest.yml" python3 - <<'EOF'
-          import os, sys
+          import json, os, subprocess, sys, urllib.request
           noms = set(os.environ["NOMS"].split())
-          manquants = [m for m in os.environ["MANIFESTES"].split() if m not in noms]
+          attendus = os.environ["MANIFESTES"].split()
+          manquants = [m for m in attendus if m not in noms]
           if manquants:
               print(f"::error::release publiee mais INCOMPLETE — manifestes absents : "
                     f"{', '.join(manquants)}. Ces utilisateurs ne recevront pas la mise a "
-                    f"jour. Reparer en relancant le job de la plateforme concernee : "
-                    f"electron-builder retrouve la release et y ajoute ce qui manque.")
+                    f"jour. Reparer en relancant le job de la plateforme concernee.")
               sys.exit(1)
-          print(f"manifestes complets : {sorted(noms & set(os.environ['MANIFESTES'].split()))}")
+
+          # **UN MANIFESTE QUI DESIGNE UN FICHIER ABSENT EST PIRE QU'UN MANIFESTE MANQUANT** :
+          # l'application annonce la mise a jour, puis echoue au telechargement. Vu sur la
+          # v0.77.1 — le manifeste Windows nommait « Cockpit-Setup-0.77.1.exe » quand l'asset
+          # depose s'appelait « Cockpit.Setup.0.77.1.exe », GitHub ayant remplace les espaces
+          # du nom de fichier par des points.
+          rate = []
+          for manifeste in attendus:
+              texte = subprocess.run(
+                  ["gh", "release", "download", os.environ["TAG"], "--pattern", manifeste, "-O", "-"],
+                  capture_output=True, text=True, check=True).stdout
+              for ligne in texte.splitlines():
+                  ligne = ligne.strip()
+                  if ligne.startswith("- url:") or ligne.startswith("url:"):
+                      cible = ligne.split(":", 1)[1].strip()
+                      if cible and cible not in noms:
+                          rate.append(f"{manifeste} designe {cible}, absent de la release")
+          if rate:
+              print("::error::manifeste et artefacts ne correspondent pas : " + " ; ".join(rate))
+              sys.exit(1)
+          print(f"manifestes complets et coherents : {sorted(set(attendus))}")
           EOF
