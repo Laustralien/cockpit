@@ -12,6 +12,18 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Enregistrer un second namespace ne rate plus avec « An object could not be cloned ». Le
+  premier passait, donc la panne n'apparaissait qu'une fois un namespace déjà enregistré.
+
+### Changed
+
+- Le classement des pods les plus gourmands affiche les deux mesures sur chaque ligne : un pod
+  à « 0m » de processeur qui tient 127 Mo ne se lit plus comme un pod qui ne consomme rien.
+- Il annonce aussi combien de pods sont mesurés sur le total. Le cluster ne mesure que ce qui
+  tourne : sur un namespace de 286 pods dont 264 terminés, 22 seulement ont une mesure.
+
 ## [0.80.0] — 2026-09-18
 
 ### Added

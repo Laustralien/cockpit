@@ -30,9 +30,37 @@ function preload(): Preload {
   return pont;
 }
 
+/**
+ * Remet une charge a plat avant de la confier au pont.
+ *
+ * **LE PONT CLONE CE QU'ON LUI DONNE, ET IL NE SAIT PAS CLONER UN OBJET REACTIF.** Svelte 5
+ * represente une valeur `$state` par un Proxy ; le clonage d'Electron le refuse avec « An
+ * object could not be cloned » et l'appel ne part JAMAIS. Constate le 2026-09-18 : enregistrer
+ * un second namespace echouait des qu'un premier existait, parce que la liste envoyee portait
+ * alors un objet venu de l'etat. Le premier marchait, donc le defaut ne se voyait qu'une fois
+ * l'ecran deja rempli.
+ *
+ * **ON NE PAIE QUE CE QU'IL FAUT.** Une charge faite de valeurs simples part telle quelle, sans
+ * allocation : c'est le cas du chemin de frappe (`{ id, data }`), ou l'interdit sur les
+ * surcouches s'applique. Mesure du 2026-09-18 : remettre a plat une charge de frappe coute
+ * 0,63 us, la verification qui l'evite 0,05 us, et l'aller-retour du pont des dizaines de
+ * microsecondes.
+ *
+ * Sans perte : tout ce qui part au backend traverse un tuyau de lignes JSON, donc rien de ce
+ * qu'on envoie ne survivrait a un aller-retour JSON de toute facon.
+ */
+export function aplatir(arguments_: Record<string, unknown>): Record<string, unknown> {
+  for (const valeur of Object.values(arguments_)) {
+    if (valeur !== null && typeof valeur === "object") {
+      return JSON.parse(JSON.stringify(arguments_)) as Record<string, unknown>;
+    }
+  }
+  return arguments_;
+}
+
 /** Appelle une commande. Celles de la coquille commencent par `coquille:`, les autres vont au backend. */
 export function invoke<T>(commande: string, arguments_?: Record<string, unknown>): Promise<T> {
-  return preload().invoke(commande, arguments_ ?? {}) as Promise<T>;
+  return preload().invoke(commande, aplatir(arguments_ ?? {})) as Promise<T>;
 }
 
 /** Ce qu'on appelle pour cesser d'ecouter. */

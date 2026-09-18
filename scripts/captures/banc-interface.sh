@@ -199,6 +199,15 @@ if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   # reglages ne montre ni le rythme ni le cout par jour, donc rien de ce qu'on veut relire.
   clic 1264 368 4         # « Enregistrer ce namespace », a droite du bandeau
   image k8s-11b-enregistre
+  # **ENREGISTRER UN SECOND NAMESPACE EST LE GESTE QUI ECHOUAIT** (« An object could not be
+  # cloned ») : la liste envoyee portait alors un objet venu de l'etat, que le pont refuse de
+  # cloner. Le premier passait, donc le defaut ne se voyait qu'une fois l'ecran rempli.
+  clic 610 228 2          # le selecteur de namespace
+  clic 450 364 10         # « boutique-demo », la premiere entree SOUS le champ de filtre
+  clic 849 268 5          # l onglet « Ressources »
+  image k8s-11c-avant     # ou est le bouton a cet instant, pour recaler le clic
+  clic 1264 368 6         # « Enregistrer ce namespace », pour le second
+  image k8s-11c-second
   clic 1275 55 3          # l engrenage
   clic 380 300 3          # l entree « Kubernetes » du menu
   image k8s-12-reglages

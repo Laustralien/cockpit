@@ -825,6 +825,8 @@ export const en: Catalog = {
   "k8s.enregistrementEteintAide": "The charts only show what is sampled while you watch this screen, and start over when you come back.",
   "k8s.activerLEnregistrement": "Record this namespace",
   "k8s.arreterLEnregistrement": "Stop",
+  "k8s.mesuresCouvertureN": "{mesures} pods sampled out of {total}",
+  "k8s.mesuresCouvertureAide": "The cluster only samples what is running: a completed pod has no sample, so it does not show up here.",
   "k8s.ongletEnsemble": "Overview",
   "k8s.ongletServices": "Services",
   "k8s.ongletTaches": "Scheduled jobs",

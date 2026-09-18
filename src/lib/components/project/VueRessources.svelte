@@ -68,7 +68,11 @@
       .filter((p) => p.cpu !== null || p.ram !== null)
       .map((p) => ({ nom: p.nom, cpu: p.cpu ?? 0, ram: p.ram ?? 0 })),
   );
-  const classement = $derived(lesPlusGourmands(mesures, trierSur, 15));
+  /// **UN POD TERMINE N'A PAS DE MESURE, ET CE N'EST PAS UNE MESURE A ZERO.** Releve du
+  /// 2026-09-18 sur un namespace reel : 286 pods, dont 264 termines. Le serveur de mesures n'en
+  /// connait que 22. Sans ce compte affiche, on cherche les 264 autres dans une liste ou ils ne
+  /// seront jamais.
+  const classement = $derived(lesPlusGourmands(mesures, trierSur, 60));
   const plusGros = $derived(Math.max(1, ...classement.map((m) => m[trierSur])));
   const suivi = $derived(focus ? pods.find((p) => p.nom === focus) : undefined);
 </script>
@@ -196,6 +200,9 @@
   <div class="classement">
     <div class="classement-tete">
       <span class="titre">{$trad("k8s.lesPlusGourmands")}</span>
+      <span class="compte-mesures" title={$trad("k8s.mesuresCouvertureAide")}>
+        {$trad("k8s.mesuresCouvertureN", { mesures: mesures.length, total: pods.length })}
+      </span>
       <span class="bascules">
         <button class="bascule" class:actif={trierSur === "cpu"} onclick={() => (trierSur = "cpu")}>
           {$trad("k8s.cpu")}
@@ -219,7 +226,11 @@
             style="width:{Math.round((m[trierSur] / plusGros) * 100)}%"
           ></span>
         </span>
+        <!-- **LES DEUX MESURES, TOUJOURS.** Un pod a « 0m » de processeur qui tient 127 Mo ne
+             consomme pas rien : n'afficher que la mesure du tri le faisait croire, et c'est ce
+             qui a fait douter des chiffres entiers. -->
         <span class="rang-valeur">{trierSur === "cpu" ? formaterCpu(m.cpu) : formaterRam(m.ram)}</span>
+        <span class="rang-autre">{trierSur === "cpu" ? formaterRam(m.ram) : formaterCpu(m.cpu)}</span>
       </button>
     {/each}
   </div>
@@ -271,6 +282,20 @@
 
   .reglages { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
   .espace { flex: 1; }
+  /* Colle au titre, et pousse les bascules a droite : le compte parle du titre, pas du tri. */
+  .compte-mesures {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    margin: 0 auto 0 0.5rem;
+  }
+  /* La mesure qui ne sert pas au tri se lit en retrait : elle informe, elle ne se compare pas. */
+  .rang-autre {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    min-width: 4.4rem;
+    text-align: right;
+  }
   .focus { color: var(--text-primary); font-weight: 600; font-size: 0.9rem; }
   .fil {
     background: none;
@@ -330,7 +355,7 @@
 
   .rang {
     display: grid;
-    grid-template-columns: minmax(8rem, 22rem) 1fr 4.2rem;
+    grid-template-columns: minmax(8rem, 22rem) 1fr 4.2rem 4.4rem;
     align-items: center;
     gap: 0.6rem;
     width: 100%;
