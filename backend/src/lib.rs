@@ -389,6 +389,15 @@ async fn k8s_arreter_les_logs(state: &AppState) -> Result<(), String> {
     Ok(())
 }
 
+/// Ce qui est declare dans le namespace, meme sans aucun pod.
+#[commande]
+async fn k8s_workloads(
+    contexte: String,
+    namespace: String,
+) -> Result<Vec<k8s::workloads::Workload>, String> {
+    k8s::workloads(&contexte, &namespace).await
+}
+
 /// Ce que Cockpit suit en continu : les namespaces que l'utilisateur a declares.
 #[commande]
 async fn k8s_surveillance_lire(state: &AppState) -> Result<k8s::surveillance::Reglages, String> {

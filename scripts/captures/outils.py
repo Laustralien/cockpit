@@ -259,6 +259,27 @@ def taper(texte: str, entree: bool = True) -> None:
         time.sleep(0.03)
 
 
+def effacer() -> None:
+    """Vide le champ qui a le focus : Ctrl+A puis Retour arriere.
+
+    `taper` AJOUTE au contenu existant. Sans ce geste, une seconde recherche dans le meme champ
+    donnait « websnap » et le banc concluait que rien n'etait trouve.
+    """
+    from Xlib import X, XK
+    from Xlib.ext import xtest
+
+    d = _ecran()
+    ctrl = d.keysym_to_keycode(XK.string_to_keysym("Control_L"))
+    a = d.keysym_to_keycode(XK.string_to_keysym("a"))
+    retour = d.keysym_to_keycode(XK.string_to_keysym("BackSpace"))
+    xtest.fake_input(d, X.KeyPress, ctrl); d.sync(); time.sleep(0.02)
+    xtest.fake_input(d, X.KeyPress, a); d.sync(); time.sleep(0.03)
+    xtest.fake_input(d, X.KeyRelease, a); d.sync(); time.sleep(0.02)
+    xtest.fake_input(d, X.KeyRelease, ctrl); d.sync(); time.sleep(0.05)
+    xtest.fake_input(d, X.KeyPress, retour); d.sync(); time.sleep(0.03)
+    xtest.fake_input(d, X.KeyRelease, retour); d.sync(); time.sleep(0.05)
+
+
 # Les sept onglets d'un projet, dans l'ordre ou la barre les affiche.
 ONGLETS = ("workspace", "docker", "terminal", "fichiers", "git", "plugins", "reglages")
 
@@ -624,6 +645,8 @@ if __name__ == "__main__":
         glisser(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]))
     elif quoi == "taper":
         taper(sys.argv[2])
+    elif quoi == "effacer":
+        effacer()
     elif quoi == "arreter":
         options = sys.argv[3:]
         if "--lister-service" in options:

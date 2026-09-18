@@ -11,6 +11,8 @@ Il sert ce dont l'ecran a besoin, et rien de plus :
   GET  /api/v1/namespaces                         la liste, courte
   POST /apis/authorization.k8s.io/v1/selfsubjectrulesreviews  les droits nommes
   GET  /api/v1/namespaces/<ns>/pods               la liste des pods
+  GET  /apis/apps/v1/namespaces/<ns>/deployments  les services declares
+  GET  /apis/batch/v1/namespaces/<ns>/cronjobs    les taches planifiees declarees
   GET  ...?watch=1                                le flux des changements
   GET  /apis/metrics.k8s.io/v1beta1/...           le CPU et la memoire
   GET  .../pods/<pod>/log                         les logs, en direct si `follow`
@@ -44,6 +46,11 @@ SERVICES = [
     ("url-repairer-consumer", 2, 2, "Running"),
 ]
 TACHES = ["nettoyage-archives", "nettoyage-medias", "nettoyage-journaux", "export-comptable"]
+# **DES TACHES DECLAREES QUI N'ONT LAISSE AUCUN POD.** C'est le cas qui a motive la vue des
+# objets declares : sur un vrai namespace, dix-sept taches sur soixante-dix-neuf n'avaient jamais
+# ete declenchees, donc la liste des pods ne les montrait nulle part.
+TACHES_JAMAIS = ["snapshot-quotidien-alpha", "snapshot-quotidien-beta", "purge-annuelle"]
+TACHE_SUSPENDUE = "reprise-manuelle"
 
 DEBUT = time.time()
 
@@ -116,6 +123,21 @@ def tous_les_pods():
     for i in range(4):
         liste.append(pod(f"import-nocturne-29810000-zz{i:02d}q", "", "", "Succeeded", 0, 1, 90000))
     return liste
+
+
+def _cronjob(nom, planification, dernier, suspendu):
+    """Un travail planifie declare. `dernier` a None veut dire « jamais declenche »."""
+    return {
+        "metadata": {"name": nom, "creationTimestamp": "2026-09-16T06:00:00Z"},
+        "spec": {
+            "schedule": planification,
+            "suspend": suspendu,
+            "jobTemplate": {"spec": {"template": {"spec": {"containers": [
+                {"image": f"depot.exemple.test/travaux:{VERSION}"}
+            ]}}}},
+        },
+        "status": {"lastScheduleTime": dernier} if dernier else {},
+    }
 
 
 PODS = tous_les_pods()
@@ -215,6 +237,30 @@ class Faux(BaseHTTPRequestHandler):
                 self.end_headers()
                 return self.wfile.write(corps)
             return self._json(trouve)
+        if "/deployments" in chemin:
+            return self._json({"items": [
+                {
+                    "metadata": {"name": nom, "creationTimestamp": "2026-08-01T09:00:00Z"},
+                    "spec": {
+                        "replicas": total,
+                        "template": {"spec": {"containers": [
+                            {"image": f"depot.exemple.test/appli:{VERSION}"}
+                        ]}},
+                    },
+                    "status": {"readyReplicas": prets},
+                }
+                for nom, total, prets, _ in SERVICES
+            ]})
+        if "/cronjobs" in chemin:
+            items = []
+            for i, nom in enumerate(TACHES):
+                items.append(_cronjob(nom, f"{i * 7} 3 * * *", "2026-09-17T03:00:00Z", False))
+            for i, nom in enumerate(TACHES_JAMAIS):
+                items.append(_cronjob(nom, f"{i * 5} 4 * * *", None, False))
+            items.append(_cronjob(TACHE_SUSPENDUE, "0 0 31 2 *", None, True))
+            return self._json({"items": items})
+        if "/statefulsets" in chemin or "/daemonsets" in chemin:
+            return self._json({"items": []})
         if "/pods" in chemin:
             return self._json(
                 {"metadata": {"resourceVersion": "4242"}, "items": PODS}

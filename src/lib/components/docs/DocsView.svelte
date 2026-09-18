@@ -220,14 +220,14 @@
             <span class="d-count">{$trad("docs.k8s.demoDirect")}</span>
           </div>
           <div class="d-tabs">
-            <span class="d-tab active">{$trad("k8s.filtreTout")}</span>
-            <span class="d-tab">{$trad("k8s.filtreServices")}</span>
-            <span class="d-tab">{$trad("k8s.filtreTaches")}</span>
-            <span class="d-tab">{$trad("k8s.filtreAvoir")}</span>
+            <span class="d-tab">{$trad("k8s.ongletEnsemble")}</span>
+            <span class="d-tab active">{$trad("k8s.ongletTaches")} <span class="d-count">79</span></span>
+            <span class="d-tab">{$trad("k8s.ongletServices")} <span class="d-count">12</span></span>
+            <span class="d-tab">{$trad("k8s.ongletPods")} <span class="d-count">301</span></span>
           </div>
           <div class="d-row"><strong>{$trad("docs.k8s.demoService1")}</strong> <span class="d-stat">0/3</span> <span class="d-badge mod">{$trad("docs.k8s.demoEtat")}</span></div>
+          <div class="d-row"><strong>{$trad("docs.k8s.demoService3")}</strong> <span class="d-stat">10 3 * * *</span> <span class="d-count">{$trad("k8s.jamaisLance")}</span></div>
           <div class="d-row"><strong>{$trad("docs.k8s.demoService2")}</strong> <span class="d-stat">7/7</span> <span class="d-count">{$trad("docs.k8s.demoVersion")}</span> <span class="d-stat">{$trad("docs.k8s.demoMesures")}</span></div>
-          <div class="d-row"><strong>{$trad("docs.k8s.demoService3")}</strong> <span class="d-stat">0/258</span> <span class="d-stat">{$trad("docs.k8s.demoFinis")}</span></div>
         </div>
       </div>
 
@@ -243,6 +243,7 @@
         <p>{@html $trad("docs.k8s.ressources")}</p>
         <div class="demo">
           <div class="d-tabs">
+            <span class="d-tab">{$trad("k8s.ongletEnsemble")}</span>
             <span class="d-tab">{$trad("k8s.ongletPods")}</span>
             <span class="d-tab active">{$trad("k8s.ongletRessources")}</span>
             <span class="d-spring"></span>

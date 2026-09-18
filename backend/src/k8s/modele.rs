@@ -143,11 +143,18 @@ fn sans_dernier_morceau(nom: &str) -> String {
 
 /// Le tag de la premiere image : la version livree, telle qu'on en parle.
 pub fn version_de(pod: &Value) -> String {
-    let image = pod
-        .pointer("/spec/containers/0/image")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
-    // Une image s'ecrit `depot/nom:tag`, et le depot peut porter un port (`hote:5000/nom`).
+    version_depuis_image(
+        pod.pointer("/spec/containers/0/image")
+            .and_then(Value::as_str)
+            .unwrap_or_default(),
+    )
+}
+
+/// Le tag d'une image. Partage avec les objets declares, qui rangent leur image ailleurs.
+///
+/// Une image s'ecrit `depot/nom:tag`, et le depot peut porter un port (`hote:5000/nom`) : le
+/// `:` d'un port n'est pas celui d'un tag.
+pub fn version_depuis_image(image: &str) -> String {
     match image.rsplit_once(':') {
         Some((_, tag)) if !tag.contains('/') => tag.to_string(),
         _ => String::new(),

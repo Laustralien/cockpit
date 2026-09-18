@@ -81,3 +81,13 @@ export const k8sSurveillanceEcrire = (reglages: ReglagesSurveillance) =>
   invoke<ReglagesSurveillance>("k8s_surveillance_ecrire", { reglages });
 export const k8sHistorique = (contexte: string, namespace: string, depuis: number) =>
   invoke<PointEnregistre[]>("k8s_historique", { contexte, namespace, depuis });
+
+/**
+ * Ce qui est DECLARE dans le namespace, meme quand rien ne tourne.
+ *
+ * Une liste de pods ne dit pas ce que le namespace contient : un travail planifie qui ne s'est
+ * jamais declenche n'y figure pas, et 79 travaux declares n'y apparaissent que par les 264 pods
+ * qu'ils ont laisses. C'est une lecture par ouverture d'ecran, pas une lecture sur minuteur.
+ */
+export const k8sWorkloads = (contexte: string, namespace: string) =>
+  invoke<import("../k8s/vue").Workload[]>("k8s_workloads", { contexte, namespace });

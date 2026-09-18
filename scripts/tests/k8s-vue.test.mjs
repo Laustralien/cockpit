@@ -263,12 +263,14 @@ test("les filtres comptent ce qu'ils montrent", () => {
   ];
   const c = comptesDesFiltres(pods);
   assert.equal(c.tout, 3);
-  assert.equal(c.deployments, 2);
-  assert.equal(c.cronjobs, 1);
   assert.equal(c.avoir, 1);
   assert.equal(c.marche, 1);
   assert.equal(c.termines, 1);
-  assert.equal(appliquerLeFiltre(pods, "cronjobs").length, 1);
+  // **AUCUN FILTRE DE CETTE VUE NE COMPTE DES OBJETS.** « Services » et « taches planifiees »
+  // en sont partis : ils comptaient les pods d'un objet sous le nom de l'objet, d'ou un ecran
+  // qui annoncait 264 taches planifiees sur un namespace qui en declare 79.
+  assert.deepEqual(Object.keys(c).sort(), ["avoir", "marche", "termines", "tout"]);
+  assert.equal(appliquerLeFiltre(pods, "termines").length, 1);
   assert.equal(appliquerLeFiltre(pods, "avoir")[0].nom, "k");
   assert.equal(appliquerLeFiltre(pods, "tout").length, 3, "« tout » ne retire jamais rien");
 });

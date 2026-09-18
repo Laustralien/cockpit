@@ -13,6 +13,7 @@ pub mod logs;
 pub mod modele;
 pub mod suivi;
 pub mod surveillance;
+pub mod workloads;
 
 use client::Client;
 use kubeconfig::{Contexte, Fichier};
@@ -225,6 +226,27 @@ fn restreindre(chemin: &std::path::Path, mode: u32) -> Result<(), String> {
     #[cfg(not(unix))]
     let _ = (chemin, mode);
     Ok(())
+}
+
+/// Ce qui est DECLARE dans le namespace : services, travaux planifies, et le reste.
+///
+/// **UNE SORTE REFUSEE N'ARRETE PAS LES AUTRES.** Les droits se donnent ressource par
+/// ressource : ne pas voir les `statefulsets` ne doit pas priver de la liste des deploiements.
+pub async fn workloads(contexte: &str, namespace: &str) -> Result<Vec<workloads::Workload>, String> {
+    if !kubeconfig::nom_valide(namespace) {
+        return Err(format!("nom de namespace refuse : {namespace}"));
+    }
+    let (client, _) = client_de(contexte)?;
+    let mut tout = Vec::new();
+    for (groupe, ressource) in workloads::SOURCES {
+        let chemin = format!("/{groupe}/namespaces/{namespace}/{ressource}");
+        let Ok(liste) = client.json(&chemin).await else { continue };
+        let sorte = workloads::sorte_de(ressource);
+        for objet in liste.pointer("/items").and_then(Value::as_array).into_iter().flatten() {
+            tout.push(workloads::reduire(objet, sorte));
+        }
+    }
+    Ok(tout)
 }
 
 /// Les logs d'un conteneur. `lignes` borne ce qu'on demande : un pod bavard a des centaines de

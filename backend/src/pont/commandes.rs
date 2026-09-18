@@ -199,6 +199,15 @@ pub async fn appeler(
             ).await?))
         })
         .await,
+        "k8s_workloads" => typer(async {
+            valeur(serde_json::to_value(crate::k8s_workloads(
+                serde_json::from_value(prendre(a, "contexte", "contexte"))
+                    .map_err(|e| format!("argument contexte : {e}"))?,
+                serde_json::from_value(prendre(a, "namespace", "namespace"))
+                    .map_err(|e| format!("argument namespace : {e}"))?,
+            ).await?))
+        })
+        .await,
         "k8s_surveillance_lire" => typer(async {
             valeur(serde_json::to_value(crate::k8s_surveillance_lire(etat, 
             ).await?))

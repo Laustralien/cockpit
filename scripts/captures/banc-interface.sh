@@ -150,32 +150,54 @@ fi
 
 if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   clic 941 127 14         # l onglet Kubernetes (a droite de Git)
-  image k8s-1-liste
+  image k8s-1-ensemble    # ce que le namespace contient, en objets declares
+  # **LA VUE DES TACHES PLANIFIEES EST CELLE QUI A MOTIVE TOUT CECI.** Elle doit montrer les
+  # taches DECLAREES, y compris celles qui ne se sont jamais declenchees et n'ont donc aucun pod.
+  clic 632 268 3          # l onglet « Taches planifiees »
+  image k8s-2-taches
+  clic 600 400 3          # une tache de la liste : on entre dedans
+  image k8s-3-dans-la-tache
+  # Un pod ouvert DEPUIS un objet doit rendre le meme detail que depuis la liste des pods.
+  clic 500 389 4
+  image k8s-3b-pod-depuis-la-tache
+  clic 1351 350 1         # fermer le detail
+  clic 380 317 3          # « Retour a la liste »
+  image k8s-4-retour
+  clic 500 268 3          # l onglet « Services »
+  image k8s-5-services
+  clic 742 268 3          # l onglet « Pods »
+  image k8s-6-pods
   clic 1000 228 1         # le champ de recherche
   python3 "$OUTILS" taper "web" 2>/dev/null || true
   sleep 3
-  image k8s-2-recherche
-  clic 500 347 6          # le pod trouve : ouvre son detail et ses logs
-  image k8s-3-detail
+  image k8s-7-recherche
+  # **UNE RECHERCHE QUI NE TROUVE RIEN ICI DOIT DIRE OU ELLE TROUVE.** « snap » ne rend aucun
+  # pod : la tache planifiee de ce nom ne s'est jamais declenchee. L'ecran doit y emmener.
+  clic 1000 228 1
+  python3 "$OUTILS" effacer 2>/dev/null || true
+  python3 "$OUTILS" taper "snap" 2>/dev/null || true
+  sleep 2
+  image k8s-7b-passerelle
+  clic 1000 228 1
+  python3 "$OUTILS" effacer 2>/dev/null || true
+  python3 "$OUTILS" taper "web" 2>/dev/null || true
+  sleep 2
+  clic 500 376 6          # le premier pod trouve : ouvre son detail et ses logs
+  image k8s-8-detail
   sleep 6                 # de quoi voir arriver des lignes en direct
-  image k8s-4-logs
-  # L'onglet Ressources : les courbes se remplissent au rythme des mesures.
+  image k8s-9-logs
   clic 1351 311 1         # fermer le detail
-  python3 "$OUTILS" taper "" 2>/dev/null || true
-  clic 420 268 3          # l onglet « Ressources »
+  clic 1000 228 1
+  python3 "$OUTILS" effacer 2>/dev/null || true
+  clic 849 268 3          # l onglet « Ressources »
   sleep 25                # cinq mesures a cinq secondes
-  image k8s-5-ressources
+  image k8s-10-ressources
   clic 600 620 4          # le premier pod du classement : on le suit de pres
-  image k8s-6-focus
+  image k8s-11-focus
   # Les reglages : c'est la qu'on declare ce que Cockpit suit en continu.
   clic 1275 55 3          # l engrenage
   clic 380 300 3          # l entree « Kubernetes » du menu
-  image k8s-7-reglages
-  clic 1351 311 1         # fermer le detail
-  clic 419 228 2          # le selecteur de cluster
-  image k8s-4-clusters
-  clic 402 355 2          # « + Ajouter un cluster » (sous la liste)
-  image k8s-5-ajout
+  image k8s-12-reglages
   echo "images kubernetes : $TRAVAIL/img"
   exit 0
 fi

@@ -17,15 +17,19 @@
   import { trad } from "../../i18n";
   import PodJournal from "./PodJournal.svelte";
   import VueRessources from "./VueRessources.svelte";
+  import K8sEnsemble from "./K8sEnsemble.svelte";
+  import K8sObjets from "./K8sObjets.svelte";
+  import K8sLignePod from "./K8sLignePod.svelte";
   import {
     k8sContextes, k8sNamespaces, k8sPods, k8sEvenements, k8sYaml,
     k8sKubectlPresent, k8sAjouterUnCluster, k8sSurveillanceLire, k8sSurveillanceEcrire,
-    k8sHistorique, type Contexte, type ReglagesSurveillance,
+    k8sHistorique, k8sWorkloads, type Contexte, type ReglagesSurveillance,
   } from "../../api/k8s";
   import {
     filtrer, grouper, formaterCpu, formaterRam, age, grouperLesNamespaces,
     appliquer, appliquerLesMesures, cibleDeDemarrage, enFamilles, comptesDesFiltres,
-    appliquerLeFiltre, peutAllerA, type Pod, type Mesure, type Filtre,
+    appliquerLeFiltre, peutAllerA, unifier, deSorte, filtrerLesElements, ensemble,
+    type Pod, type Mesure, type Filtre, type Workload,
   } from "../../k8s/vue";
   import {
     noter, depuisEnregistre, fusionner, type Historique,
@@ -38,6 +42,9 @@
   let namespaces: string[] = $state([]);
   let namespace = $state("");
   let pods: Pod[] = $state([]);
+  /// Ce que le namespace DECLARE. Lu une fois par ouverture d'ecran : le flux ne porte que les
+  /// pods, et un travail planifie ne change pas trente fois par minute.
+  let declares: Workload[] = $state([]);
   let sansMesures: string | null = $state(null);
   let recherche = $state("");
   let filtre: Filtre = $state("tout");
@@ -47,9 +54,12 @@
   let ouverts = $state(new Set<string>());
   let kubectl = $state(false);
 
-  /// **DEUX VUES DANS L'ONGLET, ET IL Y EN AURA D'AUTRES.** Les pods d'un cote, les ressources
-  /// de l'autre : ajouter une vue ne coute qu'une entree ici.
-  let vue: "pods" | "ressources" = $state("pods");
+  /// **CINQ VUES, ET CHACUNE REPOND A UNE QUESTION DIFFERENTE.** « Qu'est-ce qu'il y a
+  /// la-dedans », « quels services », « quelles taches planifiees », « qu'est-ce qui tourne
+  /// en ce moment », « qu'est-ce que ca consomme ». Une seule liste qui melangeait tout
+  /// obligeait a deplier des centaines de pods pour lire soixante-dix-neuf noms.
+  type Vue = "ensemble" | "services" | "taches" | "pods" | "ressources";
+  let vue: Vue = $state("ensemble");
   /// L'historique des mesures, tenu par Cockpit : le cluster ne rend qu'un instantane.
   /// Ce que l'ecran mesure pendant qu'on le regarde.
   let direct: Historique = $state(new Map());
@@ -78,9 +88,40 @@
   let detacheurs: Detacher[] = [];
 
   const cle = $derived(`k8s.cible.${name}`);
+  /// Ce qui est declare et ce qui tourne, rassemble. Un objet sans pod y figure, un pod dont
+  /// le createur a disparu aussi : les deux existent, et les deux se cherchent.
+  const elements = $derived(unifier(declares, grouper(pods)));
+  const trouves = $derived(filtrerLesElements(elements, recherche));
+  const services = $derived(deSorte(trouves, "services"));
+  const taches = $derived(deSorte(trouves, "taches"));
+  const resume = $derived(ensemble(elements, pods));
   const filtres = $derived(appliquerLeFiltre(pods, filtre));
   const visibles = $derived(filtrer(filtres, recherche));
   const familles = $derived(enFamilles(grouper(visibles)));
+  /// **UNE RECHERCHE QUI NE TROUVE RIEN ICI PEUT TROUVER AILLEURS, ET LE TAIRE EST UN
+  /// CUL-DE-SAC.** Chercher « snap » dans les pods ne rend rien quand la tache planifiee de ce
+  /// nom ne s'est jamais declenchee : on le dit, et on y emmene.
+  /// TypeScript reduit `vue` a sa valeur de depart tant que rien ne l'a reaffectee : sans ce
+  /// detour, la comparaison ci-dessous est signalee comme toujours fausse.
+  const vueCourante = $derived(vue as Vue);
+  const ailleurs = $derived(
+    recherche.trim().length === 0
+      ? []
+      : (
+          [
+            { vue: "services" as const, libelle: $trad("k8s.ongletServices"), n: services.length },
+            { vue: "taches" as const, libelle: $trad("k8s.ongletTaches"), n: taches.length },
+            { vue: "pods" as const, libelle: $trad("k8s.ongletPods"), n: visibles.length },
+          ]
+        ).filter((x) => x.n > 0 && x.vue !== vueCourante),
+  );
+  /// Ce que la vue affichee montre en ce moment, pour savoir si elle est vide.
+  const combienIci = $derived(
+    vueCourante === "services"
+      ? services.length
+      : vueCourante === "taches" ? taches.length : visibles.length,
+  );
+  const aVoir = $derived(elements.filter((e) => e.ennuyeux));
   const comptes = $derived(comptesDesFiltres(pods));
   const contexteActif = $derived(contextes.find((c) => c.nom === contexte));
   const famillesDeNamespaces = $derived(
@@ -100,10 +141,12 @@
     surveillance.cibles.find((c) => c.contexte === contexte && c.namespace === namespace) ?? null,
   );
 
+  /// **LES FILTRES DE CETTE VUE NE PORTENT QUE SUR DES PODS.** « Services » et « taches
+  /// planifiees » en sont partis : ils comptaient les pods d'un deploiement ou d'un travail
+  /// sous le nom de l'objet, d'ou « taches planifiees 264 » sur un namespace qui en declare 79.
+  /// Ces deux-la ont leur propre vue, qui compte des objets.
   const LIBELLES: { id: Filtre; libelle: Parameters<typeof $trad>[0] }[] = [
     { id: "tout", libelle: "k8s.filtreTout" },
-    { id: "deployments", libelle: "k8s.filtreServices" },
-    { id: "cronjobs", libelle: "k8s.filtreTaches" },
     { id: "avoir", libelle: "k8s.filtreAvoir" },
     { id: "marche", libelle: "k8s.filtreMarche" },
     { id: "termines", libelle: "k8s.filtreTermines" },
@@ -198,6 +241,7 @@
     ouvert = null;
     chercheNamespace = "";
     choisi = null;
+    declares = [];
     ouverts = new Set();
     direct = new Map();
     enregistre = new Map();
@@ -226,6 +270,11 @@
       // **CE QUI A ETE ENREGISTRE ARRIVE AVANT LE DIRECT.** Sans ca, la courbe repart de zero
       // a chaque ouverture, alors que la surveillance a peut-etre mesure toute la journee.
       void relireLHistorique();
+      // **CE QUI EST DECLARE NE BLOQUE PAS CE QUI TOURNE.** Les droits se donnent ressource
+      // par ressource : un refus sur les `cronjobs` ne doit pas priver de la liste des pods.
+      void k8sWorkloads(contexte, namespace)
+        .then((w) => (declares = w))
+        .catch((e) => signalerErreur("k8s.workloads", String(e)));
       const lu = await k8sPods(contexte, namespace);
       pods = lu.pods;
       sansMesures = lu.sans_mesures;
@@ -233,6 +282,7 @@
     } catch (e) {
       panne = String(e);
       pods = [];
+      declares = [];
     } finally {
       chargement = false;
     }
@@ -453,14 +503,35 @@
     </div>
   </div>
 
-  {#if pods.length > 0}
+  {#if namespace}
+    <!-- **CHAQUE ONGLET PORTE SON COMPTE, ET IL COMPTE CE QU'IL AFFICHE.** Celui des taches
+         planifiees annonce les taches DECLAREES, pas les pods qu'elles ont laisses. -->
     <div class="vues">
-      {#each [["pods", $trad("k8s.ongletPods")], ["ressources", $trad("k8s.ongletRessources")]] as [id, libelle] (id)}
+      {#each [
+        ["ensemble", $trad("k8s.ongletEnsemble"), -1],
+        ["services", $trad("k8s.ongletServices"), resume.services],
+        ["taches", $trad("k8s.ongletTaches"), resume.taches],
+        ["pods", $trad("k8s.ongletPods"), resume.pods],
+        ["ressources", $trad("k8s.ongletRessources"), -1],
+      ] as [id, libelle, n] (id)}
         <button
           class="vue"
           class:actif={vue === id}
-          onclick={() => (vue = id as typeof vue)}
-        >{libelle}</button>
+          onclick={() => (vue = id as Vue)}
+        >
+          {libelle}{#if (n as number) >= 0}<span class="compte-vue">{n}</span>{/if}
+        </button>
+      {/each}
+    </div>
+  {/if}
+
+  {#if ailleurs.length > 0 && combienIci === 0 && vue !== "ensemble" && vue !== "ressources"}
+    <div class="passerelle">
+      <span>{$trad("k8s.rienIci")}</span>
+      {#each ailleurs as a (a.vue)}
+        <button class="lien" onclick={() => (vue = a.vue)}>
+          {$trad("k8s.trouveDansN", { n: a.n, vue: a.libelle })}
+        </button>
       {/each}
     </div>
   {/if}
@@ -579,7 +650,34 @@
     </div>
   {:else}
     <div class="corps">
-      {#if vue === "ressources"}
+      {#if vue === "ensemble"}
+        <div class="page">
+          <K8sEnsemble
+            ensemble={resume}
+            {aVoir}
+            {maintenant}
+            surVue={(v) => (vue = v)}
+          />
+        </div>
+      {:else if vue === "services" || vue === "taches"}
+        <div class="page">
+          <!-- Changer de vue REMONTE la liste : sans cette cle, Svelte garderait l'instance et
+               l'objet ouvert dans les taches resterait ouvert en passant aux services. -->
+          {#key vue}
+          <K8sObjets
+            elements={vue === "services" ? services : taches}
+            {maintenant}
+            {kubectl}
+            {choisi}
+            surOuvrirPod={(pod, volet) => void ouvrirLeDetail(pod, volet)}
+            surShell={ouvrirUnShell}
+            vide={recherche
+              ? $trad("k8s.aucunResultat")
+              : vue === "services" ? $trad("k8s.aucunService") : $trad("k8s.aucuneTache")}
+          />
+          {/key}
+        </div>
+      {:else if vue === "ressources"}
         <VueRessources
           {pods}
           {historique}
@@ -668,32 +766,14 @@
                 {#if deplie}
                   <div class="pods">
                     {#each g.pods as p (p.nom)}
-                      <div class="pod" class:choisi={choisi?.nom === p.nom}>
-                        <button class="ligne" onclick={() => void ouvrirLeDetail(p)}>
-                          <span class="pastille {couleurDe(p)}"></span>
-                          <span class="pod-nom">{p.nom}</span>
-                          <span class="pod-etat" class:mauvais={p.ennuyeux}>{p.etat}</span>
-                          <span class="pod-age">{age(p.depuis, maintenant)}</span>
-                          {#if p.redemarrages > 0}
-                            <span class="redemarrages" title={$trad("k8s.redemarrages")}>
-                              ⟳ {p.redemarrages}
-                            </span>
-                          {/if}
-                          <span class="espace"></span>
-                          <span class="mesure">{formaterCpu(p.cpu)}</span>
-                          <span class="mesure">{formaterRam(p.ram)}</span>
-                        </button>
-                        <span class="actions">
-                          <button class="btn small ghost" onclick={() => void ouvrirLeDetail(p, "logs")}>
-                            {$trad("k8s.logs")}
-                          </button>
-                          {#if kubectl}
-                            <button class="btn small ghost" onclick={() => ouvrirUnShell(p)}>
-                              {$trad("k8s.shell")}
-                            </button>
-                          {/if}
-                        </span>
-                      </div>
+                      <K8sLignePod
+                        pod={p}
+                        choisi={choisi?.nom === p.nom}
+                        {maintenant}
+                        {kubectl}
+                        surOuvrirPod={(pod, volet) => void ouvrirLeDetail(pod, volet)}
+                        surShell={ouvrirUnShell}
+                      />
                     {/each}
                   </div>
                 {/if}
@@ -704,7 +784,7 @@
       </div>
       {/if}
 
-      {#if choisi && vue === "pods"}
+      {#if choisi && vue !== "ensemble" && vue !== "ressources"}
         <aside class="detail">
           <div class="detail-tete">
             <div class="detail-titre">
@@ -893,6 +973,48 @@
 
   /* ── La liste ─────────────────────────────────────────────────────────────── */
   .corps { display: flex; gap: 0.7rem; flex: 1; min-height: 0; }
+  /* Une vue qui n'est pas une liste infinie : elle defile, et ses enfants ne s'ecrasent pas. */
+  .page {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    padding: 0.5rem 0.2rem 1rem;
+  }
+  .page > * { flex: none; }
+
+  .passerelle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.4rem 0.5rem;
+    margin: 0.3rem 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .passerelle .lien {
+    background: none;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0;
+  }
+
+  .compte-vue {
+    margin-left: 0.35rem;
+    padding: 0.02rem 0.28rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+  }
+
   .liste {
     flex: 1;
     min-width: 0;

@@ -12,6 +12,26 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- L'onglet Kubernetes a maintenant cinq vues, et chacune répond à une question : **Vue
+  d'ensemble** dit ce que le namespace contient, **Services** et **Tâches planifiées** listent
+  ce qui est déclaré dans le cluster, **Pods** ce qui tourne en ce moment, **Ressources** ce que
+  ça consomme.
+- Les tâches planifiées et les services déclarés s'affichent même quand ils n'ont aucun pod :
+  une tâche qui ne s'est jamais lancée était jusqu'ici introuvable.
+- Un clic sur une ligne ouvre les pods de cet objet, et un clic ramène à la liste. Les listes ne
+  déplient plus les pods sous chaque ligne.
+- Une recherche qui ne trouve rien dans la vue affichée dit dans quelle autre vue elle trouve,
+  et y emmène d'un clic.
+
+### Changed
+
+- Les nombres affichés sur les onglets comptent désormais ce que la vue montre : des objets
+  déclarés pour les services et les tâches, des pods pour les pods. « Tâches planifiées 264 »
+  sur un namespace qui en déclare 79 comptait en réalité leurs pods.
+- Une tâche suspendue ne compte plus parmi les tâches jamais lancées : elle est éteinte exprès.
+
 ## [0.78.2] — 2026-09-18
 
 ### Fixed
