@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.79.0] — 2026-09-18
+
 ### Added
 
 - L'onglet Kubernetes a maintenant cinq vues, et chacune répond à une question : **Vue
