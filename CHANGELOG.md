@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.78.1] — 2026-09-18
+
 ### Fixed
 
 - Les mises à jour de Windows et de macOS repartent : depuis la 0.77.1, la release ne portait
