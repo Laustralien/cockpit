@@ -179,3 +179,12 @@ test("fusionner garde ce que la base avait et que le direct n'a pas", () => {
   assert.equal(tout.get("vieux").length, 1);
   assert.equal(tout.get("neuf").length, 1);
 });
+
+test("la periode choisie figure toujours parmi celles proposees", () => {
+  // Un `select` dont la valeur ne correspond a aucune option s'affiche vide : c'est ce qui
+  // arrivait avec une periode retenue de 15 min sur vingt secondes de mesure.
+  const offertes = periodesOffertes(20);
+  assert.ok(!offertes.includes(900), "900 n'est pas encore atteignable");
+  const avecLaChoisie = [...new Set([...offertes, 900])].sort((a, b) => a - b);
+  assert.ok(avecLaChoisie.includes(900), "mais elle doit rester dans la liste affichee");
+});

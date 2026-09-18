@@ -52,7 +52,12 @@
 
   /// Depuis combien de temps cet ecran mesure : c'est tout ce qu'on peut montrer.
   const couvert = $derived(couverture(historique.get(TOTAL) ?? [], maintenant));
-  const offertes = $derived(periodesOffertes(couvert));
+  /// **LA VALEUR CHOISIE FIGURE TOUJOURS DANS LA LISTE.** Un `select` dont la valeur ne
+  /// correspond a aucune option s'affiche VIDE : vu a l'ecran, avec une periode retenue de
+  /// quinze minutes alors que l'ecran ne mesurait que depuis vingt secondes.
+  const offertes = $derived(
+    [...new Set([...periodesOffertes(couvert), fenetreSecondes])].sort((a, b) => a - b),
+  );
   /// Une periode plus longue que ce qu'on a se ramene a ce qu'on a : on ne dessine pas du vide.
   const utile = $derived(Math.min(fenetreSecondes, Math.max(60, couvert)));
   const depuis = $derived(maintenant - utile * 1000);
@@ -215,6 +220,11 @@
     gap: 0.75rem;
     overflow: auto;
     padding-right: 0.2rem;
+    /* **L'UNIQUE ENFANT D'UN CONTENEUR FLEX NE S'ETEND PAS TOUT SEUL.** Sans cette ligne, la
+       vue prenait la largeur de son contenu et laissait un tiers de l'ecran vide a droite,
+       avec des courbes deux fois trop etroites. */
+    flex: 1;
+    min-width: 0;
   }
   .ressources > * { flex: none; }
 

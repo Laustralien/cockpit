@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- La vue Ressources occupe toute la largeur de l'écran : elle s'arrêtait aux deux tiers et
+  laissait ses courbes deux fois trop étroites.
+- Le sélecteur de période ne reste plus vide quand la durée retenue n'est pas encore atteinte.
+
 ## [0.78.1] — 2026-09-18
 
 ### Fixed
