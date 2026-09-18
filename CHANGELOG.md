@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.81.0] — 2026-09-18
+
 ### Fixed
 
 - Enregistrer un second namespace ne rate plus avec « An object could not be cloned ». Le
