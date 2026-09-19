@@ -434,6 +434,7 @@ mod tests {
     /// Le ramassage : une session morte est annoncee une fois, puis oubliee.
     #[test]
     fn une_session_morte_est_signalee_puis_oubliee() {
+        super::super::session::shell_neutre();
         let service = Arc::new(Service::neuf(std::path::PathBuf::from("/inutilise"), 100));
         creer(&service, 7, &std::env::temp_dir().to_string_lossy(), Taille { colonnes: 40, lignes: 10 }, Some("exit".into()), &[])
             .unwrap();

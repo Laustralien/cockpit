@@ -148,6 +148,25 @@ if [ -n "${COCKPIT_BANC_MAJ:-}" ]; then
   exit 0
 fi
 
+# **LE THEME CLAIR SE REGARDE AUSSI.** Le fond des graphiques et les couleurs des courbes y
+# repondent autrement : un contraste correct en sombre ne prouve rien. Le theme vit dans le
+# stockage de la page, donc on le choisit en cliquant, comme un utilisateur.
+if [ -n "${COCKPIT_BANC_CLAIR:-}" ]; then
+  clic 1275 55 3          # l engrenage
+  clic 400 215 3          # « Apparence »
+  clic 1117 232 3         # la palette « Clair »
+  image clair-1-apparence
+  clic 105 296 3          # un projet
+  clic 941 127 14         # l onglet Kubernetes
+  clic 849 268 3          # l onglet « Ressources »
+  sleep 30                # de quoi remplir les courbes
+  image clair-2-ressources
+  # **UNE BANDE SANS NOM NE SERT A RIEN** : le survol doit dire QUEL pod on designe.
+  python3 "$OUTILS" survoler 600 540
+  image clair-3-survol
+  exit 0
+fi
+
 if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   clic 941 127 14         # l onglet Kubernetes (a droite de Git)
   image k8s-1-ensemble    # ce que le namespace contient, en objets declares

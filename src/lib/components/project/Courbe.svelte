@@ -13,13 +13,22 @@
    * traits — une ligne de 1,5 px devient un trait gras d'un cote et un cheveu de l'autre. On
    * mesure donc la largeur disponible et on dessine dedans.
    */
+  import { trad } from "../../i18n";
   import {
-    aire, borneHaute, graduations, graduationsDeTemps, heureDe, leplusProche, ligne, points,
-    type Point,
+    aire, bandeSousLeCurseur, borneHaute, empiler, graduations, graduationsDeTemps, heureDe,
+    leplusProche, ligne, points, sommets, type BandeEmpilee, type Historique, type Point,
   } from "../../k8s/mesures";
 
   interface Props {
     serie: Point[];
+    /**
+     * L'historique complet, pour dessiner UNE BANDE PAR POD.
+     *
+     * **UNE COURBE DE TOTAL NE DIT PAS QUI CONSOMME** : on voit la bosse, pas son auteur.
+     * Absent, le graphique retombe sur la courbe seule — c'est ce qu'on veut quand un pod est
+     * deja suivi de pres, ou qu'il n'y a rien a decomposer.
+     */
+    parPod?: Historique;
     valeur: "cpu" | "ram";
     titre: string;
     /** Met une valeur brute en texte lisible (millicores, octets…). */
@@ -31,14 +40,20 @@
     hauteur?: number;
   }
   let {
-    serie, valeur, titre, formater, teinte = "accent", depuis, jusqua, hauteur = 132,
+    serie, parPod, valeur, titre, formater, teinte = "accent", depuis, jusqua, hauteur = 132,
   }: Props = $props();
 
   let largeur = $state(0);
   let survol: { x: number; point: Point } | null = $state(null);
+  let survolBande: { x: number; nom: string; valeur: number; t: number } | null = $state(null);
 
   const cadre = $derived({ largeur: Math.max(1, largeur), hauteur });
-  const max = $derived(borneHaute(serie.map((p) => p[valeur])));
+  const bandes = $derived<BandeEmpilee[]>(parPod ? empiler(parPod, valeur, depuis) : []);
+  const empile = $derived(bandes.length > 0);
+  /// L'echelle porte sur le SOMMET de la pile : c'est la meme valeur que le total d'avant.
+  const max = $derived(
+    borneHaute(empile ? sommets(bandes) : serie.map((p) => p[valeur])),
+  );
   const coords = $derived(points(serie, valeur, cadre, depuis, jusqua, max));
   const trace = $derived(ligne(coords));
   const dessous = $derived(aire(coords, cadre));
@@ -51,8 +66,39 @@
   function surLaSouris(e: MouseEvent) {
     const boite = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = e.clientX - boite.left;
+    if (empile) {
+      const y = e.clientY - boite.top;
+      const trouve = bandeSousLeCurseur(bandes, x, y, cadre, depuis, jusqua, max);
+      survolBande = trouve
+        ? { x, nom: trouve.bande.nom, valeur: trouve.valeur, t: trouve.t }
+        : null;
+      survol = null;
+      return;
+    }
     const point = leplusProche(serie, x, cadre, depuis, jusqua);
     survol = point ? { x, point } : null;
+  }
+
+  function quitter() {
+    survol = null;
+    survolBande = null;
+  }
+
+  /// Le chemin ferme d'une bande : son sommet a l'aller, son plancher au retour.
+  function contour(bande: BandeEmpilee): string {
+    const enHaut = bande.points.map((p) => coordonnee(p.t, p.haut));
+    const enBas = [...bande.points].reverse().map((p) => coordonnee(p.t, p.bas));
+    if (enHaut.length === 0) return "";
+    const tout = [...enHaut, ...enBas];
+    return `M${tout.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join("L")}Z`;
+  }
+
+  function coordonnee(t: number, v: number): { x: number; y: number } {
+    const etendue = Math.max(1, jusqua - depuis);
+    return {
+      x: ((t - depuis) / etendue) * cadre.largeur,
+      y: cadre.hauteur - (Math.min(v, max) / max) * cadre.hauteur,
+    };
   }
 </script>
 
@@ -70,7 +116,7 @@
     style="height:{hauteur}px"
     bind:clientWidth={largeur}
     onmousemove={surLaSouris}
-    onmouseleave={() => (survol = null)}
+    onmouseleave={quitter}
   >
     <svg width={cadre.largeur} height={hauteur} aria-hidden="true">
       <defs>
@@ -89,9 +135,25 @@
         <line class="grille verticale" x1={h.x} y1="0" x2={h.x} y2={hauteur} />
       {/each}
 
-      {#if dessous}
+      {#if empile}
+        <!-- **UNE BANDE PAR POD, DU BAS VERS LE HAUT.** La hauteur totale reste la courbe du
+             total : ce qui change, c'est qu'on voit QUI la compose. -->
+        {#each bandes as bande (bande.nom + bande.teinte)}
+          <path
+            class="bande"
+            class:autres={bande.teinte < 0}
+            style={bande.teinte >= 0 ? `fill: var(--serie-${bande.teinte + 1})` : ""}
+            d={contour(bande)}
+          />
+        {/each}
+      {:else if dessous}
         <path class="aire" d={dessous} fill="url(#{identifiant})" />
         <path class="trait" d={trace} />
+      {/if}
+
+      {#if survolBande}
+        {@const x = ((survolBande.t - depuis) / Math.max(1, jusqua - depuis)) * cadre.largeur}
+        <line class="repere" x1={x} y1="0" x2={x} y2={hauteur} />
       {/if}
 
       {#if survol}
@@ -118,6 +180,19 @@
       </div>
     {/if}
 
+    {#if survolBande}
+      <!-- Le nom du pod d'abord : c'est ce qu'on vient chercher en promenant la souris sur une
+           bande. Sans lui, l'infobulle repondrait « 120m » a la question « lequel ? ». -->
+      <div
+        class="infobulle nommee"
+        style="left:{Math.min(Math.max(survolBande.x, 90), Math.max(90, cadre.largeur - 90))}px"
+      >
+        <strong>{survolBande.nom || $trad("k8s.autresPods")}</strong>
+        <span>{formater(survolBande.valeur)}</span>
+        <span>{heureDe(survolBande.t)}</span>
+      </div>
+    {/if}
+
     {#if serie.length === 0}
       <p class="attente">—</p>
     {/if}
@@ -132,6 +207,23 @@
       <span class={bord} style="left:{h.x}px">{h.libelle}</span>
     {/each}
   </div>
+
+  {#if empile}
+    <!-- **UNE COULEUR SANS NOM NE SERT A RIEN.** La legende dit quelle bande est quel pod ;
+         sans elle, on voit bien que la bosse vient de quelqu'un, mais pas de qui. -->
+    <div class="legende">
+      {#each bandes as bande (bande.nom + bande.teinte)}
+        <span class="entree" title={bande.nom || $trad("k8s.autresPodsAide")}>
+          <span
+            class="puce"
+            class:autres={bande.teinte < 0}
+            style={bande.teinte >= 0 ? `background: var(--serie-${bande.teinte + 1})` : ""}
+          ></span>
+          {bande.nom || $trad("k8s.autresPods")}
+        </span>
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -149,12 +241,16 @@
     position: relative;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: var(--bg-secondary);
+    background: var(--graphe-fond);
     overflow: hidden;
   }
   svg { display: block; }
 
   .grille { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.7; }
+  /* Un trait de separation entre les couches : sans lui, deux teintes voisines se confondent
+     la ou l'une devient tres fine. */
+  .bande { stroke: var(--graphe-fond); stroke-width: 0.5; }
+  .bande.autres { fill: var(--serie-autres); }
   /* Plus discrete que l'horizontale : elle sert de repere, elle ne quadrille pas le fond. */
   .grille.verticale { opacity: 0.4; }
   .aire { stroke: none; }
@@ -218,6 +314,29 @@
     pointer-events: none;
   }
   .infobulle span { color: var(--text-muted); }
+  .infobulle.nommee strong { font-family: var(--font-mono); font-size: 0.7rem; }
+
+  /* La legende tient sur deux ou trois lignes et ne pousse jamais le graphique : les noms sont
+     longs, et un pod de plus ne doit pas deplacer ce qu'on regarde. */
+  .legende {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1rem 0.7rem;
+    padding-top: 0.25rem;
+    max-height: 3.4rem;
+    overflow: auto;
+  }
+  .entree {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+  .puce { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  .puce.autres { background: var(--serie-autres); }
 
   .attente {
     position: absolute;

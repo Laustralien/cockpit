@@ -168,8 +168,11 @@
   {/if}
 
   <div class="courbes">
+    <!-- **ON N'EMPILE QUE QUAND ON REGARDE TOUT LE NAMESPACE.** Un pod suivi de pres n'a rien
+         a decomposer : sa propre courbe se lit mieux qu'une bande unique. -->
     <Courbe
       serie={serie}
+      parPod={focus ? undefined : historique}
       valeur="cpu"
       titre={$trad("k8s.cpu")}
       formater={(n) => formaterCpu(Math.round(n))}
@@ -179,6 +182,7 @@
     />
     <Courbe
       serie={serie}
+      parPod={focus ? undefined : historique}
       valeur="ram"
       titre={$trad("k8s.ram")}
       formater={(n) => formaterRam(Math.round(n))}

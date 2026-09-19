@@ -836,6 +836,8 @@ export const fr = {
   "k8s.arreterLEnregistrement": "Arrêter",
   "k8s.mesuresCouvertureN": "{mesures} pods mesurés sur {total}",
   "k8s.mesuresCouvertureAide": "Le cluster ne mesure que ce qui tourne : un pod terminé n'a pas de mesure, et n'apparaît donc pas ici.",
+  "k8s.autresPods": "autres",
+  "k8s.autresPodsAide": "Tous les pods qui n'ont pas leur propre couleur, cumulés.",
   "k8s.ongletEnsemble": "Vue d'ensemble",
   "k8s.ongletServices": "Services",
   "k8s.ongletTaches": "Tâches planifiées",

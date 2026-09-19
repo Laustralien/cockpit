@@ -248,3 +248,97 @@ test("un cadre pas encore mesure ne rend rien", async () => {
   assert.deepEqual(graduationsDeTemps(1000, 2000, 0), []);
   assert.deepEqual(graduationsDeTemps(2000, 2000, 500), []);
 });
+
+// ── Les bandes empilees ──────────────────────────────────────────────────────────────────────
+
+const { empiler, sommets, bandeSousLeCurseur, BANDES_MAX } = await import(
+  "../../src/lib/k8s/mesures.ts"
+);
+
+/** Fabrique un historique : { pod: [[t, cpu], …] }. */
+function historique(table) {
+  const h = new Map();
+  for (const [nom, points] of Object.entries(table)) {
+    h.set(nom, points.map(([t, cpu]) => ({ t, cpu, ram: cpu * 10 })));
+  }
+  return h;
+}
+
+test("les bandes s'empilent, et leur sommet est le total", () => {
+  const h = historique({ a: [[1000, 10], [2000, 20]], b: [[1000, 5], [2000, 5]] });
+  const bandes = empiler(h, "cpu", 0);
+  assert.equal(bandes.length, 2);
+  assert.deepEqual(bandes[0].points[0], { t: 1000, bas: 0, haut: 10 });
+  assert.deepEqual(bandes[1].points[0], { t: 1000, bas: 10, haut: 15 });
+  assert.deepEqual(sommets(bandes), [15, 25], "le haut de la pile, c'est la courbe du total");
+});
+
+test("un pod non mesure a cet instant vaut zero, jamais sa derniere valeur", () => {
+  // Prolonger inventerait de la consommation pour un pod qui n'existait plus.
+  const h = historique({ a: [[1000, 10]], b: [[1000, 5], [2000, 5]] });
+  const bandes = empiler(h, "cpu", 0);
+  const aDeux = bandes.find((x) => x.nom === "a").points.find((p) => p.t === 2000);
+  assert.equal(aDeux.haut - aDeux.bas, 0);
+  assert.deepEqual(sommets(bandes), [15, 5]);
+});
+
+test("au-dela de la palette, le reste va dans « autres » et n'est jamais perdu", () => {
+  const table = {};
+  for (let i = 0; i < BANDES_MAX + 4; i++) table[`pod-${String(i).padStart(2, "0")}`] = [[1000, 10]];
+  const bandes = empiler(table === null ? new Map() : historique(table), "cpu", 0);
+  assert.equal(bandes.length, BANDES_MAX + 1, "les nommes, plus une bande pour le reste");
+  const derniere = bandes[bandes.length - 1];
+  assert.equal(derniere.teinte, -1);
+  assert.equal(derniere.points[0].haut - derniere.points[0].bas, 40, "les 4 restants, cumules");
+  assert.equal(sommets(bandes)[0], 140, "et le total reste juste");
+});
+
+test("ce sont les plus gros de la FENETRE qui sont nommes", () => {
+  // Une pointe passagere ne doit pas evincer un pod qui consomme en continu.
+  const table = { continu: [[1000, 5], [2000, 5], [3000, 5]] };
+  for (let i = 0; i < BANDES_MAX; i++) table[`petit-${i}`] = [[1000, 1], [2000, 1], [3000, 1]];
+  const bandes = empiler(historique(table), "cpu", 0);
+  assert.ok(bandes.some((b) => b.nom === "continu"), "le regulier est nomme");
+});
+
+test("les couleurs suivent le nom, pas la consommation", () => {
+  // Sinon deux mesures voisines echangeraient les teintes et le graphique clignoterait.
+  const h1 = historique({ zzz: [[1000, 100]], aaa: [[1000, 1]] });
+  const h2 = historique({ zzz: [[1000, 1]], aaa: [[1000, 100]] });
+  const t1 = Object.fromEntries(empiler(h1, "cpu", 0).map((b) => [b.nom, b.teinte]));
+  const t2 = Object.fromEntries(empiler(h2, "cpu", 0).map((b) => [b.nom, b.teinte]));
+  assert.deepEqual(t1, t2);
+  assert.equal(t1.aaa, 0, "le premier nom prend la premiere teinte");
+});
+
+test("le total ne se compte pas comme un pod", () => {
+  const h = historique({ a: [[1000, 10]] });
+  h.set(TOTAL, [{ t: 1000, cpu: 10, ram: 100 }]);
+  const bandes = empiler(h, "cpu", 0);
+  assert.deepEqual(bandes.map((b) => b.nom), ["a"], "sinon tout serait compte deux fois");
+});
+
+test("la fenetre ecarte ce qui est trop vieux", () => {
+  const h = historique({ a: [[1000, 10], [9000, 4]] });
+  assert.deepEqual(sommets(empiler(h, "cpu", 5000)), [4]);
+  assert.deepEqual(empiler(h, "cpu", 99999), [], "rien dans la fenetre : rien a dessiner");
+});
+
+test("l'infobulle designe la bande sous le curseur", () => {
+  const h = historique({ bas: [[1000, 10]], haut: [[1000, 10]] });
+  const bandes = empiler(h, "cpu", 0);
+  const cadre = { largeur: 100, hauteur: 100 };
+  // max = 20 : la moitie basse du cadre appartient a « bas », la haute a « haut ».
+  const enBas = bandeSousLeCurseur(bandes, 50, 90, cadre, 1000, 2000, 20);
+  assert.equal(enBas.bande.nom, "bas");
+  assert.equal(enBas.valeur, 10);
+  const enHaut = bandeSousLeCurseur(bandes, 50, 10, cadre, 1000, 2000, 20);
+  assert.equal(enHaut.bande.nom, "haut");
+  // Au-dessus de la pile, plus personne : on ne designe pas une bande au hasard. Avec une
+  // echelle a 40, le haut du cadre vaut 40 alors que la pile s'arrete a 20.
+  assert.equal(bandeSousLeCurseur(bandes, 50, 0, cadre, 1000, 2000, 40), null);
+});
+
+test("sans bande, l'infobulle ne designe rien", () => {
+  assert.equal(bandeSousLeCurseur([], 10, 10, { largeur: 100, hauteur: 100 }, 0, 1000, 5), null);
+});

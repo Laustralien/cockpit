@@ -130,8 +130,10 @@ struct Tampon {
     abonne: Option<Arc<dyn Destinataire>>,
     /// Le PTY est ferme : l'emetteur ecoule ce qui reste puis s'arrete.
     fini: bool,
-    /// Commande a taper des que le shell aura montre qu'il lit (voir `lire_pty`).
+    /// Commande a taper quand le shell se sera tu (voir `taper_la_commande_initiale`).
     commande_initiale: Option<String>,
+    /// Instant de la derniere sortie du shell. `None` tant qu'il n'a rien ecrit.
+    derniere_sortie: Option<std::time::Instant>,
     recherche: Recherche,
 }
 
@@ -255,6 +257,7 @@ impl Session {
                 abonne: None,
                 fini: false,
                 commande_initiale,
+                derniere_sortie: None,
                 recherche: Recherche::default(),
             }),
             Condvar::new(),
@@ -280,6 +283,11 @@ impl Session {
                 let _ = enfant.wait();
                 session_guetteur.guetter_la_fin();
             });
+        }
+
+        if partage.0.lock().unwrap_or_else(|e| e.into_inner()).commande_initiale.is_some() {
+            let session_commande = Arc::clone(&session);
+            std::thread::spawn(move || taper_la_commande_initiale(&session_commande));
         }
 
         {
@@ -600,7 +608,7 @@ fn lire_pty(lecteur: &mut (impl Read + ?Sized), session: &Session) {
             Ok(0) | Err(_) => return,
             Ok(n) => n,
         };
-        let (sortants, presse_papier, commande, abonne) = {
+        let (sortants, presse_papier, abonne) = {
             let mut t = tampon.lock().unwrap_or_else(|e| e.into_inner());
             t.ecran.avaler(&morceau[..lus]);
             if t.abonne.is_some() {
@@ -622,11 +630,8 @@ fn lire_pty(lecteur: &mut (impl Read + ?Sized), session: &Session) {
                     Sortant::VersLePressePapier(texte) => vers_le_presse_papier.push(texte),
                 }
             }
-            // Le shell a montre qu'il lit (il vient d'ecrire son invite) : c'est le moment
-            // de taper la commande d'ouverture. L'envoyer avant que le shell soit pret la
-            // ferait avaler par un `stty` d'initialisation.
-            let commande = t.commande_initiale.take();
-            (vers_le_shell, vers_le_presse_papier, commande, t.abonne.clone())
+            t.derniere_sortie = Some(std::time::Instant::now());
+            (vers_le_shell, vers_le_presse_papier, t.abonne.clone())
         };
         signal.notify_all();
 
@@ -645,14 +650,77 @@ fn lire_pty(lecteur: &mut (impl Read + ?Sized), session: &Session) {
                 abonne.pousser(Pousse::PressePapier { id: session.id, texte });
             }
         }
-        if let Some(commande) = commande {
-            // `\r` et non `\n` : un shell en mode edition de ligne attend un retour
-            // chariot, et le PTY en mode canonique le traduit de toute facon.
-            if let Err(e) = session.ecrire(format!("{commande}\r").as_bytes()) {
-                if let Some(abonne) = &abonne {
-                    abonne.pousser(Pousse::Panne { id: session.id, message: e });
-                }
-            }
+    }
+}
+
+/// **UN ESSAI NE MESURE PAS LA CONFIGURATION DE LA MACHINE.** Les sessions lancent le shell de
+/// l'utilisateur (`$SHELL`). Sur un poste equipe de oh-my-zsh, celui-ci a annonce une mise a
+/// jour disponible au milieu d'un essai d'echo : 64 octets de message dans le lot mesure, et un
+/// rouge qui n'avait rien a voir avec le code. On fixe donc un shell nu, une fois pour toutes
+/// les sessions d'essai. Le vrai shell reste couvert par le banc d'interface, qui lance
+/// l'application entiere.
+#[cfg(test)]
+pub(crate) fn shell_neutre() {
+    static UNE_FOIS: std::sync::Once = std::sync::Once::new();
+    UNE_FOIS.call_once(|| {
+        #[cfg(unix)]
+        std::env::set_var("SHELL", "/bin/sh");
+    });
+}
+
+/// Depuis combien de temps le shell doit s'etre TU avant qu'on lui tape la commande d'ouverture.
+const SILENCE_AVANT_DE_TAPER: std::time::Duration = std::time::Duration::from_millis(250);
+/// Et au-dela de ce delai, on tape quand meme : un shell qui ecrit sans fin (un `neofetch`
+/// dans son fichier de demarrage) ne doit pas empecher la commande de partir.
+const ATTENTE_MAX_AVANT_DE_TAPER: std::time::Duration = std::time::Duration::from_secs(3);
+
+/// Tape la commande d'ouverture quand le shell a fini de s'installer.
+///
+/// **LA PREMIERE SORTIE D'UN SHELL N'EST PAS SON INVITE.** Le code tapait des que le PTY avait
+/// rendu un octet. Or une invite riche (powerlevel10k affiche une invite PROVISOIRE avant de
+/// charger la configuration) et les fichiers de demarrage ecrivent bien avant que le shell ne
+/// lise : ce qu'on tape a cet instant est jete par le `stty` d'initialisation, et seule la fin
+/// de la ligne arrive. Mesure du 2026-09-19, machine chargee : `exit` devenait `xit` et le
+/// terminal ne se fermait pas ; `seq 1 200000` devenait `eq 1 200000`. Ce qui rate ici, ce sont
+/// le bouton « Cmd », le shell d'un conteneur, et la reprise d'un agent apres une extinction.
+///
+/// On attend donc que le shell se TAISE : il a parle, puis plus rien pendant un quart de
+/// seconde. C'est le signe qu'il attend une entree. On ne rejoue JAMAIS la commande — elle peut
+/// construire, deployer, effacer — donc l'attente est bornee et, passe ce delai, on tape.
+fn peut_taper(
+    derniere_sortie: Option<std::time::Instant>,
+    depuis_l_ouverture: std::time::Duration,
+) -> bool {
+    if depuis_l_ouverture >= ATTENTE_MAX_AVANT_DE_TAPER {
+        return true;
+    }
+    derniere_sortie.is_some_and(|quand| quand.elapsed() >= SILENCE_AVANT_DE_TAPER)
+}
+
+fn taper_la_commande_initiale(session: &Session) {
+    let (tampon, _) = &*session.partage;
+    let debut = std::time::Instant::now();
+    loop {
+        if !session.vivant() {
+            return;
+        }
+        let derniere = tampon.lock().unwrap_or_else(|e| e.into_inner()).derniere_sortie;
+        if peut_taper(derniere, debut.elapsed()) {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    }
+    let commande = {
+        let mut t = tampon.lock().unwrap_or_else(|e| e.into_inner());
+        t.commande_initiale.take()
+    };
+    let Some(commande) = commande else { return };
+    // `\r` et non `\n` : un shell en mode edition de ligne attend un retour chariot, et le PTY
+    // en mode canonique le traduit de toute facon.
+    if let Err(e) = session.ecrire(format!("{commande}\r").as_bytes()) {
+        let abonne = tampon.lock().unwrap_or_else(|e| e.into_inner()).abonne.clone();
+        if let Some(abonne) = abonne {
+            abonne.pousser(Pousse::Panne { id: session.id, message: e });
         }
     }
 }
@@ -827,6 +895,7 @@ mod tests {
     /// La meme chose, en repartant d'un ecran deja rempli : c'est le chemin de la
     /// restauration apres une extinction du poste.
     fn session_avec_ecran(commande: Option<&str>, ecran_initial: &[u8]) -> Arc<Session> {
+        shell_neutre();
         Session::ouvrir(
             1,
             &std::env::temp_dir().to_string_lossy(),
@@ -852,6 +921,40 @@ mod tests {
                 "toujours pas {quoi} apres 20 s. Ecran :\n{vu}"
             );
             std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+    }
+
+    /// Attend que le shell EXECUTE ce qu'on lui tape, pas seulement qu'il ait ecrit un octet.
+    ///
+    /// **UNE INVITE AFFICHEE N'EST PAS UN SHELL PRET.** Les invites riches (powerlevel10k,
+    /// starship) peignent en plusieurs temps, et zsh peut encore lire ses fichiers de
+    /// demarrage : ce qu'on tape a cet instant est PERDU, et seule la fin de la ligne arrive.
+    /// Constate le 2026-09-19, machine chargee : `seq 1 200000; …` devenait
+    /// `eq 1 200000; …`, le shell repondait « command not found » puis attendait une quote
+    /// fermante, et l'essai concluait « la rafale n'a pas eu lieu » — un banc qui reproduit le
+    /// symptome pour une autre raison fait chercher une panne qui n'existe pas.
+    ///
+    /// On tape donc une amorce jusqu'a ce qu'elle REVIENNE EXECUTEE, et le marqueur est ecrit
+    /// en deux morceaux pour que son echo ne suffise pas a la valider.
+    fn attendre_un_shell_qui_execute(session: &Session) {
+        let debut = std::time::Instant::now();
+        loop {
+            session.ecrire(b"printf 'pret%s\n' -a-taper\r").expect("ecrire l'amorce");
+            let jusqua = std::time::Instant::now() + std::time::Duration::from_millis(900);
+            while std::time::Instant::now() < jusqua {
+                if ecran_visible(session).contains("pret-a-taper") {
+                    // Le shell a execute : on lui rend un ecran propre pour la suite.
+                    session.ecrire(b"clear\r").expect("nettoyer l'ecran");
+                    std::thread::sleep(std::time::Duration::from_millis(120));
+                    return;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
+            assert!(
+                debut.elapsed() < std::time::Duration::from_secs(20),
+                "le shell n'execute toujours rien apres 20 s. Ecran :\n{}",
+                ecran_visible(session)
+            );
         }
     }
 
@@ -1045,12 +1148,56 @@ mod tests {
         s.fermer().unwrap();
     }
 
+    /// **ON NE TAPE PAS TANT QUE LE SHELL PARLE.** C'est toute la regle : la premiere sortie
+    /// d'un shell n'est pas son invite, et ce qu'on tape avant qu'il lise est jete.
+    #[test]
+    fn la_commande_d_ouverture_attend_que_le_shell_se_taise() {
+        let rien = std::time::Duration::ZERO;
+        assert!(!peut_taper(None, rien), "il n'a rien ecrit : on ne sait rien de lui");
+        assert!(
+            !peut_taper(Some(std::time::Instant::now()), rien),
+            "il vient de parler : c'est trop tot"
+        );
+        let calme = std::time::Instant::now() - SILENCE_AVANT_DE_TAPER;
+        assert!(peut_taper(Some(calme), rien), "il s'est tu : il attend une entree");
+        // Un shell qui ecrit sans fin (un `neofetch` dans son fichier de demarrage) ne doit
+        // pas empecher la commande de partir pour toujours.
+        assert!(
+            peut_taper(Some(std::time::Instant::now()), ATTENTE_MAX_AVANT_DE_TAPER),
+            "passe le plafond, on tape quand meme"
+        );
+    }
+
     /// La commande d'ouverture (bouton « ▶ Cmd », shell de conteneur, palette).
     #[test]
     fn la_commande_initiale_est_tapee_toute_seule() {
         let s = session(Some("echo depart-automatique"));
         attendre(&s, "la commande initiale", |vu| vu.contains("depart-automatique"));
         s.fermer().unwrap();
+    }
+
+    /// **ELLE DOIT ARRIVER ENTIERE, A CHAQUE FOIS.** Tapee des la premiere sortie du shell,
+    /// elle etait rognee par le `stty` d'initialisation : `exit` devenait `xit`, et le
+    /// terminal restait ouvert. Une seule ouverture ne le montre pas — c'est sous charge, ou
+    /// quand le fichier de demarrage prend son temps, que ca se joue. On en ouvre donc
+    /// plusieurs, en meme temps.
+    #[test]
+    fn la_commande_initiale_arrive_entiere_a_chaque_ouverture() {
+        let sessions: Vec<_> = (0..5)
+            .map(|i| session(Some(&format!("echo marqueur-entier-{i}"))))
+            .collect();
+        for (i, s) in sessions.iter().enumerate() {
+            let vu = attendre(s, "la commande entiere", |vu| {
+                vu.contains(&format!("marqueur-entier-{i}")) || vu.contains("not found")
+            });
+            assert!(
+                !vu.contains("not found"),
+                "la commande a ete rognee a l'ouverture {i}. Ecran :\n{vu}"
+            );
+        }
+        for s in sessions {
+            s.fermer().unwrap();
+        }
     }
 
     /// L'invariant de la sortie en rafale : le contenu arrive EN ENTIER (c'est lui qui
@@ -1068,7 +1215,7 @@ mod tests {
     #[test]
     fn une_rafale_part_en_gros_lots_pas_en_miettes() {
         let s = session(None);
-        attendre(&s, "l'invite du shell", |vu| !vu.trim().is_empty());
+        attendre_un_shell_qui_execute(&s);
         let (abonne, recu) = boite();
         s.attacher(abonne);
         // 200 000 lignes numerotees : plusieurs Mo, tres au-dela d'un ecran.

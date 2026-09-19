@@ -12,6 +12,23 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- La commande d'ouverture d'un terminal (bouton « Cmd », shell d'un conteneur, reprise d'un
+  agent) n'arrive plus amputée de ses premiers caractères quand le shell met du temps à
+  démarrer : elle attend maintenant qu'il soit prêt à lire.
+
+### Added
+
+- Les graphiques de l'onglet Ressources montrent **une bande de couleur par pod** au lieu d'une
+  seule courbe : la hauteur totale ne change pas, mais on voit qui compose la bosse. Le survol
+  nomme la bande, et une légende donne les couleurs. Les pods trop petits pour avoir leur teinte
+  sont cumulés dans une bande « autres », jamais perdue.
+
+### Changed
+
+- Le fond des graphiques n'est plus blanc : il reprend le beige du thème Papier, plus reposant.
+
 ## [0.81.0] — 2026-09-18
 
 ### Fixed

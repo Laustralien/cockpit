@@ -196,6 +196,33 @@ html[data-theme="forest"] { --surface-canvas: #0b1310; --surface-base: #121d18; 
 html[data-theme="ember"] { --surface-canvas: #14100d; --surface-base: #1e1814; --surface-raised: #29211b; }
 html[data-theme="paper"] { --surface-canvas: #f7f4ee; --surface-base: #fffdf8; --surface-raised: #efe9df; }
 
+/* --- Le fond des graphiques, et les couleurs des courbes ---
+   **UN GRAPHIQUE SUR FOND BLANC FATIGUE.** Demande du mainteneur : un fond legerement beige en
+   theme clair, ou les traces se posent sans eblouir. Les themes sombres gardent leur surface.
+
+   **LES DIX TEINTES DE SERIES SONT LES MEMES SUR TOUS LES THEMES**, et c'est delibere : une
+   couleur de courbe doit se distinguer de ses voisines, pas s'accorder au decor. Elles sont
+   assez saturees pour tenir sur un fond clair comme sur un fond sombre — la regle « une couleur
+   peut etre invisible » vaut ici aussi, et c'est ce qui a ecarte les tons pastel. « autres »
+   reste gris : ce n'est pas un pod, c'est ce qui reste. */
+:root {
+  /* La meme teinte que le theme « Papier » : elle a deja ete choisie pour etre reposante, et
+     deux beiges differents dans la meme application se verraient. */
+  --graphe-fond: #f7f4ee;
+  --serie-1: #4f7cff;
+  --serie-2: #21a35b;
+  --serie-3: #e8930c;
+  --serie-4: #e5484d;
+  --serie-5: #8b5cf6;
+  --serie-6: #06b6d4;
+  --serie-7: #d946a8;
+  --serie-8: #7cb518;
+  --serie-9: #14b8a6;
+  --serie-10: #64748b;
+  --serie-autres: #b6bcc8;
+}
+html.dark { --graphe-fond: var(--bg-secondary); --serie-autres: #4a5162; }
+
 /* CE QUE LE SYSTEME DOIT SAVOIR DU THEME.
    Les controles natifs — la liste qui s'ouvre sous un `<select>`, les barres de defilement, le
    curseur de saisie — sont peints par le moteur, pas par nous. Sans `color-scheme`, il les peint

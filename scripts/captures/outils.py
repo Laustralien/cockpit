@@ -259,6 +259,26 @@ def taper(texte: str, entree: bool = True) -> None:
         time.sleep(0.03)
 
 
+def survoler(x: int, y: int) -> None:
+    """Pose le pointeur sans cliquer.
+
+    Une infobulle qui suit la souris ne se prouve pas par un clic : `cliquer` la ferait
+    disparaitre, ou pire, declencherait l'action qui est dessous.
+    """
+    from Xlib import X
+    from Xlib.ext import xtest
+
+    # **UN SEUL SAUT NE COMPTE PAS COMME UN MOUVEMENT.** Le moteur n'emet `mousemove` que s'il
+    # voit le pointeur BOUGER : pose d'un coup a sa place finale, l'infobulle ne s'ouvrait pas.
+    # On approche donc en deux temps, comme une main.
+    d = _ecran()
+    for etape in ((x - 40, y - 25), (x - 12, y - 6), (x, y)):
+        xtest.fake_input(d, X.MotionNotify, x=etape[0], y=etape[1])
+        d.sync()
+        time.sleep(0.15)
+    time.sleep(0.5)
+
+
 def effacer() -> None:
     """Vide le champ qui a le focus : Ctrl+A puis Retour arriere.
 
@@ -647,6 +667,8 @@ if __name__ == "__main__":
         taper(sys.argv[2])
     elif quoi == "effacer":
         effacer()
+    elif quoi == "survoler":
+        survoler(int(sys.argv[2]), int(sys.argv[3]))
     elif quoi == "arreter":
         options = sys.argv[3:]
         if "--lister-service" in options:
