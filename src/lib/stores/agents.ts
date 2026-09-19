@@ -1,6 +1,10 @@
 import { derived, get, writable } from "svelte/store";
 import { terminals } from "./terminals";
+import { attachTerminal } from "../api/workspace";
+import { signalerErreur } from "./errors";
 import {
+  doitObserver,
+  noterUneSortie,
   prochainEtat,
   sortieDe,
   meriteUnRepere,
@@ -35,6 +39,38 @@ export const nombreQuiAttendent = derived(etatsAgents, ($etats) =>
   [...$etats.values()].filter((e) => e === "attend").length,
 );
 
+/**
+ * Les sessions sur lesquelles on s'est deja branche pour les OBSERVER.
+ *
+ * **UN TERMINAL JAMAIS OUVERT N'ENVOIE RIEN, DONC NE SIGNALE RIEN.** La sortie d'un terminal
+ * n'arrive au frontend que s'il est branche, et il ne l'est qu'a l'ouverture de son onglet :
+ * apres un lancement de Cockpit, un agent qui attend dans un terminal qu'on n'a pas encore
+ * regarde ne pouvait donc rien dire. On se branche sur ces sessions-la, une fois chacune.
+ *
+ * Trois precautions, toutes obligatoires : on ne se branche QUE sur une session que le service
+ * dit vivante (se brancher sur une session inconnue ROUVRIRAIT un shell, ce que le demarrage ne
+ * doit jamais faire), on envoie SA taille et pas une autre (sinon on redimensionne un terminal
+ * qu'on n'affiche meme pas), et seulement quand un agent y tourne — sinon on paierait l'ecran et
+ * l'historique de chaque terminal de chaque projet pour rien.
+ */
+const observes = new Set<number>();
+
+function observer(t: { id: number; llm: boolean; alive: boolean; cols: number; rows: number }): void {
+  if (!doitObserver(t, observes.has(t.id), sortieDe(t.id) !== undefined)) return;
+  observes.add(t.id);
+  attachTerminal(t.id, t.cols, t.rows)
+    // **ON COMMENCE A COMPTER LE SILENCE ICI.** Sans cet instant de depart, le terminal reste
+    // « on n'a jamais rien vu passer », donc « en cours » pour toujours : le seul octet qui
+    // arrive ensuite est le redessin du branchement, et un redessin ne dit rien de l'agent.
+    // On ne pretend pas connaitre son passe, on mesure son silence a partir du moment ou on
+    // l'ecoute.
+    .then(() => noterUneSortie(t.id))
+    .catch((e) => {
+      observes.delete(t.id);
+      signalerErreur("agents.observer", String(e));
+    });
+}
+
 function recalculer(): void {
   const liste = get(terminals);
   const maintenant = Date.now();
@@ -43,6 +79,9 @@ function recalculer(): void {
 
   for (const t of liste) {
     vus.add(t.id);
+    // Un agent tourne ici et on n'a jamais rien vu passer : on se branche pour pouvoir
+    // repondre autre chose que « en cours ».
+    observer(t);
     const suivant = prochainEtat(
       suivis.get(t.id), t.llm, sortieDe(t.id), maintenant, undefined, regardes.has(t.id),
     );
@@ -51,6 +90,7 @@ function recalculer(): void {
   }
   // Un terminal disparu de la liste ne doit pas garder un suivi pour toujours.
   for (const id of [...suivis.keys()]) if (!vus.has(id)) suivis.delete(id);
+  for (const id of [...observes]) if (!vus.has(id)) observes.delete(id);
 
   // **ON N'ECRIT QUE SI QUELQUE CHOSE A CHANGE.** Reposer une Map identique chaque seconde
   // ferait recalculer la barre laterale pour rien, soixante fois par minute.

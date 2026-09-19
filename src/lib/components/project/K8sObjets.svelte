@@ -154,7 +154,7 @@
     width: 100%;
     padding: 0.4rem 0.5rem;
     background: var(--bg-secondary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     color: inherit;
     text-align: left;
@@ -182,7 +182,7 @@
     font-size: 0.68rem;
     padding: 0.05rem 0.3rem;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     color: var(--text-secondary);
     white-space: nowrap;
   }
@@ -252,7 +252,7 @@
     padding: 0.4rem 0.5rem;
     margin-bottom: 0.4rem;
     background: var(--bg-secondary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
   }
   .fait { display: flex; align-items: baseline; gap: 0.35rem; font-size: 0.78rem; }

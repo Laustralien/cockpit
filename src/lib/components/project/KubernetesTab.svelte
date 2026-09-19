@@ -857,7 +857,7 @@
     gap: 0.45rem;
     padding: 0.38rem 0.7rem;
     background: var(--bg-secondary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 999px;
     color: var(--text-primary);
     cursor: pointer;
@@ -877,7 +877,7 @@
   .direct.actif { color: var(--success); }
   .direct.actif::before { content: "● "; }
 
-  .vues { display: flex; gap: 0.2rem; border-bottom: 1px solid var(--border); }
+  .vues { display: flex; gap: 0.2rem; border-bottom: 1px solid var(--border-color); }
   .vue {
     padding: 0.3rem 0.8rem;
     background: none;
@@ -899,7 +899,7 @@
     gap: 0.4rem;
     padding: 0.26rem 0.7rem;
     background: transparent;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 999px;
     color: var(--text-secondary);
     cursor: pointer;
@@ -923,8 +923,8 @@
 
   /* ── Les panneaux de choix ────────────────────────────────────────────────── */
   .panneau {
-    background: var(--surface-1);
-    border: 1px solid var(--border);
+    background: var(--surface-base);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius);
     padding: 0.5rem;
     max-height: 24rem;
@@ -992,7 +992,7 @@
     padding: 0.4rem 0.5rem;
     margin: 0.3rem 0;
     background: var(--bg-secondary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
     color: var(--text-muted);
@@ -1034,7 +1034,7 @@
     font-size: 0.78rem;
     padding: 0.35rem 0.6rem;
     margin: 0;
-    border: 1px dashed var(--border);
+    border: 1px dashed var(--border-color);
     border-radius: var(--radius-sm);
   }
 
@@ -1047,7 +1047,7 @@
     margin-top: 0.25rem;
     background: none;
     border: none;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-color);
     color: var(--text-secondary);
     cursor: pointer;
     font-size: 0.8rem;
@@ -1065,7 +1065,7 @@
   }
 
   .carte {
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius);
     background: var(--bg-secondary);
     overflow: hidden;
@@ -1143,9 +1143,9 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .pods { border-top: 1px solid var(--border); }
+  .pods { border-top: 1px solid var(--border-color); }
   .pod { display: flex; align-items: center; }
-  .pod + .pod { border-top: 1px solid var(--border); }
+  .pod + .pod { border-top: 1px solid var(--border-color); }
   .pod:hover { background: var(--bg-tertiary); }
   .pod.choisi { background: var(--accent-soft); }
 
@@ -1184,9 +1184,9 @@
     min-height: 0;
     gap: 0.5rem;
     padding: 0.6rem;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius);
-    background: var(--surface-1);
+    background: var(--surface-base);
   }
   .detail-tete { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
   .detail-titre { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
@@ -1204,7 +1204,7 @@
     color: var(--text-muted);
     font-size: 0.76rem;
   }
-  .onglets { display: flex; gap: 0.15rem; border-bottom: 1px solid var(--border); }
+  .onglets { display: flex; gap: 0.15rem; border-bottom: 1px solid var(--border-color); }
   .onglet {
     padding: 0.3rem 0.7rem;
     background: none;
@@ -1225,7 +1225,7 @@
     margin: 0;
     padding: 0.6rem;
     background: var(--bg-primary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     font-family: var(--font-mono);
     font-size: 0.75rem;

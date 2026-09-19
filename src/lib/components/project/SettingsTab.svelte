@@ -177,7 +177,7 @@
     padding: 0.15rem 0.4rem; border-radius: 4px;
     background: var(--bg-tertiary); color: var(--text-primary); font-size: 0.85rem;
   }
-  .compose-vide { margin: 0.3rem 0 0; font-size: 0.85rem; color: var(--text-tertiary); }
+  .compose-vide { margin: 0.3rem 0 0; font-size: 0.85rem; color: var(--text-muted); }
   .compose-choix { margin: 0.6rem 0 0; }
   select {
     display: block; width: 100%; margin-top: 0.25rem; padding: 0.4rem 0.6rem;

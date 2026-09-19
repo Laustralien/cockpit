@@ -68,6 +68,33 @@ export function prochainEtat(
   return { agentAvant: false, etat: garde ? "fini" : "aucun" };
 }
 
+/**
+ * Faut-il se brancher sur cette session pour l'OBSERVER ?
+ *
+ * **UN TERMINAL JAMAIS OUVERT N'ENVOIE RIEN, DONC NE SIGNALE RIEN.** Sa sortie n'arrive au
+ * frontend que s'il est branche, et il ne l'est qu'a l'ouverture de son onglet : apres un
+ * lancement de Cockpit, un agent qui attend dans un terminal qu'on n'a pas encore regarde
+ * restait muet. On se branche donc sur ces sessions-la, une seule fois chacune.
+ *
+ * Quatre conditions, toutes necessaires :
+ *  - un agent y tourne (sinon on paierait l'ecran et l'historique de chaque terminal de chaque
+ *    projet pour rien) ;
+ *  - le service la dit VIVANTE : se brancher sur une session qu'il ne connait pas ROUVRIRAIT un
+ *    shell, ce qu'un demarrage ne doit jamais faire ;
+ *  - on n'a encore rien vu passer, sinon c'est deja fait ;
+ *  - sa taille est connue : on renvoie la SIENNE, sinon on redimensionne un terminal qu'on
+ *    n'affiche meme pas, et une application plein ecran ne s'en remet pas.
+ */
+export function doitObserver(
+  terminal: { llm: boolean; alive: boolean; cols: number; rows: number },
+  dejaObserve: boolean,
+  sortieConnue: boolean,
+): boolean {
+  if (dejaObserve || sortieConnue) return false;
+  if (!terminal.llm || !terminal.alive) return false;
+  return terminal.cols > 0 && terminal.rows > 0;
+}
+
 /** Un etat qui merite un repere a l'ecran. « En cours » n'en est pas un : c'est l'ordinaire. */
 export function meriteUnRepere(etat: EtatAgent): boolean {
   return etat === "attend" || etat === "fini";

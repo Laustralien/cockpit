@@ -98,7 +98,7 @@
     gap: 0.1rem;
     padding: 0.8rem;
     background: var(--bg-secondary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius);
     color: inherit;
     text-align: left;
@@ -116,7 +116,7 @@
     gap: 0.2rem;
     padding: 0.6rem;
     background: var(--bg-secondary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius);
   }
   h4 { margin: 0 0 0.3rem; font-size: 0.8rem; color: var(--text-secondary); }

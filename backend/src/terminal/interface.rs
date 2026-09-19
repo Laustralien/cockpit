@@ -28,6 +28,14 @@ pub struct TerminalInfo {
     pub alive: bool,
     /// Un CLI d'agent LLM (claude, codex, gemini...) tourne dans la session.
     pub llm: bool,
+    /// La taille que le SERVICE donne a cette session, ou 0 s'il ne la connait pas.
+    ///
+    /// **ELLE SERT A OBSERVER SANS RIEN CHANGER.** Se brancher sur un terminal jamais ouvert
+    /// demande une taille ; en envoyer une autre que la sienne redimensionnerait le
+    /// pseudo-terminal, ce qui deforme pour de bon une application plein ecran (voir la regle
+    /// sur la taille mesuree trop tot). On renvoie donc la sienne.
+    pub cols: u16,
+    pub rows: u16,
     /// Le dossier ou le terminal a ete OUVERT, tel qu'il est range en base.
     ///
     /// **C'EST LUI QUI DIT A QUEL DOSSIER DE TRAVAIL APPARTIENT LE TERMINAL**, et pas le

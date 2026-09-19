@@ -257,7 +257,7 @@
     align-items: center;
     gap: 0.6rem;
     padding: 0.4rem 0;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--border-color);
     flex-wrap: wrap;
   }
   .cible.eteinte .nom { color: var(--text-muted); text-decoration: line-through; }
@@ -268,7 +268,7 @@
   .petit-libelle { color: var(--text-muted); font-size: 0.74rem; }
   .petit { width: auto; padding: 0.2rem 0.35rem; font-size: 0.78rem; }
 
-  .ajout { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 0.6rem; border-top: 1px solid var(--border); }
+  .ajout { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 0.6rem; border-top: 1px solid var(--border-color); }
   .ligne-ajout { display: flex; gap: 0.8rem; flex-wrap: wrap; }
   .liste-namespaces { display: flex; flex-direction: column; gap: 0.08rem; max-height: 16rem; overflow: auto; }
   .famille {
@@ -288,5 +288,5 @@
     cursor: pointer;
     font-size: 0.82rem;
   }
-  .entree:hover { background: var(--bg-tertiary); border-color: var(--border); }
+  .entree:hover { background: var(--bg-tertiary); border-color: var(--border-color); }
 </style>

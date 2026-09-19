@@ -39,12 +39,20 @@ struct Contexte {
     db: Database,
 }
 
-/// La charge de l'evenement `terminal_output`. Forme figee : le frontend la lit telle
-/// quelle (`{ id, data }`, data en base64).
+/// La charge de l'evenement `terminal_output`. Le frontend la lit telle quelle
+/// (`{ id, data }`, data en base64).
+///
+/// **`redessin` DIT QUI A ECRIT : LE SHELL, OU NOUS.** Un redessin est ce que le service renvoie
+/// quand on se rebranche sur un terminal ; il ne prouve rien sur ce que fait l'agent. Confondu
+/// avec une vraie sortie, il remettait a zero le compteur de silence a CHAQUE retour sur un
+/// onglet : le repere « il attend » mettait alors plusieurs secondes a revenir alors que l'agent
+/// n'avait pas ecrit une ligne depuis longtemps. Signale le 2026-09-19 (« quand je repars ca met
+/// du temps a se remettre »).
 #[derive(Serialize, Clone)]
 struct SortiePayload {
     id: i64,
     data: String,
+    redessin: bool,
 }
 
 /// Temps minimum entre deux series de photos d'ecran, hors fermeture de la fenetre.
@@ -137,18 +145,20 @@ fn journaliser(scope: &str, message: &str) {
     }
 }
 
+fn emettre_la_sortie(contexte: &Contexte, id: i64, octets: &[u8], redessin: bool) {
+    contexte.emetteur.emettre(
+        "terminal_output",
+        serde_json::to_value(SortiePayload { id, data: b64(octets), redessin }).unwrap_or_default(),
+    );
+}
+
 /// Ce que le service envoie de lui-meme, traduit pour le frontend.
 fn traiter_poussee(contexte: &Contexte, pousse: Pousse) {
     match pousse {
         // Sortie brute et redessin partent par le MEME evenement : le frontend les donne
         // tels quels a xterm, qui n'a pas a savoir lequel des deux il recoit.
-        Pousse::Sortie { id, octets } | Pousse::Redessin { id, octets } => {
-            contexte.emetteur.emettre(
-                "terminal_output",
-                serde_json::to_value(SortiePayload { id, data: b64(&octets) })
-                    .unwrap_or_default(),
-            );
-        }
+        Pousse::Sortie { id, octets } => emettre_la_sortie(contexte, id, &octets, false),
+        Pousse::Redessin { id, octets } => emettre_la_sortie(contexte, id, &octets, true),
         Pousse::PressePapier { id, texte } => {
             if let Err(e) = crate::poser_presse_papier(texte) {
                 journaliser("terminal.pressePapier", &format!("terminal {id} : {e}"));
@@ -579,6 +589,8 @@ impl Terminaux for TerminauxService {
                     name: row.name,
                     alive: session.is_some_and(|s| s.vivant),
                     llm: session.is_some_and(|s| s.llm),
+                    cols: session.map_or(0, |s| s.taille.colonnes),
+                    rows: session.map_or(0, |s| s.taille.lignes),
                     cwd: row.cwd,
                 }
             })

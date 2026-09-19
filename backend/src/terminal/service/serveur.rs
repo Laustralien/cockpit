@@ -436,8 +436,16 @@ mod tests {
     fn une_session_morte_est_signalee_puis_oubliee() {
         super::super::session::shell_neutre();
         let service = Arc::new(Service::neuf(std::path::PathBuf::from("/inutilise"), 100));
-        creer(&service, 7, &std::env::temp_dir().to_string_lossy(), Taille { colonnes: 40, lignes: 10 }, Some("exit".into()), &[])
+        creer(&service, 7, &std::env::temp_dir().to_string_lossy(), Taille { colonnes: 40, lignes: 10 }, None, &[])
             .unwrap();
+        // **CET ESSAI PORTE SUR LE RAMASSAGE, PAS SUR LA COMMANDE D'OUVERTURE.** Il passait par
+        // elle pour faire mourir le shell ; depuis qu'elle attend un shell pret, il dependait
+        // d'un delai qui n'a rien a voir avec ce qu'il verifie, et tombait sous charge. On tue
+        // donc la session directement : c'est aussi ce qui arrive quand un shell se termine.
+        {
+            let sessions = service.sessions.lock().unwrap_or_else(|e| e.into_inner());
+            sessions.get(&7).expect("la session vient d'etre creee").fermer().unwrap();
+        }
 
         let debut = std::time::Instant::now();
         loop {

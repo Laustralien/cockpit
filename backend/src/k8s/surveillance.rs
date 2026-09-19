@@ -22,6 +22,10 @@ pub const CLE_RETENTION: &str = "k8s.retention_heures";
 
 /// Ce qu'on garde par defaut, quand l'utilisateur n'a rien dit.
 pub const RETENTION_PAR_DEFAUT: u32 = 24;
+/// **ON NE GARDE PAS PLUS D'UNE SEMAINE.** Decision du mainteneur, 2026-09-19 : au-dela, ces
+/// mesures ne servent plus a rien et ne font qu'occuper de la place. La borne vit ICI, pas dans
+/// l'ecran : une valeur venue du client ne decide jamais de ce qu'on ecrit sur le disque.
+pub const RETENTION_MAXIMUM: u32 = 24 * 7;
 /// Le rythme le plus rapide qu'on accepte : en dessous, le serveur de mesures du cluster n'a
 /// rien de neuf a dire, et on paierait la question pour rien.
 pub const PERIODE_MINIMUM: u32 = 15;
@@ -74,7 +78,7 @@ pub fn ecrire(db: &Database, mut reglages: Reglages) -> Result<Reglages, String>
             return Err(format!("nom de namespace refuse : {}", cible.namespace));
         }
     }
-    reglages.retention_heures = reglages.retention_heures.clamp(1, 24 * 30);
+    reglages.retention_heures = reglages.retention_heures.clamp(1, RETENTION_MAXIMUM);
     let json = serde_json::to_string(&reglages.cibles).map_err(|e| e.to_string())?;
     db.set_setting(CLE_CIBLES, &json)?;
     db.set_setting(CLE_RETENTION, &reglages.retention_heures.to_string())?;
@@ -299,11 +303,11 @@ mod tests {
         )
         .unwrap();
         assert_eq!(rendu.cibles[0].periode, PERIODE_MINIMUM);
-        assert_eq!(rendu.retention_heures, 24 * 30);
+        assert_eq!(rendu.retention_heures, RETENTION_MAXIMUM, "une semaine, pas plus");
         // Et ce qui est ecrit se relit a l'identique.
         let relu = lire(&db);
         assert_eq!(relu.cibles[0].periode, PERIODE_MINIMUM);
-        assert_eq!(relu.retention_heures, 24 * 30);
+        assert_eq!(relu.retention_heures, RETENTION_MAXIMUM);
     }
 
     #[test]

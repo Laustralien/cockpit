@@ -839,7 +839,7 @@
     grid-template-columns: 1fr auto;
     gap: 0.35rem 0.8rem;
     padding: 0.7rem 0.85rem;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--bg-secondary);
   }
@@ -858,7 +858,7 @@
     font-size: 0.72rem;
     color: var(--text-secondary);
     background: var(--bg-primary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 999px;
     padding: 0.05rem 0.5rem;
   }

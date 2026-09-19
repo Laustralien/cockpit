@@ -100,13 +100,16 @@
   // (requestAnimationFrame) a ete essayee dans la 0.54.10 : chaque echo de frappe payait une image
   // de retard, et quand le moteur ne peint plus — cas documente dans le guetteur — la sortie
   // s'arretait completement au lieu d'etre au moins analysee. Retiree dans la 0.54.12.
-  listenGlobal<{ id: number; data: string }>("terminal_output", (e) => {
+  listenGlobal<{ id: number; data: string; redessin?: boolean }>("terminal_output", (e) => {
     pool.get(e.payload.id)?.term.write(b64ToBytes(e.payload.data));
     // **DEUX OPERATIONS, ET RIEN D'AUTRE, SUR CE CHEMIN.** Poser un instant dans une table
     // ordinaire ne declenche aucun rendu ; c'est ce qui permet a la barre laterale de savoir
     // qu'un agent s'est tu sans qu'on paie quoi que ce soit par octet recu. Toute la regle
     // qui en decoule est ailleurs, et echantillonnee.
-    noterUneSortie(e.payload.id);
+    // **UN REDESSIN N'EST PAS UNE SORTIE DE L'AGENT.** C'est ce que le service nous renvoie
+    // quand on se rebranche : le compter remettait le compteur de silence a zero a chaque
+    // retour sur un onglet, et le repere « il attend » mettait alors des secondes a revenir.
+    if (!e.payload.redessin) noterUneSortie(e.payload.id);
   });
   listenGlobal<number>("terminal_exit", (e) => {
     pool.get(e.payload)?.term.write("\r\n\x1b[2m[processus terminé]\x1b[0m\r\n");

@@ -256,6 +256,9 @@ export interface TerminalInfo {
   alive: boolean;
   /** Un CLI d'agent LLM (claude, codex, gemini...) tourne dans la session */
   llm: boolean;
+  /** La taille que le service donne a la session, 0 s'il ne la connait pas. */
+  cols: number;
+  rows: number;
   /** Le dossier ou le terminal a ete OUVERT : c'est lui qui dit de quel worktree il releve. */
   cwd: string;
 }

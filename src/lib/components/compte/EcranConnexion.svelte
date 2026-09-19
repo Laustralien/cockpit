@@ -272,9 +272,9 @@
   .refus {
     margin: 0 0 1rem;
     padding: 0.55rem 0.75rem;
-    border: 1px solid var(--danger);
+    border: 1px solid var(--error);
     border-radius: var(--radius-sm);
-    color: var(--danger);
+    color: var(--error);
     font-size: 0.84rem;
   }
   .large {

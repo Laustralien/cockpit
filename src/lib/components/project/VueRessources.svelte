@@ -263,7 +263,7 @@
     gap: 0.6rem;
     flex-wrap: wrap;
     padding: 0.45rem 0.6rem;
-    border: 1px dashed var(--border);
+    border: 1px dashed var(--border-color);
     border-radius: var(--radius);
     color: var(--text-secondary);
     font-size: 0.78rem;
@@ -332,7 +332,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.12rem;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius);
     padding: 0.5rem;
     background: var(--bg-secondary);
@@ -349,7 +349,7 @@
   .bascule {
     padding: 0.12rem 0.55rem;
     background: none;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 999px;
     color: var(--text-muted);
     cursor: pointer;

@@ -116,3 +116,26 @@ test("« fini » survit a un passage ailleurs, puis se consomme en regardant", (
   s = prochainEtat(s, false, T, T + 3000, SILENCE_MS, false);
   assert.equal(s.etat, "aucun", "et il ne revient pas");
 });
+
+// ── Se brancher pour observer ────────────────────────────────────────────────────────────────
+
+test("on se branche sur un terminal d'agent qu'on n'a jamais ouvert", async () => {
+  const { doitObserver } = await import("../../src/lib/terminaux/activite.ts");
+  const agent = { llm: true, alive: true, cols: 120, rows: 30 };
+  assert.equal(doitObserver(agent, false, false), true);
+  // Deja branche, ou deja vu ecrire : il n'y a plus rien a demander.
+  assert.equal(doitObserver(agent, true, false), false);
+  assert.equal(doitObserver(agent, false, true), false);
+});
+
+test("on ne se branche jamais sur ce qui ferait du degat", async () => {
+  const { doitObserver } = await import("../../src/lib/terminaux/activite.ts");
+  // Pas d'agent : l'ecran et l'historique de chaque terminal de chaque projet, pour rien.
+  assert.equal(doitObserver({ llm: false, alive: true, cols: 120, rows: 30 }, false, false), false);
+  // Session morte : se brancher ROUVRIRAIT un shell, ce qu'un demarrage ne doit jamais faire.
+  assert.equal(doitObserver({ llm: true, alive: false, cols: 120, rows: 30 }, false, false), false);
+  // Taille inconnue : on redimensionnerait un terminal qu'on n'affiche meme pas, et une
+  // application plein ecran ne s'en remet pas.
+  assert.equal(doitObserver({ llm: true, alive: true, cols: 0, rows: 30 }, false, false), false);
+  assert.equal(doitObserver({ llm: true, alive: true, cols: 120, rows: 0 }, false, false), false);
+});

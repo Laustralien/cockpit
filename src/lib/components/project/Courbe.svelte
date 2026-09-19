@@ -239,14 +239,14 @@
 
   .cadre {
     position: relative;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius);
     background: var(--graphe-fond);
     overflow: hidden;
   }
   svg { display: block; }
 
-  .grille { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.7; }
+  .grille { stroke: var(--border-color); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.7; }
   /* Un trait de separation entre les couches : sans lui, deux teintes voisines se confondent
      la ou l'une devient tres fine. */
   .bande { stroke: var(--graphe-fond); stroke-width: 0.5; }
@@ -307,7 +307,7 @@
     gap: 0.4rem;
     padding: 0.15rem 0.5rem;
     border-radius: 999px;
-    background: var(--surface-1);
+    background: var(--surface-base);
     border: 1px solid var(--border-strong);
     font-size: 0.72rem;
     white-space: nowrap;

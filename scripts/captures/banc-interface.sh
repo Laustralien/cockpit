@@ -167,6 +167,62 @@ if [ -n "${COCKPIT_BANC_CLAIR:-}" ]; then
   exit 0
 fi
 
+# **UN ECRAN QUI A TROIS HEURES D'HISTORIQUE NE SE SIMULE PAS EN TROIS MINUTES.** Les courbes
+# se sont montrees VIDES chez l'utilisateur avec 21 h de mesures enregistrees, alors qu'elles se
+# remplissaient au banc apres deux minutes de direct. On ecrit donc l'historique en base, comme
+# s'il avait ete mesure toute la matinee, et on regarde.
+if [ -n "${COCKPIT_BANC_K8S_HISTO:-}" ]; then
+  python3 - "$COCKPIT_DB" <<'SQL'
+import json, sqlite3, sys, time
+c = sqlite3.connect(sys.argv[1])
+maintenant = int(time.time() * 1000)
+# Le banc ouvre le PREMIER projet de la liste : la cible se pose sur celui-la, sinon la
+# periode retenue n'est pas relue et l'ecran repart sur cinq minutes.
+for projet in ("boutique-vinyles", "api-facturation"):
+    c.execute("insert or replace into settings(key, value) values(?, ?)",
+              (f"k8s.cible.{projet}",
+               json.dumps({"contexte": "cluster-demo", "namespace": "equipe-demo",
+                           "fenetre": 10800, "rythme": 60})))
+c.execute("insert or replace into settings(key, value) values(?, ?)",
+          ("k8s.surveillance",
+           json.dumps([{"contexte": "cluster-demo", "namespace": "equipe-demo",
+                        "periode": 300, "actif": True}])))
+pods = [(f"web-5cb5677dcc-{i}xj4{i}", 250 + i * 20) for i in range(4)]
+pods += [(f"post-create-alpha-consumer-5cb5677dcc-{i}", 0) for i in range(20)]
+for pod, _ in pods:
+    c.execute("insert or ignore into k8s_cibles (contexte, namespace, pod) values (?, ?, ?)",
+              ("cluster-demo", "equipe-demo", pod))
+ids = {p: c.execute("select id from k8s_cibles where pod = ?", (p,)).fetchone()[0]
+       for p, _ in pods}
+# 21 h d'historique, comme sur l'ecran ou le defaut a ete vu : c'est le VOLUME qu'on cherche
+# a reproduire, pas seulement la fenetre affichee.
+lignes = []
+for minute in range(21 * 60, 0, -1):
+    t = maintenant - minute * 60_000
+    for pod, cpu in pods:
+        lignes.append((ids[pod], t, cpu, 120 * 1024 * 1024))
+c.executemany("insert or replace into k8s_mesures (cible, t, cpu, ram) values (?, ?, ?, ?)",
+              lignes)
+c.commit()
+print(f"  historique pose : {len(lignes)} points, {len(pods)} pods, 21 h")
+SQL
+  # **L'IMAGE DE FOND CHANGE LE RENDU, ET C'EST LA DIFFERENCE QU'ON CHERCHE.** Les surfaces
+  # deviennent translucides ; un ecran correct en theme uni ne prouve rien (regle du projet).
+  # Le fond est un simple fichier dans le dossier de donnees : on le depose avant de lancer.
+  if [ -n "${COCKPIT_BANC_FOND:-}" ]; then
+    mkdir -p "$TRAVAIL/home/.local/share/com.cockpit.dev"
+    cp "$(cd "$ICI/../.." && pwd)/docs/captures/terminal.png" \
+       "$TRAVAIL/home/.local/share/com.cockpit.dev/wallpaper.png"
+    echo "  image de fond posee"
+  fi
+  clic 105 296 3          # le projet
+  clic 941 127 14         # l onglet Kubernetes
+  clic 849 268 8          # l onglet « Ressources »
+  image histo-1-courbes
+  echo "images historique : $TRAVAIL/img"
+  exit 0
+fi
+
 if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   clic 941 127 14         # l onglet Kubernetes (a droite de Git)
   image k8s-1-ensemble    # ce que le namespace contient, en objets declares
@@ -243,12 +299,27 @@ image 2-agent-en-cours
 # terminal qu'on a sous les yeux s'effacait au clic puis revenait a la seconde suivante (0.74.0).
 sleep 8
 image 3-sous-les-yeux
-# On part ailleurs : le repere doit apparaitre, c'est toute son utilite.
-clic 797 127 4            # l onglet Fichiers
+# On part ailleurs : le repere doit apparaitre, c'est toute son utilite. **ET VITE** : il
+# mettait plusieurs secondes parce que le redessin du retour sur l'onglet comptait comme une
+# sortie de l'agent, ce qui remettait le compteur de silence a zero (signale le 2026-09-19).
+clic 797 127 2            # l onglet Fichiers
+image 4-ailleurs-tot      # ~2 s apres : le repere doit DEJA etre la
+sleep 4
 image 4-ailleurs
 # Et il repart quand on revient, sans clignoter.
 clic 713 127 4            # retour sur Terminal
 image 5-de-retour
+
+# **LE CAS QUI NE MARCHAIT PAS : UN TERMINAL D'AGENT JAMAIS OUVERT.** On arrete
+# l'application SANS toucher au service (les shells survivent, c'est la promesse du
+# produit), on relance, et on regarde la barre laterale sans jamais ouvrir l'onglet
+# Terminal. Le repere doit apparaitre : sans le branchement d'observation, ce terminal
+# restait muet pour toujours.
+python3 "$OUTILS" arreter "COCKPIT_HARNAIS=$JETON" --sauf-service
+sleep 3
+lancer
+sleep 8
+image 6-jamais-ouvert
 
 echo "images : $TRAVAIL/img"
 grep -icE "error|erreur" "$TRAVAIL/app.log" | sed 's/^/  lignes d erreur dans le log : /'

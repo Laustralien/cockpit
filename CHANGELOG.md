@@ -12,6 +12,20 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Le repère « il attend » revient en deux secondes quand tu quittes un terminal d'agent, au lieu
+  de plusieurs : le redessin du retour sur l'onglet était compté comme une activité de l'agent et
+  remettait le compteur à zéro.
+- Un terminal d'agent que tu n'as pas ouvert depuis le lancement de Cockpit signale enfin qu'il
+  attend. Jusqu'ici, il restait muet tant qu'on n'était pas allé le voir une fois.
+- Les cadres des graphiques retrouvent leur bordure et leur grille : elles demandaient une
+  couleur sous un nom qui n'existait pas, et n'étaient donc pas dessinées.
+
+### Changed
+
+- Les mesures ne se gardent plus au-delà d'une semaine, quel que soit le réglage envoyé.
+
 ## [0.82.0] — 2026-09-19
 
 ### Fixed
