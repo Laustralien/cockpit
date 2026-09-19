@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.82.0] — 2026-09-19
+
 ### Fixed
 
 - La commande d'ouverture d'un terminal (bouton « Cmd », shell d'un conteneur, reprise d'un
