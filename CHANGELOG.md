@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.83.0] — 2026-09-19
+
 ### Fixed
 
 - Le repère « il attend » revient en deux secondes quand tu quittes un terminal d'agent, au lieu
