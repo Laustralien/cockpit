@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.86.0] — 2026-09-21
+
 ### Added
 
 - Un pod se supprime depuis l'écran Kubernetes, au survol de sa ligne. La confirmation cite le
