@@ -305,36 +305,21 @@ if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   exit 0
 fi
 
-# On lance le faux agent dans le terminal affiche.
+# On lance le faux agent dans le terminal affiche : ce qu'on verifie ici, c'est qu'un agent
+# tourne bien dans un terminal et que la barre laterale le SIGNALE (l'asterisque). Les reperes
+# « attend » et « fini » ont ete retires en 0.87.0, il n'y a plus rien a en attendre.
 clic 900 500 1
 python3 "$OUTILS" taper "claude $TRAVAIL/bin/faux-agent"
 sleep 5
 image 2-agent-en-cours
-# **IL SE TAIT, MAIS ON LE REGARDE : LA BARRE LATERALE NE DOIT RIEN DIRE.** Un repere sur le
-# terminal qu'on a sous les yeux s'effacait au clic puis revenait a la seconde suivante (0.74.0).
-sleep 8
-image 3-sous-les-yeux
-# On part ailleurs : le repere doit apparaitre, c'est toute son utilite. **ET VITE** : il
-# mettait plusieurs secondes parce que le redessin du retour sur l'onglet comptait comme une
-# sortie de l'agent, ce qui remettait le compteur de silence a zero (signale le 2026-09-19).
-clic 797 127 2            # l onglet Fichiers
-image 4-ailleurs-tot      # ~2 s apres : le repere doit DEJA etre la
-sleep 4
-image 4-ailleurs
-# Et il repart quand on revient, sans clignoter.
-clic 713 127 4            # retour sur Terminal
-image 5-de-retour
 
-# **LE CAS QUI NE MARCHAIT PAS : UN TERMINAL D'AGENT JAMAIS OUVERT.** On arrete
-# l'application SANS toucher au service (les shells survivent, c'est la promesse du
-# produit), on relance, et on regarde la barre laterale sans jamais ouvrir l'onglet
-# Terminal. Le repere doit apparaitre : sans le branchement d'observation, ce terminal
-# restait muet pour toujours.
+# **L'APPLICATION SE RELANCE SANS PERDRE SES TERMINAUX**, le service survit : on arrete sans y
+# toucher, on relance, et le terminal doit revenir avec ce qu'il affichait.
 python3 "$OUTILS" arreter "COCKPIT_HARNAIS=$JETON" --sauf-service
 sleep 3
 lancer
 sleep 8
-image 6-jamais-ouvert
+image 3-apres-relance
 
 echo "images : $TRAVAIL/img"
 grep -icE "error|erreur" "$TRAVAIL/app.log" | sed 's/^/  lignes d erreur dans le log : /'

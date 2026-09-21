@@ -12,7 +12,6 @@
   import ContextMenu from "../ui/ContextMenu.svelte";
   import { notify } from "../../stores/toast";
   import { reorderable } from "../../actions/reorderable";
-  import { etatsAgents, nombreQuiAttendent } from "../../stores/agents";
   import { reorder, type DropPosition } from "../../utils/reorder";
   import { onMount } from "svelte";
   import { trad, tradN } from "../../i18n";
@@ -693,13 +692,6 @@
       <button class="section-toggle" onclick={toggleTerminals}>
         {terminalsCollapsed ? '▸' : '▾'} {$trad("sidebar.terminals")}
       </button>
-      <!-- Le compte des terminaux, et, quand il y en a, combien attendent une reponse. Le
-           second est ce qu'on cherche d'un coup d'oeil ; le premier est le contexte. -->
-      {#if $nombreQuiAttendent > 0}
-        <span class="terminals-attente" title={$trad("sidebar.agentAttendN", { n: $nombreQuiAttendent })}>
-          {$nombreQuiAttendent}
-        </span>
-      {/if}
       <span class="terminals-count">{$terminals.length}</span>
     </div>
     {#if !terminalsCollapsed}
@@ -724,11 +716,8 @@
                 />
               </div>
             {:else}
-              {@const etat = $etatsAgents.get(t.id)}
               <button
                 class="terminal-item"
-                class:attend={etat === "attend"}
-                class:fini={etat === "fini"}
                 onclick={() => gotoTerminal(t)}
                 oncontextmenu={(e) => openTermContextMenu(e, t)}
                 title={$trad("sidebar.gotoTerminal", { project: t.project })}
@@ -736,14 +725,6 @@
                 <span class="terminal-ligne1">
                   {#if t.llm}<span class="term-llm" title={$trad("sidebar.agentRunning")} aria-label={$trad("sidebar.agentRunning")}>✳</span>{:else}<span class="term-dot" title={$trad("sidebar.terminal")}></span>{/if}
                   <span class="terminal-name">{terminalLabel(t)}</span>
-                  {#if etat}
-                    <!-- Le repere porte un MOT, pas seulement une couleur : « il attend » et
-                         « il a fini » ne se devinent pas d'une pastille, et une couleur seule
-                         exclut qui les distingue mal. -->
-                    <span class="repere {etat}">
-                      {etat === "attend" ? $trad("sidebar.agentAttend") : $trad("sidebar.agentFini")}
-                    </span>
-                  {/if}
                 </span>
                 <span class="terminal-project">{t.project}</span>
               </button>
@@ -889,25 +870,6 @@
     border-color: var(--border-color);
   }
   .terminal-ligne1 { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
-  /* Un terminal qui reclame se voit sans lire : un liseré de sa couleur sur tout l'encadre. */
-  .terminal-item.attend { border-color: var(--warning); }
-  .terminal-item.fini { border-color: var(--success); }
-
-  .repere {
-    margin-left: auto; flex-shrink: 0;
-    padding: 1px 6px; border-radius: 999px;
-    font-size: 0.62rem; font-weight: 600; letter-spacing: 0.02em;
-    text-transform: uppercase;
-  }
-  .repere.attend { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
-  .repere.fini { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
-
-  .terminals-attente {
-    padding: 0 6px; border-radius: 999px;
-    background: color-mix(in srgb, var(--warning) 22%, transparent);
-    color: var(--warning); font-size: 0.68rem; font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
   /* Gris = terminal normal, vert = un agent LLM (claude, codex...) tourne dedans */
   .term-dot {
     width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;

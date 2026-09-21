@@ -1141,16 +1141,15 @@ fn un_service_qui_n_accuse_jamais_reception_ne_gele_pas_l_application() {
     let _ = std::fs::remove_dir_all(&dossier);
 }
 
-/// Ce que COUTE le branchement d'observation du demarrage, en octets et en temps.
+/// Ce que COUTE une attache, en octets et en temps : c'est le prix d'ouverture d'un onglet.
 ///
-/// **LE DEMARRAGE S'EST MIS A RAMER, ET LE SOUPCON PORTE SUR CE BRANCHEMENT.** Depuis la
-/// 0.83.0, Cockpit se branche au lancement sur chaque session ou un agent tourne, pour pouvoir
-/// dire « il attend » sans qu'on ait ouvert l'onglet. Or se brancher pousse un REDESSIN, qui
-/// porte l'ecran ET tout l'historique. Signale par l'utilisateur : « apres chaque redemarrage,
-/// les terminaux prennent beaucoup de temps a s'ouvrir ». On mesure donc ce que huit sessions
-/// pleines envoient d'un coup, au lieu de le supposer.
+/// **SE BRANCHER POUSSE UN REDESSIN, QUI PORTE L'ECRAN ET TOUT L'HISTORIQUE.** Mesure faite
+/// quand le demarrage s'est mis a trainer (2026-09-21) : huit sessions a l'historique plein
+/// envoient 464 Ko en 906 ms, et chaque appel revient en 0 ms — la lenteur n'etait donc pas la,
+/// mais dans la boucle du pont, qui servait les appels un par un. La mesure reste : c'est elle
+/// qu'on relira le jour ou l'ouverture d'un onglet trainera.
 #[test]
-fn le_branchement_d_observation_a_un_cout_mesure() {
+fn une_attache_a_un_cout_mesure() {
     let banc = Banc::neuf(serveur::HISTORIQUE);
     let lignes = serveur::lignes_d_historique(TAILLE.colonnes, serveur::HISTORIQUE);
 
@@ -1195,7 +1194,7 @@ fn le_branchement_d_observation_a_un_cout_mesure() {
     }
     let duree = debut.elapsed();
     eprintln!(
-        "branchement de 8 sessions a l'historique plein : {} Ko en {envois} envois, \
+        "attache de 8 sessions a l'historique plein : {} Ko en {envois} envois, \
          {} ms (soit {} Ko par session)",
         octets / 1024,
         duree.as_millis(),

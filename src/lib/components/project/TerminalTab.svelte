@@ -7,8 +7,6 @@
   import type { FitAddon as XFitAddon } from "@xterm/addon-fit";
   import { trad, translate } from "../../i18n";
   import { signalerErreur } from "../../stores/errors";
-  import { noterUneSortie, oublierLeTerminal } from "../../terminaux/activite";
-  import { regarderLesTerminaux } from "../../stores/agents";
 
   /// POOL PERSISTANT — LE COEUR DE L'ARCHITECTURE TERMINAUX (NE PAS RE-LOCALISER).
   ///
@@ -59,9 +57,6 @@
     for (const { el } of pool.values()) parking().appendChild(el);
   }
   function disposePoolEntry(id: number) {
-    // Un terminal ferme n'a plus d'activite a suivre : sa ligne s'en va avec lui, sinon la
-    // table grossirait pour toute la duree de l'application.
-    oublierLeTerminal(id);
     const e = pool.get(id);
     if (!e) return;
     e.dataSub?.dispose();
@@ -100,16 +95,8 @@
   // (requestAnimationFrame) a ete essayee dans la 0.54.10 : chaque echo de frappe payait une image
   // de retard, et quand le moteur ne peint plus — cas documente dans le guetteur — la sortie
   // s'arretait completement au lieu d'etre au moins analysee. Retiree dans la 0.54.12.
-  listenGlobal<{ id: number; data: string; redessin?: boolean }>("terminal_output", (e) => {
+  listenGlobal<{ id: number; data: string }>("terminal_output", (e) => {
     pool.get(e.payload.id)?.term.write(b64ToBytes(e.payload.data));
-    // **DEUX OPERATIONS, ET RIEN D'AUTRE, SUR CE CHEMIN.** Poser un instant dans une table
-    // ordinaire ne declenche aucun rendu ; c'est ce qui permet a la barre laterale de savoir
-    // qu'un agent s'est tu sans qu'on paie quoi que ce soit par octet recu. Toute la regle
-    // qui en decoule est ailleurs, et echantillonnee.
-    // **UN REDESSIN N'EST PAS UNE SORTIE DE L'AGENT.** C'est ce que le service nous renvoie
-    // quand on se rebranche : le compter remettait le compteur de silence a zero a chaque
-    // retour sur un onglet, et le repere « il attend » mettait alors des secondes a revenir.
-    if (!e.payload.redessin) noterUneSortie(e.payload.id);
   });
   listenGlobal<number>("terminal_exit", (e) => {
     pool.get(e.payload)?.term.write("\r\n\x1b[2m[processus terminé]\x1b[0m\r\n");
@@ -237,8 +224,7 @@
   import { demanderConfirmation } from "../../stores/confirm";
   import type { Worktree } from "../../types";
   import {
-    deplacer, depuisJson, diviser, feuille, fixerRatio, nettoyer, nombreDeVolets,
-    aLEcran, poserLaSession, retirer, sessionsAffichees, type Chemin, type Cote, type Noeud,
+    deplacer, depuisJson, diviser, feuille, fixerRatio, nettoyer, nombreDeVolets, poserLaSession, retirer, sessionsAffichees, type Chemin, type Cote, type Noeud,
   } from "../../terminaux/disposition";
   import { coteVise, dansLeCadre, voisinLePlusProche } from "../../terminaux/visee";
   import { getAppSettings, setAppSetting } from "../../api/recorder";
@@ -651,14 +637,6 @@
     untrack(() => {
       void montage.then(() => honorerDemande(wanted)).catch((e) => notify(String(e)));
     });
-  });
-
-  // **CE QUI EST A L'ECRAN N'A PAS BESOIN D'UN REPERE DANS LA BARRE LATERALE.** Tous les
-  // volets affiches comptent, pas seulement celui qui a le focus. En partant (autre onglet,
-  // autre projet), on annonce une liste vide : les reperes reviennent, ce qui est le but.
-  $effect(() => {
-    regarderLesTerminaux(aLEcran(disposition, activeId));
-    return () => regarderLesTerminaux([]);
   });
 
   // Commande rapide / shell de conteneur demandee alors que l'onglet est DEJA monte :

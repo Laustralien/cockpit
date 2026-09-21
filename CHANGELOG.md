@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Removed
+
+- Les repères « attend » et « fini » des terminaux d'agent, ainsi que le compteur de la barre
+  latérale. Ils se trompaient, coûtaient du travail en continu et ralentissaient le démarrage.
+  L'astérisque qui signale qu'un agent tourne dans un terminal reste.
+
 ## [0.86.2] — 2026-09-21
 
 ### Fixed
