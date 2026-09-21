@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Un clic sur une bande du graphique, ou sur son nom dans la légende, suit ce pod de près : les
+  deux graphiques et le classement le montrent, que tu aies cliqué côté processeur ou mémoire.
+- Un bouton **Réinitialiser** ramène à tout le namespace, à la période et au rythme par défaut.
+
 ## [0.84.0] — 2026-09-21
 
 ### Changed

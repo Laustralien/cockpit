@@ -219,6 +219,13 @@ SQL
   clic 941 127 14         # l onglet Kubernetes
   clic 849 268 8          # l onglet « Ressources »
   image histo-1-courbes
+  # **CLIQUER UNE BANDE SUIT CE POD, SUR LES DEUX GRAPHIQUES ET DANS LE CLASSEMENT.** Sans ca,
+  # il fallait retrouver dans la liste du dessous le pod qu'on venait de montrer du doigt.
+  python3 "$OUTILS" survoler 600 540
+  clic 600 540 4
+  image histo-2-suivi
+  clic 1126 307 4         # « Reinitialiser », entre la periode et la mesure en direct
+  image histo-3-remis
   echo "images historique : $TRAVAIL/img"
   exit 0
 fi

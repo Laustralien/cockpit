@@ -75,6 +75,21 @@
   const classement = $derived(lesPlusGourmands(mesures, trierSur, 60));
   const plusGros = $derived(Math.max(1, ...classement.map((m) => m[trierSur])));
   const suivi = $derived(focus ? pods.find((p) => p.nom === focus) : undefined);
+
+  /// Ce que « par defaut » veut dire : tout le namespace, cinq minutes, une mesure toutes les
+  /// cinq secondes. Le bouton reste ETEINT tant que rien n'a bouge — un bouton qui ne fait
+  /// rien invite au clic pour rien.
+  const FENETRE_PAR_DEFAUT = 300;
+  const RYTHME_PAR_DEFAUT = 5;
+  const quelqueChoseAChange = $derived(
+    focus !== null || fenetreSecondes !== FENETRE_PAR_DEFAUT || rafraichissement !== RYTHME_PAR_DEFAUT,
+  );
+
+  function reinitialiser() {
+    surFocus(null);
+    if (fenetreSecondes !== FENETRE_PAR_DEFAUT) surFenetre(FENETRE_PAR_DEFAUT);
+    if (rafraichissement !== RYTHME_PAR_DEFAUT) surRafraichissement(RYTHME_PAR_DEFAUT);
+  }
 </script>
 
 <div class="ressources">
@@ -104,6 +119,13 @@
          « Rafraîchir » : l'un dit a quelle cadence CET ECRAN interroge le cluster, l'autre a
          quelle cadence l'enregistrement de fond ecrit en base. Le mainteneur ne savait pas
          lequel faisait quoi, et les valeurs affichees differaient. -->
+    <button
+      class="btn small ghost"
+      title={$trad("k8s.reinitialiserAide")}
+      disabled={!quelqueChoseAChange}
+      onclick={reinitialiser}
+    >{$trad("k8s.reinitialiser")}</button>
+
     <label class="choix" title={$trad("k8s.mesureEnDirectAide")}>
       {$trad("k8s.mesureEnDirect")}
       <select class="input petit" value={rafraichissement} onchange={(e) => surRafraichissement(Number(e.currentTarget.value))}>
@@ -173,6 +195,7 @@
     <Courbe
       serie={serie}
       parPod={focus ? undefined : historique}
+      surChoisir={surFocus}
       valeur="cpu"
       titre={$trad("k8s.cpu")}
       formater={(n) => formaterCpu(Math.round(n))}
@@ -183,6 +206,7 @@
     <Courbe
       serie={serie}
       parPod={focus ? undefined : historique}
+      surChoisir={surFocus}
       valeur="ram"
       titre={$trad("k8s.ram")}
       formater={(n) => formaterRam(Math.round(n))}

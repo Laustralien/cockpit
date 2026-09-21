@@ -39,9 +39,17 @@
     depuis: number;
     jusqua: number;
     hauteur?: number;
+    /**
+     * Appele quand on DESIGNE un pod : un clic sur sa bande, ou sur son nom dans la legende.
+     *
+     * **UNE COULEUR QU'ON RECONNAIT APPELLE LE CLIC.** Il fallait retrouver le pod dans le
+     * classement en dessous pour le suivre de pres, alors qu'on venait de le montrer du doigt.
+     */
+    surChoisir?: (nom: string) => void;
   }
   let {
     serie, parPod, valeur, titre, formater, teinte = "accent", depuis, jusqua, hauteur = 132,
+    surChoisir,
   }: Props = $props();
 
   let largeur = $state(0);
@@ -80,6 +88,12 @@
     survol = point ? { x, point } : null;
   }
 
+  /// Le clic designe la bande sous le curseur. « autres » n'est pas un pod : il ne se suit pas.
+  function surLeClic() {
+    if (!surChoisir || !survolBande || !survolBande.nom) return;
+    surChoisir(survolBande.nom);
+  }
+
   function quitter() {
     survol = null;
     survolBande = null;
@@ -111,13 +125,18 @@
     {/if}
   </div>
 
+  <!-- Le cadre est une zone de DESSIN : le clic y est un raccourci a la souris, et le chemin
+       clavier passe par la legende, faite de vrais boutons. -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     class="cadre"
     style="height:{hauteur}px"
     bind:clientWidth={largeur}
     onmousemove={surLaSouris}
     onmouseleave={quitter}
+    onclick={surLeClic}
+    class:designable={empile && surChoisir !== undefined}
   >
     <svg width={cadre.largeur} height={hauteur} aria-hidden="true">
       <defs>
@@ -209,10 +228,17 @@
          sans elle, on voit bien que la bosse vient de quelqu'un, mais pas de qui. -->
     <div class="legende">
       {#each bandes as bande (bande.nom + bande.teinte)}
-        <span class="entree" title={bande.nom || $trad("k8s.autresPodsAide")}>
+        <!-- Un vrai bouton : le clavier, le focus et le curseur en dependent. -->
+        <button
+          class="entree"
+          class:designable={surChoisir !== undefined && bande.nom !== ""}
+          title={bande.nom ? $trad("k8s.suivreCePod", { nom: bande.nom }) : $trad("k8s.autresPodsAide")}
+          disabled={surChoisir === undefined || bande.nom === ""}
+          onclick={() => bande.nom && surChoisir?.(bande.nom)}
+        >
           <span class="puce" style="background: {couleurDeSerie(bande.teinte)}"></span>
           {bande.nom || $trad("k8s.autresPods")}
-        </span>
+        </button>
       {/each}
     </div>
   {/if}
@@ -228,6 +254,8 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
+
+  .cadre.designable { cursor: pointer; }
 
   .cadre {
     position: relative;
@@ -323,11 +351,16 @@
     display: inline-flex;
     align-items: center;
     gap: 0.28rem;
+    padding: 0;
+    background: none;
+    border: none;
     color: var(--text-muted);
     font-size: 0.66rem;
     font-family: var(--font-mono);
     white-space: nowrap;
   }
+  .entree.designable { cursor: pointer; }
+  .entree.designable:hover { color: var(--text-primary); }
   .puce { width: 8px; height: 8px; border-radius: 2px; flex: none; }
 
   .attente {
