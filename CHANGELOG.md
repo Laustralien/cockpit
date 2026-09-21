@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.87.0] — 2026-09-21
+
 ### Removed
 
 - Les repères « attend » et « fini » des terminaux d'agent, ainsi que le compteur de la barre
