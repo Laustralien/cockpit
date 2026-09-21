@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.86.1] — 2026-09-21
+
 ### Fixed
 
 - Les terminaux s'ouvrent de nouveau sans attendre après un redémarrage de Cockpit. Depuis la
