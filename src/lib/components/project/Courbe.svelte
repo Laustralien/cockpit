@@ -15,8 +15,9 @@
    */
   import { trad } from "../../i18n";
   import {
-    aire, bandeSousLeCurseur, borneHaute, empiler, graduations, graduationsDeTemps, heureDe,
-    leplusProche, ligne, points, sommets, type BandeEmpilee, type Historique, type Point,
+    aire, bandeSousLeCurseur, borneHaute, couleurDeSerie, empiler, graduations,
+    graduationsDeTemps, heureDe, leplusProche, ligne, points, sommets,
+    type BandeEmpilee, type Historique, type Point,
   } from "../../k8s/mesures";
 
   interface Props {
@@ -139,12 +140,7 @@
         <!-- **UNE BANDE PAR POD, DU BAS VERS LE HAUT.** La hauteur totale reste la courbe du
              total : ce qui change, c'est qu'on voit QUI la compose. -->
         {#each bandes as bande (bande.nom + bande.teinte)}
-          <path
-            class="bande"
-            class:autres={bande.teinte < 0}
-            style={bande.teinte >= 0 ? `fill: var(--serie-${bande.teinte + 1})` : ""}
-            d={contour(bande)}
-          />
+          <path class="bande" style="fill: {couleurDeSerie(bande.teinte)}" d={contour(bande)} />
         {/each}
       {:else if dessous}
         <path class="aire" d={dessous} fill="url(#{identifiant})" />
@@ -214,11 +210,7 @@
     <div class="legende">
       {#each bandes as bande (bande.nom + bande.teinte)}
         <span class="entree" title={bande.nom || $trad("k8s.autresPodsAide")}>
-          <span
-            class="puce"
-            class:autres={bande.teinte < 0}
-            style={bande.teinte >= 0 ? `background: var(--serie-${bande.teinte + 1})` : ""}
-          ></span>
+          <span class="puce" style="background: {couleurDeSerie(bande.teinte)}"></span>
           {bande.nom || $trad("k8s.autresPods")}
         </span>
       {/each}
@@ -250,7 +242,6 @@
   /* Un trait de separation entre les couches : sans lui, deux teintes voisines se confondent
      la ou l'une devient tres fine. */
   .bande { stroke: var(--graphe-fond); stroke-width: 0.5; }
-  .bande.autres { fill: var(--serie-autres); }
   /* Plus discrete que l'horizontale : elle sert de repere, elle ne quadrille pas le fond. */
   .grille.verticale { opacity: 0.4; }
   .aire { stroke: none; }
@@ -323,7 +314,9 @@
     flex-wrap: wrap;
     gap: 0.1rem 0.7rem;
     padding-top: 0.25rem;
-    max-height: 3.4rem;
+    /* Assez pour lire une vingtaine de pods sans defiler, pas assez pour pousser le graphique
+       hors de l'ecran : au-dela, la liste defile et le survol nomme la bande de toute facon. */
+    max-height: 6.2rem;
     overflow: auto;
   }
   .entree {
@@ -336,7 +329,6 @@
     white-space: nowrap;
   }
   .puce { width: 8px; height: 8px; border-radius: 2px; flex: none; }
-  .puce.autres { background: var(--serie-autres); }
 
   .attente {
     position: absolute;

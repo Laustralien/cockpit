@@ -12,6 +12,11 @@ le script de release.
 
 ## [Unreleased]
 
+### Changed
+
+- Les graphiques de l'onglet Ressources montrent **tous** les pods mesurés, chacun avec sa
+  couleur : il n'y a plus de bande « autres » qui regroupait tout au-delà de dix.
+
 ## [0.83.0] — 2026-09-19
 
 ### Fixed

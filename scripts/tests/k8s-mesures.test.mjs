@@ -251,7 +251,7 @@ test("un cadre pas encore mesure ne rend rien", async () => {
 
 // ── Les bandes empilees ──────────────────────────────────────────────────────────────────────
 
-const { empiler, sommets, bandeSousLeCurseur, BANDES_MAX } = await import(
+const { empiler, sommets, bandeSousLeCurseur, couleurDeSerie, BANDES_MAX } = await import(
   "../../src/lib/k8s/mesures.ts"
 );
 
@@ -282,15 +282,44 @@ test("un pod non mesure a cet instant vaut zero, jamais sa derniere valeur", () 
   assert.deepEqual(sommets(bandes), [15, 5]);
 });
 
-test("au-dela de la palette, le reste va dans « autres » et n'est jamais perdu", () => {
+test("tous les pods mesures ont leur bande, sans regroupement", () => {
+  // Demande du mainteneur : « je veux pas de autres, je veux tous les voir ». Vingt-trois pods,
+  // c'est son namespace reel.
+  const table = {};
+  for (let i = 0; i < 23; i++) table[`pod-${String(i).padStart(2, "0")}`] = [[1000, 10]];
+  const bandes = empiler(historique(table), "cpu", 0);
+  assert.equal(bandes.length, 23);
+  assert.ok(!bandes.some((b) => b.teinte < 0), "aucune bande « autres »");
+  assert.equal(sommets(bandes)[0], 230);
+});
+
+test("chaque rang a sa couleur, et deux voisins ne se ressemblent pas", () => {
+  const teinte = (c) => Number(c.match(/hsl\(([\d.]+)/)[1]);
+  const vues = new Set();
+  for (let i = 0; i < 40; i++) {
+    const c = couleurDeSerie(i);
+    assert.match(c, /^hsl\([\d.]+ \d+% \d+%\)$/, c);
+    assert.equal(c, couleurDeSerie(i), "la meme entree donne toujours la meme couleur");
+    vues.add(c);
+    if (i > 0) {
+      const ecart = Math.abs(teinte(c) - teinte(couleurDeSerie(i - 1)));
+      const tour = Math.min(ecart, 360 - ecart);
+      assert.ok(tour > 40, `rangs ${i - 1} et ${i} trop proches : ${tour.toFixed(0)}°`);
+    }
+  }
+  assert.equal(vues.size, 40, "quarante rangs, quarante couleurs differentes");
+  assert.equal(couleurDeSerie(-1), "var(--serie-autres)", "le regroupement garde son gris");
+});
+
+test("au-dela du plafond, le reste va dans « autres » et n'est jamais perdu", () => {
   const table = {};
   for (let i = 0; i < BANDES_MAX + 4; i++) table[`pod-${String(i).padStart(2, "0")}`] = [[1000, 10]];
-  const bandes = empiler(table === null ? new Map() : historique(table), "cpu", 0);
+  const bandes = empiler(historique(table), "cpu", 0);
   assert.equal(bandes.length, BANDES_MAX + 1, "les nommes, plus une bande pour le reste");
   const derniere = bandes[bandes.length - 1];
   assert.equal(derniere.teinte, -1);
   assert.equal(derniere.points[0].haut - derniere.points[0].bas, 40, "les 4 restants, cumules");
-  assert.equal(sommets(bandes)[0], 140, "et le total reste juste");
+  assert.equal(sommets(bandes)[0], (BANDES_MAX + 4) * 10, "et le total reste juste");
 });
 
 test("ce sont les plus gros de la FENETRE qui sont nommes", () => {
