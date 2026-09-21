@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.87.1] — 2026-09-21
+
 ### Fixed
 
 - L'onglet Terminal n'annonce plus « aucun terminal ouvert » pendant qu'il en rouvre un : il dit
