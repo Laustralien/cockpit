@@ -139,3 +139,24 @@ test("on ne se branche jamais sur ce qui ferait du degat", async () => {
   assert.equal(doitObserver({ llm: true, alive: true, cols: 0, rows: 30 }, false, false), false);
   assert.equal(doitObserver({ llm: true, alive: true, cols: 120, rows: 0 }, false, false), false);
 });
+
+test("on n'ecoute pas tout le monde en meme temps au demarrage", async () => {
+  const { prochaineAObserver, AVANT_D_OBSERVER_MS, ENTRE_DEUX_OBSERVATIONS_MS } = await import(
+    "../../src/lib/terminaux/activite.ts"
+  );
+  const huit = [1, 2, 3, 4, 5, 6, 7, 8];
+  // **PENDANT QUE L'ECRAN SE MONTE, ON NE DEMANDE RIEN.** Huit sessions branchees d'un coup,
+  // c'est 464 Ko et 909 ms mesures au banc du service, payes pile au moment ou l'utilisateur
+  // ouvre son premier terminal.
+  assert.equal(prochaineAObserver(huit, 0, null), null);
+  assert.equal(prochaineAObserver(huit, AVANT_D_OBSERVER_MS - 1, null), null);
+  // Passe ce delai, une seule a la fois.
+  assert.equal(prochaineAObserver(huit, AVANT_D_OBSERVER_MS, null), 1);
+  assert.equal(prochaineAObserver(huit, AVANT_D_OBSERVER_MS, 0), null, "on vient d'en brancher une");
+  assert.equal(
+    prochaineAObserver(huit, AVANT_D_OBSERVER_MS, ENTRE_DEUX_OBSERVATIONS_MS),
+    1,
+    "l'espacement respecte, on prend la suivante",
+  );
+  assert.equal(prochaineAObserver([], AVANT_D_OBSERVER_MS, null), null, "rien a ecouter");
+});

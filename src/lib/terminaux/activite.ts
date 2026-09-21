@@ -95,6 +95,38 @@ export function doitObserver(
   return terminal.cols > 0 && terminal.rows > 0;
 }
 
+/**
+ * Le delai avant de commencer a ecouter, et l'espacement entre deux branchements.
+ *
+ * **SE BRANCHER COUTE UN ECRAN ET TOUT UN HISTORIQUE, PAR SESSION.** Mesure du 2026-09-21 au
+ * banc du service : huit sessions a l'historique plein envoient 464 Ko en 909 ms, d'un seul
+ * coup. Branchees toutes ensemble a la premiere seconde, elles arrivaient pendant que
+ * l'interface se monte et que l'utilisateur ouvre son premier terminal — signale apres la
+ * 0.83.0 : « apres chaque redemarrage, les terminaux prennent beaucoup de temps a s'ouvrir ».
+ *
+ * Savoir qu'un agent attend n'a rien d'urgent : on laisse l'ecran se poser, puis on ecoute une
+ * session a la fois. Le cout total ne change pas, il cesse d'etre paye en une fois.
+ */
+export const AVANT_D_OBSERVER_MS = 4000;
+export const ENTRE_DEUX_OBSERVATIONS_MS = 400;
+
+/**
+ * La prochaine session a ecouter, ou `null` s'il faut attendre.
+ *
+ * `depuisLeDemarrage` et `depuisLaDerniere` sont des durees en millisecondes ; `null` pour la
+ * seconde veut dire « on n'a encore rien branche ».
+ */
+export function prochaineAObserver(
+  candidats: number[],
+  depuisLeDemarrage: number,
+  depuisLaDerniere: number | null,
+): number | null {
+  if (candidats.length === 0) return null;
+  if (depuisLeDemarrage < AVANT_D_OBSERVER_MS) return null;
+  if (depuisLaDerniere !== null && depuisLaDerniere < ENTRE_DEUX_OBSERVATIONS_MS) return null;
+  return candidats[0];
+}
+
 /** Un etat qui merite un repere a l'ecran. « En cours » n'en est pas un : c'est l'ordinaire. */
 export function meriteUnRepere(etat: EtatAgent): boolean {
   return etat === "attend" || etat === "fini";

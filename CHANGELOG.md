@@ -12,6 +12,13 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Les terminaux s'ouvrent de nouveau sans attendre après un redémarrage de Cockpit. Depuis la
+  0.83.0, l'application se branchait d'un coup sur toutes les sessions où un agent tourne pour
+  savoir lesquelles attendent, et ces transferts arrivaient pendant l'ouverture du premier
+  terminal.
+
 ## [0.86.0] — 2026-09-21
 
 ### Added

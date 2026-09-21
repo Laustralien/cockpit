@@ -5,6 +5,7 @@ import { signalerErreur } from "./errors";
 import {
   doitObserver,
   noterUneSortie,
+  prochaineAObserver,
   prochainEtat,
   sortieDe,
   meriteUnRepere,
@@ -55,8 +56,32 @@ export const nombreQuiAttendent = derived(etatsAgents, ($etats) =>
  */
 const observes = new Set<number>();
 
-function observer(t: { id: number; llm: boolean; alive: boolean; cols: number; rows: number }): void {
-  if (!doitObserver(t, observes.has(t.id), sortieDe(t.id) !== undefined)) return;
+/// Depuis quand le suivi tourne, et quand on s'est branche pour la derniere fois : c'est ce qui
+/// etale les branchements au lieu de les payer tous au demarrage.
+let debutDuSuivi = Date.now();
+let derniereObservation: number | null = null;
+
+type Candidat = { id: number; llm: boolean; alive: boolean; cols: number; rows: number };
+
+/// Branche AU PLUS UNE session par tour, et seulement une fois l'ecran pose.
+function observerUnPeu(candidats: Candidat[]): void {
+  const attendent = candidats.filter((t) =>
+    doitObserver(t, observes.has(t.id), sortieDe(t.id) !== undefined),
+  );
+  const maintenant = Date.now();
+  const choisi = prochaineAObserver(
+    attendent.map((t) => t.id),
+    maintenant - debutDuSuivi,
+    derniereObservation === null ? null : maintenant - derniereObservation,
+  );
+  const t = attendent.find((x) => x.id === choisi);
+  if (t) {
+    derniereObservation = maintenant;
+    observer(t);
+  }
+}
+
+function observer(t: Candidat): void {
   observes.add(t.id);
   attachTerminal(t.id, t.cols, t.rows)
     // **ON COMMENCE A COMPTER LE SILENCE ICI.** Sans cet instant de depart, le terminal reste
@@ -77,11 +102,11 @@ function recalculer(): void {
   const sortie = new Map<number, EtatAgent>();
   const vus = new Set<number>();
 
+  // Au plus une session branchee par tour : voir `prochaineAObserver`.
+  observerUnPeu(liste);
+
   for (const t of liste) {
     vus.add(t.id);
-    // Un agent tourne ici et on n'a jamais rien vu passer : on se branche pour pouvoir
-    // repondre autre chose que « en cours ».
-    observer(t);
     const suivant = prochainEtat(
       suivis.get(t.id), t.llm, sortieDe(t.id), maintenant, undefined, regardes.has(t.id),
     );

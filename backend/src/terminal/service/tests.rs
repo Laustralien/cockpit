@@ -1140,3 +1140,49 @@ fn un_service_qui_n_accuse_jamais_reception_ne_gele_pas_l_application() {
     let _ = faux.join();
     let _ = std::fs::remove_dir_all(&dossier);
 }
+
+/// Ce que COUTE le branchement d'observation du demarrage, en octets et en temps.
+///
+/// **LE DEMARRAGE S'EST MIS A RAMER, ET LE SOUPCON PORTE SUR CE BRANCHEMENT.** Depuis la
+/// 0.83.0, Cockpit se branche au lancement sur chaque session ou un agent tourne, pour pouvoir
+/// dire « il attend » sans qu'on ait ouvert l'onglet. Or se brancher pousse un REDESSIN, qui
+/// porte l'ecran ET tout l'historique. Signale par l'utilisateur : « apres chaque redemarrage,
+/// les terminaux prennent beaucoup de temps a s'ouvrir ». On mesure donc ce que huit sessions
+/// pleines envoient d'un coup, au lieu de le supposer.
+#[test]
+fn le_branchement_d_observation_a_un_cout_mesure() {
+    let banc = Banc::neuf(serveur::HISTORIQUE);
+    let lignes = serveur::lignes_d_historique(TAILLE.colonnes, serveur::HISTORIQUE);
+
+    // Huit terminaux d'agent, historique plein : c'est l'ecran de quelqu'un qui travaille.
+    let (client, recu) = banc.client();
+    for id in 1..=8i64 {
+        client.creer(id, &dossier_de_travail(), TAILLE, None, Vec::new()).unwrap();
+        client.ecrire(id, format!("seq 1 {}\r", lignes + 100).as_bytes()).unwrap();
+    }
+    std::thread::sleep(Duration::from_secs(3));
+    // On vide ce que la creation a produit : ce qu'on mesure, c'est le BRANCHEMENT.
+    while recu.recv_timeout(Duration::from_millis(300)).is_ok() {}
+
+    let debut = Instant::now();
+    for id in 1..=8i64 {
+        client.attacher(id, TAILLE).unwrap();
+    }
+    let mut octets = 0usize;
+    let mut envois = 0usize;
+    while let Ok(pousse) = recu.recv_timeout(Duration::from_millis(800)) {
+        if let Pousse::Redessin { octets: o, .. } | Pousse::Sortie { octets: o, .. } = pousse {
+            octets += o.len();
+            envois += 1;
+        }
+    }
+    let duree = debut.elapsed();
+    eprintln!(
+        "branchement de 8 sessions a l'historique plein : {} Ko en {envois} envois, \
+         {} ms (soit {} Ko par session)",
+        octets / 1024,
+        duree.as_millis(),
+        octets / 1024 / 8,
+    );
+    assert!(octets > 100 * 1024, "{octets} octets : l'historique n'a pas ete rempli, rien a mesurer");
+}
