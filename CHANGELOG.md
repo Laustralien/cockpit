@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.84.0] — 2026-09-21
+
 ### Changed
 
 - Les graphiques de l'onglet Ressources montrent **tous** les pods mesurés, chacun avec sa
