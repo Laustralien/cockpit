@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.86.2] — 2026-09-21
+
 ### Fixed
 
 - Une opération lente ne fige plus le reste de l'application. Le backend traitait les demandes
