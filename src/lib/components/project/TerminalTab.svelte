@@ -239,6 +239,12 @@
   let { name }: { name: string } = $props();
 
   let sessions: { id: number; alive: boolean; name: string; cwd: string }[] = $state([]);
+  /// **« AUCUN TERMINAL » EST FAUX TANT QU'ON EN ROUVRE UN.** Relire les terminaux du projet,
+  /// leur disposition, puis se rebrancher sur le service prend deux a trois secondes quand le
+  /// terminal porte un gros historique. Pendant ce temps, l'ecran annoncait qu'il n'y avait
+  /// rien et proposait d'en ouvrir un — donc on croyait tout perdu, et cliquer en aurait cree
+  /// un de plus. Signale le 2026-09-21.
+  let reouvertureEnCours = $state(true);
   let activeId: number | null = $state(null);
   let container: HTMLDivElement | undefined = $state(undefined);
   // Menu contextuel Copier/Coller du terminal
@@ -592,7 +598,9 @@
       }
       // Un echec de chargement laissait l'onglet vide sans un mot : la liste des terminaux
       // vient du backend, son absence doit se voir.
-    })().catch((e) => notify(String(e)));
+    })()
+      .catch((e) => notify(String(e)))
+      .finally(() => (reouvertureEnCours = false));
 
     // Debounce : pendant un drag de fenetre, on n'envoie que la taille finale
     resizeObserver = new ResizeObserver(() => {
@@ -1806,7 +1814,9 @@
            entrer donnait une grande zone noire et un « + » minuscule dans un coin : le geste
            menait a un cul-de-sac. On dit ou l'on est, et on propose la seule chose a faire. -->
       <div class="term-empty">
-        {#if groupeActif?.disparu}
+        {#if reouvertureEnCours}
+          <p class="attente"><span class="rouet" aria-hidden="true"></span> {$trad("term.reouverture")}</p>
+        {:else if groupeActif?.disparu}
           <!-- Y ouvrir un terminal echouerait : on explique, et on propose la seule action
                qui ait un sens. -->
           <p>{$trad("worktree.disparu", { branche: libelleDuWorktreeActif })}</p>
@@ -2063,6 +2073,18 @@
     color: var(--text-muted); font-size: 0.85rem;
   }
   .term-empty p { margin: 0; }
+  /* Une attente qui se voit : le rouet dit que ca travaille, le texte dit quoi. L'animation
+     ne tourne que pendant le chargement, donc elle ne coute rien au reste du temps. */
+  .attente { display: flex; align-items: center; gap: 0.5rem; }
+  .rouet {
+    width: 12px; height: 12px; flex: none;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: tourner 0.8s linear infinite;
+  }
+  @keyframes tourner { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .rouet { animation: none; } }
   .term-empty .chemin {
     font-family: var(--font-mono, monospace);
     font-size: 11px;

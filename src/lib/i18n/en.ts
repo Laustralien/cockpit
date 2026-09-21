@@ -698,6 +698,7 @@ export const en: Catalog = {
   "term.noPastConversation": "No past conversation on this project",
   "term.renameSession": "Rename this session",
   "term.sessionNamePlaceholder": "Name (empty = auto label)",
+  "term.reouverture": "Reopening the terminal…",
   "term.empty": "No terminal open for this project.",
   "term.openOne": "Open a terminal",
   "term.dropHint": "Drop to insert the file path",

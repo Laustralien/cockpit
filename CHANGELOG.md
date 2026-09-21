@@ -12,6 +12,11 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- L'onglet Terminal n'annonce plus « aucun terminal ouvert » pendant qu'il en rouvre un : il dit
+  « Réouverture du terminal… ». L'état vide, lui, attend d'être vrai.
+
 ## [0.87.0] — 2026-09-21
 
 ### Removed

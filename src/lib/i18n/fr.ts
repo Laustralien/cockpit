@@ -707,6 +707,7 @@ export const fr = {
   "term.noPastConversation": "Aucune conversation passée sur ce projet",
   "term.renameSession": "Renommer cette session",
   "term.sessionNamePlaceholder": "Nom (vide = label auto)",
+  "term.reouverture": "Réouverture du terminal…",
   "term.empty": "Aucun terminal ouvert pour ce projet.",
   "term.openOne": "Ouvrir un terminal",
   "term.dropHint": "Lâcher pour insérer le chemin du fichier",

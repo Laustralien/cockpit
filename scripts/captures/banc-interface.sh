@@ -318,8 +318,14 @@ image 2-agent-en-cours
 python3 "$OUTILS" arreter "COCKPIT_HARNAIS=$JETON" --sauf-service
 sleep 3
 lancer
+# **PENDANT QU'IL SE ROUVRE, L'ECRAN DOIT LE DIRE.** Il annoncait « aucun terminal ouvert » et
+# proposait d'en creer un, alors qu'il en rechargeait un : on croyait tout perdu, et cliquer en
+# aurait cree un de plus. On capture donc TOT, avant la fin du chargement.
+clic 105 296 2            # le projet
+clic 727 127 0            # l onglet Terminal, sans laisser le temps de finir
+image 3-pendant-la-reouverture
 sleep 8
-image 3-apres-relance
+image 4-apres-relance
 
 echo "images : $TRAVAIL/img"
 grep -icE "error|erreur" "$TRAVAIL/app.log" | sed 's/^/  lignes d erreur dans le log : /'
