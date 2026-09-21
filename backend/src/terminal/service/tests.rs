@@ -1165,9 +1165,26 @@ fn le_branchement_d_observation_a_un_cout_mesure() {
     while recu.recv_timeout(Duration::from_millis(300)).is_ok() {}
 
     let debut = Instant::now();
+    let mut attentes = Vec::new();
     for id in 1..=8i64 {
+        let depart = Instant::now();
         client.attacher(id, TAILLE).unwrap();
+        attentes.push(depart.elapsed());
     }
+    let plus_longue = attentes.iter().max().copied().unwrap_or_default();
+    eprintln!(
+        "temps de retour de chaque attache : {} (la plus longue : {} ms)",
+        attentes.iter().map(|d| format!("{} ms", d.as_millis())).collect::<Vec<_>>().join(", "),
+        plus_longue.as_millis(),
+    );
+    // **UNE ATTACHE QUI EXPIRE COUTE CINQ SECONDES** (`DELAI_REPONSE`), et huit d'entre elles
+    // font les quarante secondes signalees. Si cette borne saute un jour, c'est ici qu'on le
+    // verra plutot que chez l'utilisateur.
+    assert!(
+        plus_longue < Duration::from_secs(2),
+        "une attache a mis {} ms : le service n'accuse pas reception assez vite",
+        plus_longue.as_millis(),
+    );
     let mut octets = 0usize;
     let mut envois = 0usize;
     while let Ok(pousse) = recu.recv_timeout(Duration::from_millis(800)) {

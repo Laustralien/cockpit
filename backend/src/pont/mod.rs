@@ -45,7 +45,7 @@ impl log::Log for JournalSurErreur {
 /// Un appel venu de l'hote. `id` revient tel quel dans la reponse : c'est ce qui permet a
 /// l'hote d'avoir plusieurs appels en vol sans les confondre.
 #[derive(serde::Deserialize)]
-struct Appel {
+pub(crate) struct Appel {
     id: u64,
     commande: String,
     #[serde(default)]
@@ -168,9 +168,52 @@ pub async fn servir() -> Result<(), String> {
     // lancement de docker le paierait sinon sur le fil de l'appel.
     crate::commande::precharger_les_chemins();
 
-    let entree = std::io::stdin();
-    for ligne in entree.lock().lines() {
-        let ligne = ligne.map_err(|e| e.to_string())?;
+    let etat = std::sync::Arc::new(etat);
+    let pour_traiter = etat.clone();
+    let sortie = tuyau.clone();
+    let signaler = emetteur.clone();
+    servir_les_appels(
+        std::io::stdin().lock(),
+        move |appel| {
+            let etat = pour_traiter.clone();
+            async move {
+                match repondre(&etat, &appel.commande, &appel.arguments).await {
+                    Ok(valeur) => serde_json::json!({ "id": appel.id, "ok": valeur }),
+                    Err(e) => serde_json::json!({ "id": appel.id, "err": e }),
+                }
+            }
+        },
+        move |ligne| sortie.ecrire(&ligne),
+        move |e| signaler.emettre("pont_erreur", serde_json::json!(e)),
+    )
+    .await;
+    Ok(())
+}
+
+/// La boucle des appels : lit, LANCE, et n'attend pas.
+///
+/// **UN APPEL LENT NE DOIT PAS EN BLOQUER UN AUTRE.** La boucle attendait la fin de chaque
+/// commande avant de lire la suivante. Une seule operation lente — se brancher sur un terminal
+/// a gros historique, un `git` sur un depot enorme — tenait donc tout le reste, y compris
+/// l'ouverture d'un terminal et la FRAPPE, qui passe par le meme tuyau. Signale le 2026-09-21 :
+/// quarante secondes avant de voir son terminal, au lancement, avec sept sessions d'agent que
+/// l'application ecoutait en fond.
+///
+/// Chaque reponse porte son identifiant, donc l'ordre d'arrivee n'a aucune importance pour
+/// l'hote. L'ordre des FRAPPES, lui, est garanti ailleurs : l'interface n'envoie l'ecriture
+/// suivante d'un terminal qu'une fois la precedente acquittee.
+pub(crate) async fn servir_les_appels<R, F, Fut>(
+    entree: R,
+    traiter: F,
+    ecrire: impl Fn(serde_json::Value) + Send + Sync + Clone + 'static,
+    signaler: impl Fn(String) + Send + Sync + 'static,
+) where
+    R: BufRead,
+    F: Fn(Appel) -> Fut + Clone + Send + 'static,
+    Fut: std::future::Future<Output = serde_json::Value> + Send + 'static,
+{
+    for ligne in entree.lines() {
+        let Ok(ligne) = ligne else { return };
         if ligne.trim().is_empty() {
             continue;
         }
@@ -179,15 +222,94 @@ pub async fn servir() -> Result<(), String> {
             // Une ligne illisible ne tue pas le pont : l'hote peut avoir envoye du bruit,
             // et perdre tous les terminaux pour ca serait disproportionne.
             Err(e) => {
-                emetteur.emettre("pont_erreur", serde_json::json!(e.to_string()));
+                signaler(e.to_string());
                 continue;
             }
         };
-        let reponse = match repondre(&etat, &appel.commande, &appel.arguments).await {
-            Ok(valeur) => serde_json::json!({ "id": appel.id, "ok": valeur }),
-            Err(e) => serde_json::json!({ "id": appel.id, "err": e }),
-        };
-        tuyau.ecrire(&reponse);
+        let traiter = traiter.clone();
+        let ecrire = ecrire.clone();
+        crate::taches::lancer(async move {
+            ecrire(traiter(appel).await);
+        });
     }
-    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, Mutex as MutexStd};
+
+    /// **UN APPEL LENT NE BLOQUE PLUS LES AUTRES.** La boucle attendait la fin de chaque
+    /// commande avant de lire la suivante : se brancher sur sept terminaux a gros historique
+    /// au lancement tenait donc l'ouverture du premier terminal, et la frappe avec.
+    ///
+    /// L'essai envoie un appel lent PUIS un rapide, et attend la reponse du rapide bien avant
+    /// celle du lent. Avec l'ancienne boucle, il tombe : la premiere reponse serait la lente.
+    #[tokio::test]
+    async fn un_appel_lent_ne_retient_pas_les_suivants() {
+        let entree = std::io::Cursor::new(
+            "{\"id\":1,\"commande\":\"lent\",\"arguments\":null}\n\
+             {\"id\":2,\"commande\":\"rapide\",\"arguments\":null}\n",
+        );
+        let recues: Arc<MutexStd<Vec<u64>>> = Arc::new(MutexStd::new(Vec::new()));
+        let vues = recues.clone();
+
+        servir_les_appels(
+            entree,
+            |appel| async move {
+                if appel.commande == "lent" {
+                    tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+                }
+                serde_json::json!({ "id": appel.id })
+            },
+            move |ligne| {
+                let id = ligne.get("id").and_then(serde_json::Value::as_u64).unwrap_or(0);
+                vues.lock().unwrap_or_else(|e| e.into_inner()).push(id);
+            },
+            |_| {},
+        )
+        .await;
+
+        // La boucle a rendu la main tout de suite : elle ne retient plus rien.
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+        assert_eq!(
+            recues.lock().unwrap_or_else(|e| e.into_inner()).as_slice(),
+            &[2],
+            "le rapide doit avoir repondu pendant que le lent travaille encore"
+        );
+
+        tokio::time::sleep(std::time::Duration::from_millis(700)).await;
+        assert_eq!(
+            recues.lock().unwrap_or_else(|e| e.into_inner()).as_slice(),
+            &[2, 1],
+            "et le lent repond ensuite, sans etre perdu"
+        );
+    }
+
+    /// Une ligne illisible ne tue pas le pont : elle est NOMMEE, et la suivante est servie.
+    #[tokio::test]
+    async fn une_ligne_illisible_ne_tue_pas_le_pont() {
+        let entree = std::io::Cursor::new(
+            "ceci n'est pas du JSON\n{\"id\":7,\"commande\":\"ok\",\"arguments\":null}\n",
+        );
+        let recues: Arc<MutexStd<Vec<u64>>> = Arc::new(MutexStd::new(Vec::new()));
+        let vues = recues.clone();
+        let plaintes: Arc<MutexStd<usize>> = Arc::new(MutexStd::new(0));
+        let comptees = plaintes.clone();
+
+        servir_les_appels(
+            entree,
+            |appel| async move { serde_json::json!({ "id": appel.id }) },
+            move |ligne| {
+                let id = ligne.get("id").and_then(serde_json::Value::as_u64).unwrap_or(0);
+                vues.lock().unwrap_or_else(|e| e.into_inner()).push(id);
+            },
+            move |_| *comptees.lock().unwrap_or_else(|e| e.into_inner()) += 1,
+        )
+        .await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        assert_eq!(*plaintes.lock().unwrap_or_else(|e| e.into_inner()), 1, "le bruit est nomme");
+        assert_eq!(recues.lock().unwrap_or_else(|e| e.into_inner()).as_slice(), &[7]);
+    }
 }

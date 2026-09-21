@@ -12,6 +12,13 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Une opération lente ne fige plus le reste de l'application. Le backend traitait les demandes
+  une par une : au lancement, l'ouverture d'un terminal attendait derrière la liste des pods
+  Kubernetes, l'historique des mesures et l'écoute des sessions d'agent, jusqu'à quarante
+  secondes. La frappe dans un terminal passait par la même file.
+
 ## [0.86.1] — 2026-09-21
 
 ### Fixed
