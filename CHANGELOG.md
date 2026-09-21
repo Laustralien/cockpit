@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.85.0] — 2026-09-21
+
 ### Added
 
 - Un clic sur une bande du graphique, ou sur son nom dans la légende, suit ce pod de près : les
