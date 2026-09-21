@@ -249,6 +249,28 @@ pub async fn workloads(contexte: &str, namespace: &str) -> Result<Vec<workloads:
     Ok(tout)
 }
 
+/// Supprime un pod.
+///
+/// **LE CLUSTER TRANCHE, PAS NOUS.** On ne regarde aucun droit de notre cote : on demande, et
+/// un refus (403) revient tel quel a l'ecran. Cacher le bouton ne protegerait rien, et le
+/// montrer sans pouvoir l'expliquer ferait chercher une panne chez nous.
+///
+/// Ce que ca fait vraiment : un pod tenu par un controleur (deploiement, travail) est RECREE
+/// par lui. C'est le geste courant pour repartir sur un pod casse, et c'est ce que fait
+/// l'interface web du cluster. Le travail lui-meme, ou le deploiement, n'est pas touche.
+pub async fn supprimer_un_pod(contexte: &str, namespace: &str, pod: &str) -> Result<(), String> {
+    for nom in [namespace, pod] {
+        if !kubeconfig::nom_valide(nom) {
+            return Err(format!("nom refuse : {nom}"));
+        }
+    }
+    let (client, _) = client_de(contexte)?;
+    client
+        .supprimer(&format!("/api/v1/namespaces/{namespace}/pods/{pod}"))
+        .await
+        .map(|_| ())
+}
+
 /// Les logs d'un conteneur. `lignes` borne ce qu'on demande : un pod bavard a des centaines de
 /// milliers de lignes, et les demander toutes bloquerait l'ecran le temps de les avaler.
 pub async fn logs(
@@ -405,6 +427,33 @@ mod essais_reels {
         let noms = super::namespaces(&contexte).await.expect("des namespaces");
         eprintln!("{} namespaces en {} ms", noms.len(), debut.elapsed().as_millis());
         assert!(!noms.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod tests_suppression {
+    //! Le seul appel de ce module qui DETRUIT quelque chose.
+
+    /// **UN NOM VENU DE L'INTERFACE NE RENTRE JAMAIS TEL QUEL DANS UNE URL.** Sans ce refus,
+    /// `../../autre-namespace/pods/x` sortirait du namespace demande — et cet appel-la
+    /// supprime. La verification a lieu AVANT tout acces au reseau : l'essai le prouve en
+    /// visant un contexte qui n'existe pas, dont l'erreur serait differente.
+    #[tokio::test]
+    async fn un_nom_qui_sort_du_namespace_est_refuse() {
+        for (ns, pod) in [
+            ("../secrets", "web"),
+            ("equipe", "../../autre/pods/web"),
+            ("equipe", "MAJUSCULES"),
+            ("equipe", ""),
+        ] {
+            let erreur = super::supprimer_un_pod("contexte-inexistant", ns, pod)
+                .await
+                .expect_err("un nom refuse doit l'etre");
+            assert!(
+                erreur.starts_with("nom refuse"),
+                "« {ns} / {pod} » aurait du etre refuse sur son NOM, pas plus loin : {erreur}"
+            );
+        }
     }
 }
 

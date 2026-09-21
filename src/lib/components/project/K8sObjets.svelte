@@ -14,7 +14,8 @@
   import { formaterCpu, formaterRam, age, type Element, type Pod } from "../../k8s/vue";
 
   let {
-    elements, maintenant, kubectl = false, choisi = null, surOuvrirPod, surShell, vide,
+    elements, maintenant, kubectl = false, choisi = null, surOuvrirPod, surShell, surSupprimer,
+    vide,
   }: {
     elements: Element[];
     maintenant: number;
@@ -22,6 +23,7 @@
     choisi?: Pod | null;
     surOuvrirPod: (pod: Pod, volet?: "logs" | "evenements" | "yaml") => void;
     surShell?: (pod: Pod) => void;
+    surSupprimer?: (pods: Pod[]) => void;
     vide: string;
   } = $props();
 
@@ -46,6 +48,9 @@
     if (e.suspendu) return "eteint";
     return e.pods.some((p) => p.etat === "Running") ? "bon" : "eteint";
   }
+
+  /// Les pods de l'objet ouvert qui ont echoue : ce sont eux qu'on vient nettoyer.
+  const enEchec = $derived(ouvert?.pods.filter((p) => p.ennuyeux) ?? []);
 
   function etatDe(e: Element): { texte: string; alerte: boolean } {
     if (e.sorte === "CronJob") {
@@ -89,6 +94,16 @@
       <span class="mesure">{formaterRam(ouvert.ram)}</span>
     </div>
 
+    {#if surSupprimer && enEchec.length > 1}
+      <!-- **UN ECHEC CORRIGE LAISSE DES PODS DERRIERE LUI.** Les supprimer un par un demandait
+           autant de confirmations qu'il y en avait : ici une seule, qui dit combien. -->
+      <div class="menage">
+        <button class="btn small danger" onclick={() => surSupprimer(enEchec)}>
+          {$trad("k8s.supprimerLesEchecs", { n: enEchec.length })}
+        </button>
+      </div>
+    {/if}
+
     <div class="pods">
       {#if ouvert.pods.length === 0}
         <!-- **« AUCUN POD » EST UNE REPONSE, PAS UN ECRAN VIDE.** C'est meme la reponse qu'on
@@ -96,7 +111,15 @@
         <p class="rien">{$trad("k8s.aucunPodIci")}</p>
       {/if}
       {#each ouvert.pods as p (p.nom)}
-        <K8sLignePod pod={p} choisi={choisi?.nom === p.nom} {maintenant} {kubectl} {surOuvrirPod} {surShell} />
+        <K8sLignePod
+          pod={p}
+          choisi={choisi?.nom === p.nom}
+          {maintenant}
+          {kubectl}
+          {surOuvrirPod}
+          {surShell}
+          surSupprimer={surSupprimer ? (pod) => surSupprimer([pod]) : undefined}
+        />
       {/each}
     </div>
   </div>
@@ -258,6 +281,9 @@
   .fait { display: flex; align-items: baseline; gap: 0.35rem; font-size: 0.78rem; }
   .cle { color: var(--text-muted); font-size: 0.7rem; }
   .mesure { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted); }
+
+  .menage { display: flex; justify-content: flex-end; padding-bottom: 0.3rem; }
+  .menage .danger { color: var(--error); border-color: var(--error); }
 
   .rien, .vide { color: var(--text-muted); font-size: 0.82rem; padding: 1rem 0.5rem; text-align: center; }
 </style>

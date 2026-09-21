@@ -84,6 +84,21 @@ impl Client {
         lire_json(reponse).await
     }
 
+    /// Supprime un objet. Rend ce que le cluster repond, pour qu'un refus soit lisible.
+    ///
+    /// **C'EST LE SEUL APPEL DE CE FICHIER QUI DETRUIT QUELQUE CHOSE.** Il n'accepte donc qu'un
+    /// chemin deja construit par l'appelant, dont chaque partie a ete validee : un nom venu de
+    /// l'interface qui contiendrait `../` sortirait du namespace demande.
+    pub async fn supprimer(&self, chemin: &str) -> Result<Value, String> {
+        let r = self.http.delete(format!("{}{chemin}", self.serveur));
+        let r = match &self.jeton {
+            Some(j) => r.bearer_auth(j),
+            None => r,
+        };
+        let reponse = r.send().await.map_err(|e| format!("cluster injoignable : {e}"))?;
+        lire_json(reponse).await
+    }
+
     /// Du texte brut : les logs, le YAML d'un objet.
     pub async fn texte(&self, chemin: &str, accept: &str) -> Result<String, String> {
         let reponse = self

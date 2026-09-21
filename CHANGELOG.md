@@ -12,6 +12,14 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Un pod se supprime depuis l'écran Kubernetes, au survol de sa ligne. La confirmation cite le
+  pod, et ce qui l'a créé (déploiement, tâche) le recrée : c'est le geste pour repartir d'un pod
+  cassé.
+- Quand un objet a plusieurs pods en échec, un bouton les supprime tous d'un coup, avec une
+  seule confirmation qui dit combien.
+
 ## [0.85.0] — 2026-09-21
 
 ### Added

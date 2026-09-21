@@ -119,6 +119,21 @@ def tous_les_pods():
                     3600 * (i + 2),
                 )
             )
+    # **DES ECHECS A NETTOYER.** Un travail planifie qui a rate laisse ses pods derriere lui :
+    # c'est ce qu'on vient supprimer depuis l'ecran.
+    for i in range(4):
+        liste.append(
+            pod(
+                f"nettoyage-archives-29812000-ko{i:02d}",
+                "nettoyage-archives-29812000",
+                "Job",
+                "CrashLoopBackOff",
+                0,
+                1,
+                3600,
+                3,
+            )
+        )
     # Et quelques orphelins en echec, dont le travail a ete supprime.
     for i in range(4):
         liste.append(pod(f"import-nocturne-29810000-zz{i:02d}q", "", "", "Succeeded", 0, 1, 90000))
@@ -141,6 +156,10 @@ def _cronjob(nom, planification, dernier, suspendu):
 
 
 PODS = tous_les_pods()
+# **UN VRAI CLUSTER ANNONCE LA SUPPRESSION PAR SON FLUX**, il ne se contente pas de repondre
+# 200 a l'appel. Sans cette file, l'ecran gardait les pods supprimes affiches et on croyait
+# que la suppression n'avait rien fait.
+SUPPRIMES = []
 
 
 class Faux(BaseHTTPRequestHandler):
@@ -172,6 +191,19 @@ class Faux(BaseHTTPRequestHandler):
                 }
             )
         self._json({"kind": "Status", "message": "inconnu"}, 404)
+
+    def do_DELETE(self):
+        """La suppression d'un pod : le vrai cluster rend l'objet supprime, ou un refus."""
+        global PODS
+        if "/pods/" not in self.path:
+            return self._json({"kind": "Status", "message": "route inconnue"}, 404)
+        nom = self.path.split("/pods/")[1].split("?")[0]
+        trouve = next((p for p in PODS if p["metadata"]["name"] == nom), None)
+        if trouve is None:
+            return self._json({"kind": "Status", "message": "pod inconnu"}, 404)
+        PODS = [p for p in PODS if p["metadata"]["name"] != nom]
+        SUPPRIMES.append(trouve)
+        self._json(trouve)
 
     def do_GET(self):
         chemin = self.path
@@ -275,9 +307,15 @@ class Faux(BaseHTTPRequestHandler):
         self.end_headers()
         try:
             for _ in range(60):
-                p = json.loads(json.dumps(random.choice(PODS)))
-                p["metadata"]["resourceVersion"] = str(random.randint(5000, 9999))
-                ligne = (json.dumps({"type": "MODIFIED", "object": p}) + "\n").encode()
+                # Ce qui vient d'etre supprime part en premier, et une seule fois.
+                if SUPPRIMES:
+                    p = SUPPRIMES.pop(0)
+                    sorte = "DELETED"
+                else:
+                    p = json.loads(json.dumps(random.choice(PODS)))
+                    p["metadata"]["resourceVersion"] = str(random.randint(5000, 9999))
+                    sorte = "MODIFIED"
+                ligne = (json.dumps({"type": sorte, "object": p}) + "\n").encode()
                 self.wfile.write(f"{len(ligne):X}\r\n".encode() + ligne + b"\r\n")
                 self.wfile.flush()
                 time.sleep(2)

@@ -237,6 +237,14 @@ if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   # taches DECLAREES, y compris celles qui ne se sont jamais declenchees et n'ont donc aucun pod.
   clic 632 268 3          # l onglet « Taches planifiees »
   image k8s-2-taches
+  # **SUPPRIMER LES PODS D'UN TRAVAIL QUI A RATE**, ce qu'on vient faire apres avoir corrige.
+  clic 600 320 4          # « nettoyage-archives », en tete car il porte quatre echecs
+  image k8s-2b-echecs
+  clic 1270 391 3         # « Supprimer les 4 pods en echec »
+  image k8s-2c-confirmation
+  clic 884 504 12         # « Supprimer » : le flux annonce ensuite les quatre disparitions
+  image k8s-2d-nettoye
+  clic 380 317 3          # retour a la liste
   clic 600 400 3          # une tache de la liste : on entre dedans
   image k8s-3-dans-la-tache
   # Un pod ouvert DEPUIS un objet doit rendre le meme detail que depuis la liste des pods.

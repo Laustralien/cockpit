@@ -10,7 +10,7 @@
   import { age, formaterCpu, formaterRam, type Pod } from "../../k8s/vue";
 
   let {
-    pod, choisi = false, maintenant, kubectl = false, surOuvrirPod, surShell,
+    pod, choisi = false, maintenant, kubectl = false, surOuvrirPod, surShell, surSupprimer,
   }: {
     pod: Pod;
     choisi?: boolean;
@@ -18,6 +18,8 @@
     kubectl?: boolean;
     surOuvrirPod: (pod: Pod, volet?: "logs" | "evenements" | "yaml") => void;
     surShell?: (pod: Pod) => void;
+    /** Absent : le geste n'est pas propose. Present : il passe par une confirmation nommee. */
+    surSupprimer?: (pod: Pod) => void;
   } = $props();
 
   /// La couleur suit l'ETAT, jamais le texte affiche : celui-ci change avec la langue.
@@ -43,6 +45,13 @@
     <button class="btn small ghost" onclick={() => surOuvrirPod(pod, "logs")}>{$trad("k8s.logs")}</button>
     {#if kubectl && surShell}
       <button class="btn small ghost" onclick={() => surShell(pod)}>{$trad("k8s.shell")}</button>
+    {/if}
+    {#if surSupprimer}
+      <button
+        class="btn small ghost danger"
+        title={$trad("k8s.supprimerAide")}
+        onclick={() => surSupprimer(pod)}
+      >{$trad("k8s.supprimer")}</button>
     {/if}
   </span>
 </div>
@@ -99,5 +108,7 @@
     text-align: right;
   }
   .actions { display: flex; gap: 0.2rem; opacity: 0; flex: none; padding-right: 0.3rem; }
+  /* Le geste qui detruit se distingue des autres AVANT le clic, pas dans la confirmation. */
+  .actions :global(.danger) { color: var(--error); }
   .pod:hover .actions, .pod.choisi .actions { opacity: 1; }
 </style>

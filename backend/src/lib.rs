@@ -333,6 +333,16 @@ async fn k8s_yaml(contexte: String, namespace: String, pod: String) -> Result<St
     k8s::yaml(&contexte, &namespace, &pod).await
 }
 
+/// Supprime un pod. Le cluster tranche : un refus revient tel quel a l'ecran.
+#[commande]
+async fn k8s_supprimer_un_pod(
+    contexte: String,
+    namespace: String,
+    pod: String,
+) -> Result<(), String> {
+    k8s::supprimer_un_pod(&contexte, &namespace, &pod).await
+}
+
 /// `kubectl` est-il installe ? Le bouton « ouvrir un shell » en depend, et lui seul : l'ecran
 /// entier fonctionne sans. Un bouton qui promet ce qu'on ne sait pas faire est un mensonge.
 #[commande]

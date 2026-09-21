@@ -91,3 +91,14 @@ export const k8sHistorique = (contexte: string, namespace: string, depuis: numbe
  */
 export const k8sWorkloads = (contexte: string, namespace: string) =>
   invoke<import("../k8s/vue").Workload[]>("k8s_workloads", { contexte, namespace });
+
+/**
+ * Supprime un pod.
+ *
+ * **LE CLIENT ENVOIE DES NOMS, ET LE CLUSTER TRANCHE.** Comme partout ici, l'interface dit
+ * « ce contexte, ce namespace, ce pod » : elle ne connait ni adresse ni jeton, et le backend
+ * verifie chaque nom avant de le mettre dans une URL. Un refus du cluster (403) remonte tel
+ * quel, parce qu'on ne sait pas a l'avance ce que les droits permettent.
+ */
+export const k8sSupprimerUnPod = (contexte: string, namespace: string, pod: string) =>
+  invoke<void>("k8s_supprimer_un_pod", { contexte, namespace, pod });

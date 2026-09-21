@@ -12,6 +12,7 @@
   import { ecouter, invoke, type Detacher } from "../../coquille";
   import { activeTab, pendingTerminalCommand } from "../../stores/ui";
   import { notify } from "../../stores/toast";
+  import { demanderConfirmation } from "../../stores/confirm";
   import { signalerErreur } from "../../stores/errors";
   import { getAppSettings, setAppSetting } from "../../api/recorder";
   import { trad } from "../../i18n";
@@ -23,7 +24,7 @@
   import {
     k8sContextes, k8sNamespaces, k8sPods, k8sEvenements, k8sYaml,
     k8sKubectlPresent, k8sAjouterUnCluster, k8sSurveillanceLire, k8sSurveillanceEcrire,
-    k8sHistorique, k8sWorkloads, type Contexte, type ReglagesSurveillance,
+    k8sHistorique, k8sWorkloads, k8sSupprimerUnPod, type Contexte, type ReglagesSurveillance,
   } from "../../api/k8s";
   import {
     filtrer, grouper, formaterCpu, formaterRam, age, grouperLesNamespaces,
@@ -451,6 +452,45 @@
     );
   }
 
+  /**
+   * Supprime des pods, apres confirmation NOMMEE.
+   *
+   * **ON NE DETRUIT RIEN SANS DIRE QUOI.** La fenetre cite le pod, ou le nombre quand il y en
+   * a plusieurs : « supprimer ? » sans nom ne permet pas de repondre. Et on ne touche jamais a
+   * ce qui les a crees : un pod tenu par un deploiement ou un travail est RECREE par lui,
+   * c'est le geste courant pour repartir sur un pod casse.
+   *
+   * Le cluster tranche : un refus de droits remonte tel quel, pod par pod, parce qu'on ne sait
+   * pas a l'avance ce qu'il permet.
+   */
+  async function supprimerDesPods(cibles: Pod[]) {
+    if (cibles.length === 0) return;
+    const message =
+      cibles.length === 1
+        ? $trad("k8s.supprimerConfirmation", { nom: cibles[0].nom })
+        : $trad("k8s.supprimerConfirmationN", { n: cibles.length });
+    if (!(await demanderConfirmation({ message, action: $trad("k8s.supprimer") }))) return;
+
+    let faits = 0;
+    for (const p of cibles) {
+      try {
+        await k8sSupprimerUnPod(contexte, namespace, p.nom);
+        faits += 1;
+      } catch (e) {
+        // On s'arrete au premier refus : les suivants echoueraient de la meme facon, et une
+        // pluie de messages identiques n'apprend rien de plus.
+        notify($trad("k8s.supprimerEchec", { nom: p.nom, erreur: String(e) }));
+        break;
+      }
+    }
+    if (faits > 0) {
+      notify($trad("k8s.supprimerFait", { n: faits }));
+      // Le flux annonce leur disparition de lui-meme ; si le pod choisi vient de partir, on
+      // ferme son detail pour ne pas laisser un ecran qui parle d'un pod qui n'est plus la.
+      if (choisi && cibles.some((p) => p.nom === choisi?.nom)) choisi = null;
+    }
+  }
+
   function couleurDe(pod: Pod): string {
     if (pod.ennuyeux) return "mauvais";
     if (pod.etat === "Succeeded") return "fini";
@@ -671,6 +711,7 @@
             {choisi}
             surOuvrirPod={(pod, volet) => void ouvrirLeDetail(pod, volet)}
             surShell={ouvrirUnShell}
+            surSupprimer={(cibles) => void supprimerDesPods(cibles)}
             vide={recherche
               ? $trad("k8s.aucunResultat")
               : vue === "services" ? $trad("k8s.aucunService") : $trad("k8s.aucuneTache")}
@@ -773,6 +814,7 @@
                         {kubectl}
                         surOuvrirPod={(pod, volet) => void ouvrirLeDetail(pod, volet)}
                         surShell={ouvrirUnShell}
+                        surSupprimer={(pod) => void supprimerDesPods([pod])}
                       />
                     {/each}
                   </div>

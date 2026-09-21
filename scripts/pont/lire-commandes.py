@@ -96,4 +96,15 @@ for x in cmds:
     else: c['arguments seuls'] += 1
 print('commandes lues :', len(cmds))
 for k, v in c.most_common(): print(f'  {v:4}  {k}')
-json.dump(cmds, open(sys.argv[1], 'w'), indent=1)
+# **L'ARGUMENT EST LA SORTIE, PAS L'ENTREE — ET CE SCRIPT A DEJA ECRASE `lib.rs`.** Les
+# sources sont en dur (SOURCES) ; un chemin passe en argument est le fichier JSON a ecrire.
+# Appele avec le fichier source en premier argument, il ecrivait le JSON PAR-DESSUS le code,
+# et seul un `git checkout` l'a rattrape (2026-09-21). On refuse donc tout ce qui n'est pas un
+# `.json`.
+sortie = sys.argv[1]
+if not sortie.endswith('.json'):
+    raise SystemExit(
+        f'{sortie} : la sortie doit etre un fichier .json. Les sources sont en dur dans ce '
+        f'script, il n\'y a pas de fichier d\'entree a lui passer.'
+    )
+json.dump(cmds, open(sortie, 'w'), indent=1)
