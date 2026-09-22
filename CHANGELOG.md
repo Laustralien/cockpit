@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Changed
+
+- Les liens d'un projet sont regroupés dans un menu **Liens** au lieu d'occuper une ligne
+  entière sous les onglets. Le bouton porte une pastille rouge dès que l'un d'eux ne répond
+  plus, et le menu donne l'état de chacun.
+
 ## [0.87.1] — 2026-09-21
 
 ### Fixed

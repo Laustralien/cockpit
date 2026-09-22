@@ -114,6 +114,10 @@ lancer
 clic 105 296 3            # le projet « boutique-vinyles » (le premier de la liste)
 clic 727 127 10           # l onglet Terminal
 image 1-avant
+# **LES LIENS DU PROJET TIENNENT DANS UN MENU**, sur la ligne des onglets : sept liens cotes a
+# cote prenaient une ligne entiere de l'ecran.
+clic 1190 176 2           # le bouton « Liens »
+image 1b-liens
 
 if [ -n "${COCKPIT_BANC_NS:-}" ]; then
   # **LE NAMESPACE CHOISI DOIT REVENIR.** Signale par le mainteneur : il choisit celui de son

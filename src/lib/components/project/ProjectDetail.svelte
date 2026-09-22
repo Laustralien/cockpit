@@ -114,6 +114,26 @@
   // est disponible immediatement, sans dependre d'un remount.
   let cmdMenu: { x: number; y: number; cmds: ProjectCommand[] } | null = $state(null);
 
+  /// Les liens du projet, replies dans un menu. Un lien qui ne repond plus se voit AVANT
+  /// d'ouvrir le menu (voir la pastille du bouton).
+  let liensMenu: { x: number; y: number } | null = $state(null);
+  const unLienEstTombe = $derived(
+    urls.some((u) => {
+      const h = urlHealth.get(u.url);
+      return h !== undefined && !h.ok;
+    }),
+  );
+
+  function ouvrirLesLiens(e: MouseEvent) {
+    liensMenu = { x: e.clientX, y: e.clientY };
+  }
+
+  /// Le navigateur de l'utilisateur, jamais une fenetre a nous : la coquille intercepte et
+  /// ouvre a l'exterieur (une page distante chez nous aurait acces au pont).
+  function ouvrirLeLien(url: string) {
+    window.open(url, "_blank", "noopener");
+  }
+
   async function openCmdMenu(e: MouseEvent) {
     try {
       const cmds = await getProjectCommands(name);
@@ -217,18 +237,19 @@
     <div class="header-actions">
       <button class="cmd-btn" onclick={openCmdMenu} title={$trad("project.runCommandHint")}>{$trad("project.runCommand")}</button>
       {#if urls.length > 0}
-        {#each urls as u}
-          {@const h = urlHealth.get(u.url)}
-          <a
-            class="quick-url"
-            href={u.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={h ? (h.ok ? $trad("project.urlOnline", { status: h.status }) : $trad("project.urlUnreachable", { detail: h.error || `HTTP ${h.status}` })) : u.url}
-          >
-            <span class="url-dot" class:up={h?.ok} class:down={h && !h.ok}></span>{u.label}
-          </a>
-        {/each}
+        <!-- **SEPT LIENS PRENAIENT UNE LIGNE ENTIERE.** Replies dans un menu, tout tient sur la
+             ligne des onglets. Ce qu'on ne veut PAS perdre en repliant : savoir d'un coup
+             d'oeil que quelque chose ne repond plus. Le bouton porte donc la pastille rouge des
+             qu'un lien est injoignable. -->
+        <button
+          class="cmd-btn liens"
+          class:alerte={unLienEstTombe}
+          onclick={ouvrirLesLiens}
+          title={$trad("project.liensHint")}
+        >
+          {#if unLienEstTombe}<span class="url-dot down"></span>{/if}
+          {$trad("project.liens")}<span class="compte">{urls.length}</span>
+        </button>
       {/if}
       {#if failedRecordings.length > 0}
         <span class="rec-failed" title={failedRecordings[0].error ?? ""}>
@@ -261,6 +282,25 @@
     <CurrentTab {name} />
   </div>
 </div>
+
+{#if liensMenu}
+  <ContextMenu
+    x={liensMenu.x}
+    y={liensMenu.y}
+    items={urls.map((u) => {
+      const h = urlHealth.get(u.url);
+      return {
+        label: u.label,
+        couleur: h === undefined ? "var(--text-muted)" : h.ok ? "var(--success)" : "var(--error)",
+        // **UN SUFFIXE COURT, SINON IL MANGE LE LIBELLE.** « connexion impossible » poussait
+        // le nom du lien a « Documen… » : la pastille dit deja l'essentiel, le mot le confirme.
+        suffixe: h === undefined ? "" : h.ok ? String(h.status) : $trad("project.urlHorsLigne"),
+        action: () => ouvrirLeLien(u.url),
+      };
+    })}
+    onClose={() => (liensMenu = null)}
+  />
+{/if}
 
 {#if cmdMenu}
   <ContextMenu
@@ -333,19 +373,19 @@
     cursor: pointer; transition: background 0.12s ease;
   }
   .cmd-btn:hover { background: var(--bg-tertiary); }
-  .quick-url {
-    font-size: 0.8rem; color: var(--accent); text-decoration: none;
-    padding: 0.15rem 0.5rem; border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm); background: var(--bg-secondary);
-    transition: background 0.12s ease;
+  /* Le bouton des liens porte le compte, et la pastille quand l'un d'eux est tombe. */
+  .cmd-btn.liens { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .cmd-btn.liens.alerte { border-color: var(--error); color: var(--error); }
+  .cmd-btn .compte {
+    padding: 0 0.3rem; border-radius: 999px;
+    background: var(--bg-tertiary); color: var(--text-muted);
+    font-size: 0.7rem; font-variant-numeric: tabular-nums;
   }
-  .quick-url:hover { background: var(--bg-tertiary); text-decoration: underline; }
   .url-dot {
     display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-    margin-right: 0.35rem; background: var(--text-muted); opacity: 0.5; vertical-align: middle;
+    background: var(--text-muted); vertical-align: middle;
   }
-  .url-dot.up { background: var(--success); opacity: 1; }
-  .url-dot.down { background: var(--error); opacity: 1; }
+  .url-dot.down { background: var(--error); }
   .tabs { display: flex; gap: 0; align-items: stretch; }
   .tab {
     display: flex; align-items: center;
