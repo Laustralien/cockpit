@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.88.0] — 2026-09-22
+
 ### Changed
 
 - Les liens d'un projet sont regroupés dans un menu **Liens** au lieu d'occuper une ligne
