@@ -238,3 +238,43 @@ test("avec des volets, ce sont tous les volets, pas seulement l'actif", () => {
   const d = diviser(feuille(1), 1, "colonnes", 2);
   assert.deepEqual(aLEcran(d, 1).sort(), [1, 2]);
 });
+
+// ── Deux activations qui se croisent ─────────────────────────────────────────────────────────
+
+test("la derniere demande d'affichage gagne, meme si elle finit la premiere", async () => {
+  const { creerDerniereDemande } = await import("../../src/lib/terminaux/disposition.ts");
+  const garde = creerDerniereDemande();
+  const affiche = [];
+  const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // A se rebranche lentement, B vite : B finit AVANT A. Sans garde, A reprendrait l'ecran.
+  async function activer(id, lenteur) {
+    const numero = garde.prendre();
+    await attendre(lenteur);
+    if (garde.estLaDerniere(numero)) affiche.push(id);
+  }
+  await Promise.all([activer("A", 60), activer("B", 5)]);
+  assert.deepEqual(affiche, ["B"], "l'ecran montre ce qu'on a demande en dernier, et rien d'autre");
+});
+
+test("une demande seule s'affiche toujours", async () => {
+  const { creerDerniereDemande } = await import("../../src/lib/terminaux/disposition.ts");
+  const garde = creerDerniereDemande();
+  const numero = garde.prendre();
+  assert.equal(garde.estLaDerniere(numero), true);
+});
+
+test("activer un terminal le fait revenir au retour sur l'onglet", async () => {
+  // **LE CHOIX D'UN ONGLET DOIT SURVIVRE A LA RELECTURE.** La disposition est relue a chaque
+  // retour sur l'onglet Terminal : si activer un terminal ne l'y inscrit pas, on revient sur
+  // l'ancien. C'est le second chemin du « ça revient sur l'autre terminal ».
+  const { poserLaSession, feuille, depuisJson, sessionsAffichees } = await import(
+    "../../src/lib/terminaux/disposition.ts"
+  );
+  const enregistree = feuille(1);
+  const apres = poserLaSession(enregistree, 2, 1);
+  const relue = depuisJson(JSON.stringify(apres));
+  assert.deepEqual(sessionsAffichees(relue), [2]);
+  // Et un onglet jamais divise, sans disposition, se souvient aussi.
+  assert.deepEqual(sessionsAffichees(depuisJson(JSON.stringify(poserLaSession(null, 3, null)))), [3]);
+});

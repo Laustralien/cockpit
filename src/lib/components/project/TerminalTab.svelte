@@ -224,7 +224,7 @@
   import { demanderConfirmation } from "../../stores/confirm";
   import type { Worktree } from "../../types";
   import {
-    deplacer, depuisJson, diviser, feuille, fixerRatio, nettoyer, nombreDeVolets, poserLaSession, retirer, sessionsAffichees, type Chemin, type Cote, type Noeud,
+    creerDerniereDemande, deplacer, depuisJson, diviser, feuille, fixerRatio, nettoyer, nombreDeVolets, poserLaSession, retirer, sessionsAffichees, type Chemin, type Cote, type Noeud,
   } from "../../terminaux/disposition";
   import { coteVise, dansLeCadre, voisinLePlusProche } from "../../terminaux/visee";
   import { getAppSettings, setAppSetting } from "../../api/recorder";
@@ -940,7 +940,11 @@
     return { term, fit, el };
   }
 
+  /// Qui a le droit d'afficher quand son attente se termine : la demande la plus recente.
+  const derniereDemande = creerDerniereDemande();
+
   async function addTerminal(initCommand?: string, dossier?: string) {
+    const numero = derniereDemande.prendre();
     // **UN TERMINAL NEUF S'OUVRE DANS LE DOSSIER QU'ON REGARDE.** Sans ca, le bouton « + »
     // ouvrirait a la racine du projet alors que la barre affiche une branche : on taperait
     // dans un autre dossier que celui qu'on croit.
@@ -1002,8 +1006,17 @@
       try { await attachTerminal(id, cols, rows); }
       catch (e) { signalerErreur("terminal.attache", String(e)); }
       brancherEntree(entry, (data) => sendInput(id, data));
-      activeId = id;
-      entry.term.focus();
+      // **UN TERMINAL NEUF ENTRE DANS LA DISPOSITION.** Il etait affiche a la main, par son
+      // style, sans que la disposition le sache : le prochain recalcul de la mise en page, ou
+      // le retour sur l'onglet, remettait l'ancien a sa place. Et si une autre demande est
+      // arrivee pendant la creation, c'est elle qui garde l'ecran : le terminal existe, il est
+      // dans la liste, on ne le pousse pas devant ce qu'on a demande ensuite.
+      if (derniereDemande.estLaDerniere(numero)) {
+        showOnly(id);
+        activeId = id;
+        planifierFit();
+        entry.term.focus();
+      }
       loadTerminals();
     } catch (e) {
       entry.term.dispose();
@@ -1044,8 +1057,14 @@
   /// Montre `id` dans la disposition. Si la session n'y est pas encore, elle prend la place du
   /// volet actif : « ouvre ce terminal ICI » plutot que « ferme mes volets ».
   function showOnly(id: number) {
+    const avant = disposition;
     disposition = poserLaSession(disposition, id, activeId);
     disposerLesVolets();
+    // **CE QU'ON MONTRE DOIT SURVIVRE AU RETOUR SUR L'ONGLET.** La disposition est relue a
+    // chaque remontage ; ne pas l'ecrire ici ramenait l'ANCIEN terminal apres un simple
+    // aller-retour vers Fichiers ou Git. On n'ecrit que si elle a change : re-afficher un
+    // terminal deja a l'ecran ne coute rien.
+    if (disposition !== avant) enregistrerLaDisposition();
   }
 
   // --- Recherche dans le terminal, historique compris ---
@@ -1219,14 +1238,20 @@
   }
 
   async function activate(id: number) {
+    // **LA DERNIERE DEMANDE GAGNE** (voir `creerDerniereDemande`) : on la prend AVANT toute
+    // attente, et on reverifie apres chacune.
+    const numero = derniereDemande.prendre();
     // Une recherche ouverte concerne l'ANCIEN terminal : on la clot chez lui
     if (searchOpen) await closeSearch(activeId, false);
+    if (!derniereDemande.estLaDerniere(numero)) return;
     activeId = id;
     await assurerMonte(id);
+    if (!derniereDemande.estLaDerniere(numero)) return;
     showOnly(id);
     // Les autres volets peuvent avoir besoin d'etre montes eux aussi (relecture d'une
     // disposition, session remplacee dans un volet).
     await assurerLesVolets();
+    if (!derniereDemande.estLaDerniere(numero)) return;
     requestAnimationFrame(() => {
       fitLesVolets();
       pool.get(id)?.term.focus();

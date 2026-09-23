@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Le terminal que tu viens d'ouvrir, ou de choisir dans les onglets, reste celui que tu
+  retrouves : l'écran revenait parfois sur le précédent après un passage par un autre onglet
+  du projet, ou quand deux ouvertures se suivaient de près.
+
 ## [0.88.0] — 2026-09-22
 
 ### Changed

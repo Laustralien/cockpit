@@ -286,3 +286,25 @@ function valider(valeur: unknown): Noeud | null {
     b,
   };
 }
+
+/**
+ * La derniere demande d'affichage gagne, meme si elle aboutit la premiere.
+ *
+ * **DEUX ACTIVATIONS QUI SE CROISENT NE DOIVENT PAS SE REPONDRE DANS LE DESORDRE.** Activer un
+ * terminal, c'est poser l'onglet actif, ATTENDRE que le service le rebranche, puis l'afficher.
+ * Depuis que le pont sert les appels en parallele, deux attentes peuvent finir dans l'ordre
+ * inverse : on clique B pendant que A se rebranche, B s'affiche, puis A finit et reprend
+ * l'ecran alors que l'onglet actif est B. Signale le 2026-09-23 : « parfois ça revient sur
+ * l'autre terminal ». Chaque demande prend donc un numero, et seule la plus recente a le
+ * droit d'afficher quand son attente se termine.
+ */
+export function creerDerniereDemande(): {
+  prendre(): number;
+  estLaDerniere(numero: number): boolean;
+} {
+  let courante = 0;
+  return {
+    prendre: () => ++courante,
+    estLaDerniere: (numero) => numero === courante,
+  };
+}

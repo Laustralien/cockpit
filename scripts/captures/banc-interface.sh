@@ -331,5 +331,24 @@ image 3-pendant-la-reouverture
 sleep 8
 image 4-apres-relance
 
+# **UN TERMINAL OUVERT PAR « + » DOIT RESTER CELUI QU'ON VOIT.** Signale le 2026-09-23 :
+# « parfois ça revient sur l'autre terminal ». Le premier terminal porte l'ecran du faux
+# agent, reconnaissable ; on en ouvre un second, et l'onglet actif doit montrer une invite
+# NEUVE, pas l'agent. Puis on provoque ce qui remettait l'ancien : une nouvelle mise en page.
+clic 862 127 3            # on part sur Git
+clic 727 127 0            # retour sur Terminal, sans attendre la fin du montage
+clic 594 224 0            # « + » tout de suite
+sleep 4
+image 5-apres-plus
+python3 "$OUTILS" survoler 900 500
+clic 797 127 3            # Fichiers, puis retour : la disposition est relue
+clic 727 127 4
+image 6-apres-aller-retour
+# Le second chemin : un simple CLIC sur l'autre onglet doit lui aussi survivre au retour.
+clic 485 224 3            # l onglet « - 1 »
+clic 862 127 3            # Git, puis retour
+clic 727 127 4
+image 7-clic-puis-retour
+
 echo "images : $TRAVAIL/img"
 grep -icE "error|erreur" "$TRAVAIL/app.log" | sed 's/^/  lignes d erreur dans le log : /'
