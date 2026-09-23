@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.88.1] — 2026-09-23
+
 ### Fixed
 
 - Le terminal que tu viens d'ouvrir, ou de choisir dans les onglets, reste celui que tu
