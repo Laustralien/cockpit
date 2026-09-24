@@ -1,7 +1,7 @@
 <script lang="ts" module>
   import { ecouter as listenGlobal } from "../../coquille";
   import { cheminDuFichier } from "../../coquille";
-  import { writeTerminal } from "../../api/workspace";
+  import { writeTerminal, setClipboard, getClipboard } from "../../api/workspace";
   import { notify as notifyGlobal } from "../../stores/toast";
   import type { Terminal as XTerminal } from "@xterm/xterm";
   import type { FitAddon as XFitAddon } from "@xterm/addon-fit";
@@ -182,7 +182,9 @@
       notifyGlobal(translate("term.dropOnTerminal"));
       return;
     }
-    const id = dropTarget?.activeId() ?? null;
+    // Le volet sous le pointeur, pas l'actif : on depose LA ou l'on vise.
+    const id = terminalSous(document.elementFromPoint(e.clientX, e.clientY))
+      ?? dropTarget?.activeId() ?? null;
     if (id === null) {
       notifyGlobal(translate("term.noTerminalOpen"));
       return;
@@ -190,6 +192,61 @@
     queueWrite(id, chemins.map(escapeForShell).join(" ") + " ");
     pool.get(id)?.term.focus();
   });
+
+  /// Le terminal du pool dont l'element contient `cible` : celui qu'on vient de montrer du
+  /// doigt, qui n'est pas forcement le terminal actif quand l'ecran est divise.
+  function terminalSous(cible: EventTarget | null): number | null {
+    const hote = cible instanceof Element ? cible.closest(".term-host") : null;
+    if (!hote) return null;
+    for (const [id, e] of pool) if (e.el === hote) return id;
+    return null;
+  }
+
+  // --- Copier / Coller ---
+  //
+  // **CHAQUE GESTE VISE LE TERMINAL QUI L'A RECU, JAMAIS « LE TERMINAL ACTIF ».** Signale le
+  // 2026-09-24 et reproduit au banc : on copie chez l'agent, on passe sur un autre onglet, on
+  // colle au clic molette, et le texte arrive chez l'agent. Les ecouteurs sont poses a la
+  // creation de l'xterm, et l'xterm survit au composant (voir le pool) : ils appelaient donc
+  // le composant qui l'avait CREE, demonte depuis, dont le terminal actif etait fige sur
+  // l'agent. Ces fonctions vivent donc ici, hors composant, et recoivent leur terminal.
+
+  /// Copie la selection de `term`. `effacer` : le Ctrl+C efface la selection, pour que le
+  /// suivant interrompe comme d'habitude ; le menu la LAISSE, on doit voir ce qu'on a copie.
+  async function copierDe(term: XTerminal, effacer: boolean) {
+    const sel = term.hasSelection() ? term.getSelection() : "";
+    // Rien de selectionne : on le DIT. Un « Copier » qui ne fait rien est vecu comme une
+    // panne, et l'utilisateur ne sait pas que son geste de selection n'a pas pris.
+    if (!sel) {
+      notifyGlobal(translate("term.nothingSelected"));
+      term.focus();
+      return;
+    }
+    try {
+      await setClipboard(sel);
+      if (effacer) term.clearSelection();
+      notifyGlobal(translate("term.copied"), "success");
+    } catch (e) {
+      signalerErreur("terminal.copie", String(e));
+      notifyGlobal(String(e));
+    }
+    term.focus();
+  }
+
+  /// Colle le presse-papier SYSTEME dans `term`. Source unique de tout collage Cockpit :
+  /// clic droit -> « Coller » ET clic molette passent par ici.
+  async function collerDans(term: XTerminal) {
+    try {
+      const text = await getClipboard();
+      // term.paste() passe par onData (bracketed paste) -> chemin d'entree normal
+      if (text) term.paste(text);
+      else notifyGlobal(translate("term.pasteEmpty"));
+    } catch (e) {
+      signalerErreur("terminal.collage", String(e));
+      notifyGlobal(String(e));
+    }
+    term.focus();
+  }
 </script>
 
 <script lang="ts">
@@ -211,7 +268,6 @@
   import {
     createTerminal, resizeTerminal, closeTerminal,
     attachTerminal, renameTerminal, listTerminals, listAllTerminals,
-    setClipboard, getClipboard,
     terminalSearch, openUrl, saveTerminalScreens,
   } from "../../api/workspace";
   import { notify } from "../../stores/toast";
@@ -248,7 +304,7 @@
   let activeId: number | null = $state(null);
   let container: HTMLDivElement | undefined = $state(undefined);
   // Menu contextuel Copier/Coller du terminal
-  let ctxMenu: { x: number; y: number } | null = $state(null);
+  let ctxMenu: { x: number; y: number; cible: number | null } | null = $state(null);
   /// Le clic droit sur une puce de dossier de travail. Le groupe est GARDE ICI et repasse en
   /// parametre aux actions : le menu se ferme avant qu'elles ne s'executent.
   let menuWorktree: { x: number; y: number } | null = $state(null);
@@ -743,61 +799,29 @@
     pool.forEach(({ term }) => (term.options.theme = XTERM_THEMES[t]));
   });
 
-  // --- Copier / Coller ---
-  /// Copie la selection du terminal dans le presse-papier systeme. Source unique : le menu
-  /// clic droit ET le Ctrl+C avec selection passent par ici.
-  ///
-  /// La selection appartient a xterm — c'est lui qui tient l'ecran et tout l'historique de
-  /// defilement. Du temps de tmux elle appartenait au serveur (copy-mode) et il fallait la
-  /// lui demander ; ce detour a disparu avec lui.
-  async function copySelection() {
-    const entry = activeId === null ? undefined : pool.get(activeId);
-    if (!entry) {
-      notify($trad("term.noTerminalOpen"));
-      return;
-    }
-    const sel = entry.term.hasSelection() ? entry.term.getSelection() : "";
-    // Rien de selectionne : on le DIT. Un « Copier » qui ne fait rien est vecu comme une
-    // panne, et l'utilisateur ne sait pas que son geste de selection n'a pas pris.
-    if (!sel) {
-      notify($trad("term.nothingSelected"));
-      entry.term.focus();
-      return;
-    }
-    try {
-      await setClipboard(sel);
-      entry.term.clearSelection();
-      notify($trad("term.copied"), "success");
-    } catch (e) {
-      signalerErreur("terminal.copie", String(e));
-      notify(String(e));
-    }
-    entry.term.focus();
+  /// Le terminal que vise le menu du clic droit : celui sous le pointeur, sinon l'actif.
+  function cibleDuMenu(): PoolEntry | undefined {
+    const id = ctxMenu?.cible ?? activeId;
+    return id === null ? undefined : pool.get(id);
   }
-
-  /// Colle le presse-papier SYSTEME dans le terminal actif. Source unique de tout collage
-  /// Cockpit : clic droit -> « Coller » ET clic molette passent par ici, donc les deux
-  /// collent exactement la meme chose.
-  async function pasteClipboard() {
-    const entry = activeId === null ? undefined : pool.get(activeId);
-    if (!entry) {
-      notify($trad("term.noTerminalOpen"));
-      return;
-    }
-    try {
-      const text = await getClipboard();
-      // term.paste() passe par onData (bracketed paste) -> chemin d'entree normal
-      if (text) entry.term.paste(text);
-      else notify($trad("term.pasteEmpty"));
-    } catch (e) {
-      notify(String(e));
-    }
-    entry.term.focus();
+  function copierDuMenu() {
+    const e = cibleDuMenu();
+    if (!e) return notify($trad("term.noTerminalOpen"));
+    void copierDe(e.term, false);
+  }
+  function collerDuMenu() {
+    const e = cibleDuMenu();
+    if (!e) return notify($trad("term.noTerminalOpen"));
+    void collerDans(e.term);
   }
 
   function openCtxMenu(e: MouseEvent) {
     e.preventDefault();
-    ctxMenu = { x: e.clientX, y: e.clientY };
+    // Le clic droit vise le volet sous le pointeur, comme le clic gauche : c'est lui qui
+    // devient actif, et c'est sur lui qu'agissent « Copier », « Coller » et les volets.
+    const cible = terminalSous(e.target);
+    if (cible !== null && cible !== activeId) focaliserLeVolet(cible);
+    ctxMenu = { x: e.clientX, y: e.clientY, cible };
   }
 
   function createXterm(): { term: Terminal; fit: FitAddon; el: HTMLDivElement } {
@@ -872,7 +896,7 @@
         e.type === "keydown" && e.ctrlKey && !e.shiftKey && !e.altKey &&
         (e.key === "c" || e.key === "C") && term.hasSelection();
       if (!copie) return true;
-      void copySelection();
+      void copierDe(term, true);
       return false;
     });
 
@@ -918,8 +942,14 @@
     el.addEventListener(
       "mousedown",
       (e) => {
-        collageNatifAAnnuler = (e as MouseEvent).button === 1;
-        if (collageNatifAAnnuler) void pasteClipboard();
+        const bouton = (e as MouseEvent).button;
+        collageNatifAAnnuler = bouton === 1;
+        if (collageNatifAAnnuler) void collerDans(term);
+        // **LE CLIC DROIT NE DOIT PAS EFFACER LA SELECTION QU'ON VIENT COPIER.** Quand le
+        // programme du terminal suit la souris (claude, vim, htop), xterm lui envoie le clic,
+        // et TOUT envoi au programme efface la selection. On garde donc ce clic pour le menu
+        // tant qu'une selection est affichee ; le `contextmenu` qui suit n'est pas touche.
+        if (bouton === 2 && term.hasSelection()) e.stopImmediatePropagation();
       },
       true,
     );
@@ -1935,8 +1965,8 @@
       // **RANGE PAR SUJET, PARCE QUE CE MENU S'ALLONGE.** Une liste plate melangeait deja le
       // presse-papiers, les volets et le terminal lui-meme.
       { section: $trad("term.ctxSectionClipboard") },
-      { label: $trad("common.copy"), action: copySelection },
-      { label: $trad("common.paste"), action: pasteClipboard },
+      { label: $trad("common.copy"), action: copierDuMenu },
+      { label: $trad("common.paste"), action: collerDuMenu },
       // C'est ici qu'on cherche la division : les boutons de la barre d'onglets restent,
       // pour ceux qui les ont vus, mais le clic droit est le geste naturel.
       { section: $trad("term.ctxSectionPanes") },

@@ -146,7 +146,8 @@ def _ecran():
     return display.Display(os.environ.get("DISPLAY", ":99"))
 
 
-def cliquer(x: int, y: int) -> None:
+def cliquer(x: int, y: int, bouton: int = 1) -> None:
+    """Clique en (x, y). `bouton` : 1 gauche, 2 molette, 3 droit (numeros de X)."""
     from Xlib import X
     from Xlib.ext import xtest
 
@@ -155,14 +156,14 @@ def cliquer(x: int, y: int) -> None:
     d.screen().root.warp_pointer(x + ox, y + oy)
     d.sync()
     time.sleep(0.2)
-    xtest.fake_input(d, X.ButtonPress, 1)
+    xtest.fake_input(d, X.ButtonPress, bouton)
     d.sync()
     time.sleep(0.08)
-    xtest.fake_input(d, X.ButtonRelease, 1)
+    xtest.fake_input(d, X.ButtonRelease, bouton)
     d.sync()
 
 
-def glisser(x1: int, y1: int, x2: int, y2: int, pas: int = 12) -> None:
+def glisser(x1: int, y1: int, x2: int, y2: int, pas: int = 12, maj: bool = False) -> None:
     """Presse en (x1, y1), deplace jusqu'a (x2, y2), relache.
 
     **LE DEPLACEMENT SE FAIT EN PLUSIEURS PAS, ET CE N'EST PAS COSMETIQUE.** Un saut unique
@@ -178,6 +179,14 @@ def glisser(x1: int, y1: int, x2: int, y2: int, pas: int = 12) -> None:
     d.screen().root.warp_pointer(x1 + ox, y1 + oy)
     d.sync()
     time.sleep(0.2)
+    # Maj tenue : dans un terminal ou le programme suit la souris, c'est ce qui force une
+    # selection au lieu d'envoyer le glissement au programme.
+    touche_maj = None
+    if maj:
+        from Xlib import XK
+        touche_maj = d.keysym_to_keycode(XK.string_to_keysym("Shift_L"))
+        xtest.fake_input(d, X.KeyPress, touche_maj)
+        d.sync()
     xtest.fake_input(d, X.ButtonPress, 1)
     d.sync()
     time.sleep(0.1)
@@ -190,6 +199,9 @@ def glisser(x1: int, y1: int, x2: int, y2: int, pas: int = 12) -> None:
     time.sleep(0.3)
     xtest.fake_input(d, X.ButtonRelease, 1)
     d.sync()
+    if touche_maj is not None:
+        xtest.fake_input(d, X.KeyRelease, touche_maj)
+        d.sync()
 
 
 def defiler(x: int, y: int, crans: int = 5, vers_le_bas: bool = True) -> None:
@@ -658,11 +670,12 @@ if __name__ == "__main__":
             racine="--racine" in options,
         )
     elif quoi == "cliquer":
-        cliquer(int(sys.argv[2]), int(sys.argv[3]))
+        cliquer(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]) if len(sys.argv) > 4 else 1)
     elif quoi == "defiler":
         defiler(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]) if len(sys.argv) > 4 else 5)
     elif quoi == "glisser":
-        glisser(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]))
+        glisser(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]),
+                maj="--maj" in sys.argv[6:])
     elif quoi == "taper":
         taper(sys.argv[2])
     elif quoi == "effacer":

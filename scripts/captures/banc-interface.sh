@@ -119,6 +119,49 @@ image 1-avant
 clic 1190 176 2           # le bouton « Liens »
 image 1b-liens
 
+# **UN COLLAGE VA DANS LE TERMINAL QU'ON VISE, PAS DANS CELUI D'AVANT.** Signale le 2026-09-24 :
+# on copie dans le terminal de l'agent, on passe sur un autre onglet, on colle, et le texte
+# arrive chez l'agent. Il faut que les terminaux aient ete crees par un affichage PRECEDENT de
+# l'onglet : on en ouvre deux, on revient sur le premier, on part sur Git et on revient.
+if [ -n "${COCKPIT_BANC_COLLER:-}" ]; then
+  clic 900 500 1          # ferme le menu des liens
+  clic 900 500 1          # focalise le premier terminal
+  python3 "$OUTILS" taper "echo terminal-UN"
+  clic 509 221 4          # « + » : le second terminal
+  python3 "$OUTILS" taper "echo terminal-DEUX"
+  image coller-1-deux-terminaux
+  clic 400 221 3          # retour sur le premier
+  clic 862 127 3          # Git, puis retour : l'onglet des terminaux est remonte
+  clic 727 127 5
+  image coller-2-retour
+  clic "${COCKPIT_BANC_ONGLET2_X:-580}" 221 3   # l'onglet du second terminal
+  printf 'MARQUE-COLLEE' | DISPLAY="$ECRAN" xclip -selection clipboard
+  python3 "$OUTILS" cliquer 900 500 2           # clic molette dans le second terminal
+  sleep 2
+  image coller-3-apres-molette
+  clic 400 221 3          # le premier : le texte ne doit PAS y etre
+  image coller-4-premier
+  # **LE CLIC DROIT GARDE LA SELECTION**, y compris quand le programme suit la souris, comme
+  # claude : on l'active a la main, on selectionne en tenant Maj, puis clic droit.
+  printf '#!/bin/bash\nprintf "\\e[?1000h\\e[?1006h"\necho mot-a-copier\nod -c\n' > "$TRAVAIL/bin/souris"
+  python3 "$OUTILS" taper "clear"
+  python3 "$OUTILS" taper "bash $TRAVAIL/bin/souris"
+  sleep 1
+  python3 "$OUTILS" glisser 332 273 440 273 --maj
+  sleep 1
+  image coller-5-selection
+  python3 "$OUTILS" cliquer 380 273 3
+  sleep 1
+  image coller-6-clic-droit
+  if [ -n "${COCKPIT_BANC_SOURIS:-}" ]; then
+    python3 "$OUTILS" cliquer 900 700 1; sleep 1
+    python3 "$OUTILS" cliquer 900 700 1; sleep 1
+    image coller-7-clic-gauche
+  fi
+  echo "images collage : $TRAVAIL/img"
+  exit 0
+fi
+
 if [ -n "${COCKPIT_BANC_NS:-}" ]; then
   # **LE NAMESPACE CHOISI DOIT REVENIR.** Signale par le mainteneur : il choisit celui de son
   # projet, part, revient, et retrouve celui du contexte. On pose le choix EN BASE, comme s'il
@@ -235,12 +278,21 @@ SQL
 fi
 
 if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
+  clic 941 127 1          # ferme le menu des liens, reste ouvert apres sa capture
   clic 941 127 14         # l onglet Kubernetes (a droite de Git)
   image k8s-1-ensemble    # ce que le namespace contient, en objets declares
   # **LA VUE DES TACHES PLANIFIEES EST CELLE QUI A MOTIVE TOUT CECI.** Elle doit montrer les
   # taches DECLAREES, y compris celles qui ne se sont jamais declenchees et n'ont donc aucun pod.
   clic 632 268 3          # l onglet « Taches planifiees »
   image k8s-2-taches
+  # **LE MENAGE DE TOUT LE NAMESPACE EN UN GESTE**, a droite des onglets de vue.
+  if [ -n "${COCKPIT_BANC_TOUT_NETTOYER:-}" ]; then
+    clic "${COCKPIT_BANC_TOUT_X:-1300}" 268 3
+    image k8s-tout-1-confirmation
+    clic 884 504 12       # « Supprimer »
+    image k8s-tout-2-nettoye
+    exit 0
+  fi
   # **SUPPRIMER LES PODS D'UN TRAVAIL QUI A RATE**, ce qu'on vient faire apres avoir corrige.
   clic 600 320 4          # « nettoyage-archives », en tete car il porte quatre echecs
   image k8s-2b-echecs

@@ -935,7 +935,9 @@ mod tests {
     /// symptome pour une autre raison fait chercher une panne qui n'existe pas.
     ///
     /// On tape donc une amorce jusqu'a ce qu'elle REVIENNE EXECUTEE, et le marqueur est ecrit
-    /// en deux morceaux pour que son echo ne suffise pas a la valider.
+    /// en deux morceaux pour que son echo ne suffise pas a la valider. Unix seulement, comme
+    /// le seul essai qui s'en sert : l'amorce est une ligne de shell POSIX.
+    #[cfg(unix)]
     fn attendre_un_shell_qui_execute(session: &Session) {
         let debut = std::time::Instant::now();
         loop {

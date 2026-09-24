@@ -12,6 +12,22 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Kubernetes : un bouton « Supprimer les N pods en échec », à droite des vues, nettoie d'un
+  coup tous les pods en échec du namespace (ou de la recherche en cours), après une seule
+  confirmation.
+
+### Fixed
+
+- Terminaux : un collage au clic molette arrivait parfois dans un autre terminal, celui où
+  l'on venait de copier, au lieu de celui qu'on regardait. Il va maintenant toujours dans le
+  terminal où l'on clique.
+- Terminaux : le clic droit sur une sélection ne l'efface plus quand le programme du terminal
+  suit la souris (comme claude). La sélection reste aussi visible après « Copier ».
+- Terminaux : avec l'écran divisé, le clic droit et le dépôt d'un fichier visent le volet sous
+  le pointeur, et non le dernier volet actif.
+
 ## [0.88.1] — 2026-09-23
 
 ### Fixed

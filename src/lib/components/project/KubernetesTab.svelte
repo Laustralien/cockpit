@@ -99,6 +99,9 @@
   const filtres = $derived(appliquerLeFiltre(pods, filtre));
   const visibles = $derived(filtrer(filtres, recherche));
   const familles = $derived(enFamilles(grouper(visibles)));
+  /// Les pods en echec du namespace, recherche comprise : on ne supprime que ce qu'on
+  /// pourrait voir. Le filtre des pods n'y entre pas, il ne vaut que pour leur vue.
+  const enEchec = $derived(filtrer(pods, recherche).filter((p) => p.ennuyeux));
   /// **UNE RECHERCHE QUI NE TROUVE RIEN ICI PEUT TROUVER AILLEURS, ET LE TAIRE EST UN
   /// CUL-DE-SAC.** Chercher « snap » dans les pods ne rend rien quand la tache planifiee de ce
   /// nom ne s'est jamais declenchee : on le dit, et on y emmene.
@@ -463,26 +466,36 @@
    * Le cluster tranche : un refus de droits remonte tel quel, pod par pod, parce qu'on ne sait
    * pas a l'avance ce qu'il permet.
    */
-  async function supprimerDesPods(cibles: Pod[]) {
+  async function supprimerDesPods(cibles: Pod[], message?: string) {
     if (cibles.length === 0) return;
-    const message =
+    message ??=
       cibles.length === 1
         ? $trad("k8s.supprimerConfirmation", { nom: cibles[0].nom })
         : $trad("k8s.supprimerConfirmationN", { n: cibles.length });
     if (!(await demanderConfirmation({ message, action: $trad("k8s.supprimer") }))) return;
 
+    // **PLUSIEURS A LA FOIS, MAIS PAS TOUS.** Un namespace peut laisser des centaines de pods
+    // en echec : un par un, le nettoyage durait des minutes. Six demandes en cours au plus,
+    // pour ne pas envoyer d'un coup des centaines de requetes au cluster.
+    const reste = [...cibles];
     let faits = 0;
-    for (const p of cibles) {
-      try {
-        await k8sSupprimerUnPod(contexte, namespace, p.nom);
-        faits += 1;
-      } catch (e) {
-        // On s'arrete au premier refus : les suivants echoueraient de la meme facon, et une
-        // pluie de messages identiques n'apprend rien de plus.
-        notify($trad("k8s.supprimerEchec", { nom: p.nom, erreur: String(e) }));
-        break;
+    let refus = false;
+    const ouvrier = async () => {
+      while (!refus) {
+        const p = reste.shift();
+        if (!p) return;
+        try {
+          await k8sSupprimerUnPod(contexte, namespace, p.nom);
+          faits += 1;
+        } catch (e) {
+          // On s'arrete au premier refus : les suivants echoueraient de la meme facon, et une
+          // pluie de messages identiques n'apprend rien de plus.
+          if (!refus) notify($trad("k8s.supprimerEchec", { nom: p.nom, erreur: String(e) }));
+          refus = true;
+        }
       }
-    }
+    };
+    await Promise.all(Array.from({ length: Math.min(6, cibles.length) }, ouvrier));
     if (faits > 0) {
       notify($trad("k8s.supprimerFait", { n: faits }));
       // Le flux annonce leur disparition de lui-meme ; si le pod choisi vient de partir, on
@@ -562,6 +575,21 @@
           {libelle}{#if (n as number) >= 0}<span class="compte-vue">{n}</span>{/if}
         </button>
       {/each}
+      <span class="espace-vues"></span>
+      {#if enEchec.length > 0}
+        <!-- **LE MENAGE D'UN NAMESPACE SE FAIT EN UN GESTE.** Entrer dans chaque tache pour
+             nettoyer ses echecs demandait autant de visites qu'il y a de taches qui ont rate. -->
+        <button
+          class="btn small danger tout-nettoyer"
+          title={$trad("k8s.supprimerTousAide")}
+          onclick={() => void supprimerDesPods(
+            enEchec,
+            $trad("k8s.supprimerTousConfirmation", { n: enEchec.length, ns: namespace }),
+          )}
+        >
+          {$trad("k8s.supprimerLesEchecs", { n: enEchec.length })}
+        </button>
+      {/if}
     </div>
   {/if}
 
@@ -919,7 +947,9 @@
   .direct.actif { color: var(--success); }
   .direct.actif::before { content: "● "; }
 
-  .vues { display: flex; gap: 0.2rem; border-bottom: 1px solid var(--border-color); }
+  .vues { display: flex; align-items: center; gap: 0.2rem; border-bottom: 1px solid var(--border-color); }
+  .espace-vues { flex: 1; }
+  .tout-nettoyer { margin-bottom: 0.3rem; }
   .vue {
     padding: 0.3rem 0.8rem;
     background: none;

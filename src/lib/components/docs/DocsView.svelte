@@ -224,6 +224,7 @@
             <span class="d-tab active">{$trad("k8s.ongletTaches")} <span class="d-count">79</span></span>
             <span class="d-tab">{$trad("k8s.ongletServices")} <span class="d-count">12</span></span>
             <span class="d-tab">{$trad("k8s.ongletPods")} <span class="d-count">301</span></span>
+            <span class="d-btn small">{$trad("k8s.supprimerLesEchecs", { n: 7 })}</span>
           </div>
           <div class="d-row"><strong>{$trad("docs.k8s.demoService1")}</strong> <span class="d-stat">0/3</span> <span class="d-badge mod">{$trad("docs.k8s.demoEtat")}</span></div>
           <div class="d-row"><strong>{$trad("docs.k8s.demoService3")}</strong> <span class="d-stat">10 3 * * *</span> <span class="d-count">{$trad("k8s.jamaisLance")}</span></div>
