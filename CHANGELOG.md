@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.89.0] — 2026-09-24
+
 ### Added
 
 - Kubernetes : un bouton « Supprimer les N pods en échec », à droite des vues, nettoie d'un
