@@ -4,3 +4,5 @@
 //! meme regle que les cles d'API des fournisseurs d'IA.
 
 pub mod branche;
+pub mod jql;
+pub mod modele;
