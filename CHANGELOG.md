@@ -12,6 +12,11 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fichiers : la coloration syntaxique est de retour. Les fichiers s'affichaient en texte brut,
+  sans couleur, en lecture comme en édition.
+
 ## [0.89.0] — 2026-09-24
 
 ### Added

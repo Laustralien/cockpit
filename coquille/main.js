@@ -104,14 +104,15 @@ function servirInterface() {
     // Ce que chaque directive paie : `style-src 'unsafe-inline'` parce que Svelte et xterm
     // posent des styles a la volee ; `img-src data: blob:` parce que le fond d'ecran et les
     // avatars sont des data URL ; `connect-src` pour les APIs des fournisseurs d'IA et la
-    // synchronisation. Il n'y a PAS de `script-src 'unsafe-eval'` : le code de la page est
-    // compile, et le pont ne fait rien evaluer.
+    // synchronisation ; `'wasm-unsafe-eval'` parce que la coloration (Shiki) compile un
+    // module WebAssembly — sans lui, tout fichier s'affiche sans couleur. Il n'y a PAS de
+    // `'unsafe-eval'` : le code de la page est compile, et le pont ne fait rien evaluer.
     const entetes = new Headers(reponse.headers)
     entetes.set(
       'Content-Security-Policy',
       [
         "default-src 'self'",
-        "script-src 'self'",
+        "script-src 'self' 'wasm-unsafe-eval'",
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: blob:",
         "font-src 'self' data:",
