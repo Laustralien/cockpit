@@ -10,6 +10,7 @@ pub mod compte;
 mod commande;
 mod docker;
 mod gitdiff;
+mod jira;
 mod k8s;
 mod llm;
 mod lsp;
