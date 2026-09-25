@@ -35,6 +35,8 @@ pub fn commande_du_service(chemin: &std::path::Path) -> Result<Command, String> 
     for variable in crate::terminal::environnement::VARIABLES_APPIMAGE {
         commande.env_remove(variable);
     }
+    // Le profil appartient a la fenetre, pas aux shells : ils ne doivent pas en heriter.
+    commande.env_remove(crate::chemins::VARIABLE_PROFIL);
     #[cfg(target_os = "linux")]
     if let Some(systemd_run) = systemd_run_utilisable() {
         let nom = format!(
@@ -141,9 +143,10 @@ pub(crate) fn binaire_du_service() -> Result<std::path::PathBuf, String> {
     if std::env::var_os("APPIMAGE").is_none() {
         return Ok(exe);
     }
-    let donnees = crate::chemins::calculer_le_dossier_de_donnees()
+    // Une seule copie par version, commune a tous les profils.
+    let racine = crate::chemins::calculer_la_racine_des_donnees()
         .ok_or_else(|| "dossier de donnees introuvable".to_string())?;
-    poser_la_copie_du_service(&exe, &donnees.join("service"), env!("CARGO_PKG_VERSION"))
+    poser_la_copie_du_service(&exe, &racine.join("service"), env!("CARGO_PKG_VERSION"))
 }
 
 /// Pose (si besoin) une copie du binaire dans `dossier` et rend son chemin.
@@ -545,5 +548,18 @@ mod tests {
         // Le nom temporaire qu'utilise `poser_la_copie_du_service` avant de renommer.
         std::fs::write(dossier.join(".cockpit-service-0.64.0.1234"), b"x").unwrap();
         assert_eq!(version_du_service_pose(dossier).as_deref(), Some("0.63.0"));
+    }
+
+    /// Les shells lances par le service ne doivent pas croire appartenir a un profil : un
+    /// `cockpit` lance depuis l'un d'eux ouvrirait sinon ce profil-la.
+    #[test]
+    fn le_service_n_herite_pas_du_profil() {
+        let commande = commande_du_service(std::path::Path::new("/run/x.sock")).unwrap();
+        assert!(
+            commande
+                .get_envs()
+                .any(|(cle, valeur)| cle == crate::chemins::VARIABLE_PROFIL && valeur.is_none()),
+            "COCKPIT_PROFIL n'est pas retiree de l'environnement du service"
+        );
     }
 }
