@@ -12,6 +12,10 @@ le script de release.
 
 ## [Unreleased]
 
+### Changed
+
+- La fenêtre s'ouvre maximisée.
+
 ## [0.89.1] — 2026-09-25
 
 ### Fixed

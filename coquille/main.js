@@ -418,7 +418,12 @@ function ouvrirLaFenetre() {
   })
 
   // Affichee seulement quand elle a quelque chose a montrer : sinon on voit un cadre vide.
-  fenetre.once('ready-to-show', () => fenetre.show())
+  // Maximisee d'emblee : 1400x900 n'est que la taille qu'elle reprend quand on la restaure.
+  // Pas au banc : ses captures doivent garder la meme taille quel que soit l'ecran.
+  fenetre.once('ready-to-show', () => {
+    if (!process.env.COCKPIT_BANC_CAPTURE) fenetre.maximize()
+    fenetre.show()
+  })
   // La mort du moteur de rendu laissait une fenetre blanche sans un mot : c'est l'autre
   // forme que prend « une erreur au lancement » vue de l'utilisateur.
   fenetre.webContents.on('render-process-gone', (_e, details) =>
