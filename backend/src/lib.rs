@@ -1167,6 +1167,7 @@ pub fn get_app_settings(
     state: &AppState,
 ) -> Result<std::collections::HashMap<String, String>, String> {
     let mut settings = state.db.get_all_settings()?;
+    jira::config::masquer(&mut settings);
     settings
         .entry("summary_prompt".into())
         .or_insert_with(|| recorder::summarize::DEFAULT_PROMPT.to_string());
