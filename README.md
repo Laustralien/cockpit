@@ -327,7 +327,10 @@ runs the full test suite before bundling anything.
 
 ## Contributing
 
-Issues and pull requests are welcome.
+Issues and pull requests are welcome. Fork the repository, work on a branch, and open a pull
+request against `main`. Every pull request is reviewed by the maintainers, who merge it and
+publish the release themselves: **do not change the version** in `package.json`, and do not
+create tags. A pull request runs no workflow and never builds a release.
 
 A change is ready when all of these pass:
 
