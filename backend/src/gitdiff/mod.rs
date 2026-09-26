@@ -3,6 +3,7 @@
 //! modele FileDiff/Hunk/Line avec les deux numeros de ligne (old/new).
 
 use serde::Serialize;
+use std::time::Duration;
 use tokio::process::Command;
 
 pub mod depart;
@@ -91,18 +92,17 @@ pub(super) async fn run_git(repo: &str, args: &[&str]) -> Result<String, String>
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
-/// Runner strict pour les operations (add/commit/push/branch) : tout code != 0
-/// est une erreur, avec stderr+stdout comme message (git ecrit sur les deux).
-pub(super) async fn run_git_strict(repo: &str, args: &[&str]) -> Result<String, String> {
-    let output = Command::new("git")
-        .sans_console()
-        .args(args)
-        .current_dir(repo)
-        .env("GIT_OPTIONAL_LOCKS", "0")
-        .kill_on_drop(true)
-        .output()
-        .await
-        .map_err(|e| format!("git: {}", e))?;
+/// Partie commune a run_git_strict et run_git_reseau : lance git, code != 0 = erreur
+/// (stderr+stdout comme message, git ecrit sur les deux). `sans_prompt` coupe toute
+/// demande d'identifiants interactive (utile derriere un timeout : rien ne doit attendre
+/// une saisie qui ne viendra jamais).
+async fn executer_strict(repo: &str, args: &[&str], sans_prompt: bool) -> Result<String, String> {
+    let mut commande = Command::new("git");
+    commande.sans_console().args(args).current_dir(repo).env("GIT_OPTIONAL_LOCKS", "0").kill_on_drop(true);
+    if sans_prompt {
+        commande.env("GIT_TERMINAL_PROMPT", "0");
+    }
+    let output = commande.output().await.map_err(|e| format!("git: {}", e))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -111,6 +111,24 @@ pub(super) async fn run_git_strict(repo: &str, args: &[&str]) -> Result<String, 
         return Err(msg.trim().chars().take(400).collect());
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+/// Runner strict pour les operations (add/commit/push/branch) : tout code != 0
+/// est une erreur, avec stderr+stdout comme message (git ecrit sur les deux).
+pub(super) async fn run_git_strict(repo: &str, args: &[&str]) -> Result<String, String> {
+    executer_strict(repo, args, false).await
+}
+
+/// Runner strict pour les operations reseau (fetch/pull) : jamais de prompt d'identifiants
+/// (GIT_TERMINAL_PROMPT=0) et jamais d'attente infinie (timeout 60 s, le process tue via
+/// kill_on_drop en cas d'abandon du futur).
+pub(super) async fn run_git_reseau(repo: &str, args: &[&str]) -> Result<String, String> {
+    match tokio::time::timeout(Duration::from_secs(60), executer_strict(repo, args, true)).await {
+        Ok(resultat) => resultat,
+        Err(_) => {
+            Err(format!("git {} : pas de reponse apres 60 s (identifiants demandes ?)", args.first().unwrap_or(&"")))
+        }
+    }
 }
 
 pub async fn git_status(repo: &str) -> Result<GitStatus, String> {

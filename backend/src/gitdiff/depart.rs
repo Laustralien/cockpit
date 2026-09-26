@@ -3,7 +3,7 @@
 //! **TOUJOURS DEPUIS `main` A JOUR** (ou `master` a defaut) : partir de la branche courante
 //! embarquerait le travail d'un autre ticket dans la MR de celui-ci.
 
-use super::run_git_strict;
+use super::{run_git_reseau, run_git_strict};
 
 #[derive(Debug)]
 pub struct Depart {
@@ -45,14 +45,14 @@ pub async fn partir_de_la_base(depot: &str, branche: &str) -> Result<Depart, Str
 
     let a_un_origin = run_git_strict(depot, &["remote", "get-url", "origin"]).await.is_ok();
     if a_un_origin {
-        run_git_strict(depot, &["fetch", "origin"]).await?;
+        run_git_reseau(depot, &["fetch", "origin"]).await?;
     }
     let base = choisir_la_base(depot).await?;
     run_git_strict(depot, &["checkout", &base]).await?;
     // Passe ce point, un echec laisse le depot sur `base` : on le dit, plutot que de rendre
     // seulement l'erreur brute de git qui ne dit pas ou on en est reste.
     if a_un_origin && existe(depot, &format!("refs/remotes/origin/{base}")).await {
-        run_git_strict(depot, &["pull", "--ff-only", "origin", &base])
+        run_git_reseau(depot, &["pull", "--ff-only", "origin", &base])
             .await
             .map_err(|e| format!("{e} (le depot est maintenant sur {base} ; la branche {branche} n'a pas ete creee)"))?;
     }
