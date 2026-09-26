@@ -34,20 +34,28 @@
     apercu = "";
     try {
       const d = await jiraTicket(c);
+      if (c !== cle) return;
       detail = d;
-      transitions = await jiraTransitions(c);
-      if (liaison) apercu = await jiraApercuBranche(liaison.gabarit, d.ticket.cle, d.ticket.type_ticket, d.ticket.resume);
+      const tr = await jiraTransitions(c);
+      if (c !== cle) return;
+      transitions = tr;
+      if (liaison) {
+        const a = await jiraApercuBranche(liaison.gabarit, d.ticket.cle, d.ticket.type_ticket, d.ticket.resume);
+        if (c !== cle) return;
+        apercu = a;
+      }
     } catch (e) {
       notify(String(e));
     }
   }
 
-  async function agir(action: () => Promise<unknown>, succes: string) {
+  async function agir(action: (c: string) => Promise<unknown>, succes: string) {
+    const c = cle;
     occupe = true;
     try {
-      await action();
+      await action(c);
       notify(succes, "success");
-      await charger(cle);
+      if (c === cle) await charger(c);
       onChange();
     } catch (e) {
       notify(String(e));
@@ -57,29 +65,30 @@
   }
 
   const transitionner = (t: TransitionJira) =>
-    agir(() => jiraTransitionner(cle, t.id), $trad("jira.statutChange", { statut: t.vers }));
+    agir((c) => jiraTransitionner(c, t.id), $trad("jira.statutChange", { statut: t.vers }));
 
   const commenter = () =>
-    agir(async () => {
-      await jiraCommenter(cle, commentaire);
+    agir(async (c) => {
+      await jiraCommenter(c, commentaire);
       commentaire = "";
     }, $trad("jira.commentaireAjoute"));
 
   const saisirTemps = () =>
-    agir(async () => {
-      await jiraSaisirTemps(cle, duree, commentaireTemps.trim() || null);
+    agir(async (c) => {
+      await jiraSaisirTemps(c, duree, commentaireTemps.trim() || null);
       duree = "";
       commentaireTemps = "";
     }, $trad("jira.tempsSaisi"));
 
   async function demarrer() {
     if (!liaison) return;
+    const c = cle;
     occupe = true;
     try {
-      const d = await jiraDemarrer(liaison.projet, cle);
+      const d = await jiraDemarrer(liaison.projet, c);
       notify($trad(d.creee ? "jira.brancheCreee" : "jira.brancheReprise", { branche: d.branche }), "success");
       if (d.erreur_transition) notify($trad("jira.transitionEchouee", { erreur: d.erreur_transition }));
-      await charger(cle);
+      if (c === cle) await charger(c);
       onChange();
     } catch (e) {
       notify(String(e));
