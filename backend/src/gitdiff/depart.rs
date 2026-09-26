@@ -49,10 +49,16 @@ pub async fn partir_de_la_base(depot: &str, branche: &str) -> Result<Depart, Str
     }
     let base = choisir_la_base(depot).await?;
     run_git_strict(depot, &["checkout", &base]).await?;
+    // Passe ce point, un echec laisse le depot sur `base` : on le dit, plutot que de rendre
+    // seulement l'erreur brute de git qui ne dit pas ou on en est reste.
     if a_un_origin && existe(depot, &format!("refs/remotes/origin/{base}")).await {
-        run_git_strict(depot, &["pull", "--ff-only", "origin", &base]).await?;
+        run_git_strict(depot, &["pull", "--ff-only", "origin", &base])
+            .await
+            .map_err(|e| format!("{e} (le depot est maintenant sur {base} ; la branche {branche} n'a pas ete creee)"))?;
     }
-    run_git_strict(depot, &["checkout", "-b", branche]).await?;
+    run_git_strict(depot, &["checkout", "-b", branche])
+        .await
+        .map_err(|e| format!("{e} (le depot est maintenant sur {base} ; la branche {branche} n'a pas ete creee)"))?;
     Ok(Depart { base: Some(base), creee: true })
 }
 
@@ -130,10 +136,11 @@ mod tests {
     #[tokio::test]
     async fn refuse_une_copie_modifiee() {
         let (_, clone) = depot_avec_origin("main");
+        git(&clone, &["checkout", "-b", "ailleurs"]);
         std::fs::write(clone.join("a.txt"), "modifie").unwrap();
         let e = partir_de_la_base(clone.to_str().unwrap(), "fix/CCM-3/x").await.unwrap_err();
         assert!(e.contains("commit ou stash"), "{e}");
-        assert_eq!(branche_courante(&clone), "main", "rien n'a bouge");
+        assert_eq!(branche_courante(&clone), "ailleurs", "rien n'a bouge, pas meme un checkout avant le refus");
     }
 
     #[tokio::test]
@@ -161,6 +168,29 @@ mod tests {
         let e = partir_de_la_base(clone.to_str().unwrap(), "fix/CCM-6/avec espace").await.unwrap_err();
         assert!(e.contains("nom de branche invalide"), "{e}");
         assert_eq!(branche_courante(&clone), "ailleurs");
+    }
+
+    #[tokio::test]
+    async fn un_pull_impossible_dit_ou_est_reste_le_depot() {
+        let (origin, clone) = depot_avec_origin("main");
+        git(&clone, &["checkout", "-b", "ailleurs"]);
+        // Le main local avance de son cote...
+        git(&clone, &["checkout", "main"]);
+        std::fs::write(clone.join("a.txt"), "local").unwrap();
+        git(&clone, &["add", "."]);
+        git(&clone, &["commit", "-m", "divergence locale"]);
+        git(&clone, &["checkout", "ailleurs"]);
+        // ...pendant qu'un autre commit, different, est pousse sur origin/main : ff-only impossible.
+        let autre = origin.parent().unwrap().join("autre");
+        git(origin.parent().unwrap(), &["clone", origin.to_str().unwrap(), "autre"]);
+        std::fs::write(autre.join("b.txt"), "distant").unwrap();
+        git(&autre, &["add", "."]);
+        git(&autre, &["commit", "-m", "divergence distante"]);
+        git(&autre, &["push", "origin", "main"]);
+
+        let e = partir_de_la_base(clone.to_str().unwrap(), "fix/CCM-8/x").await.unwrap_err();
+        assert!(e.contains("maintenant sur main"), "{e}");
+        assert_eq!(branche_courante(&clone), "main", "le checkout a reussi, seul le pull a echoue");
     }
 
     #[tokio::test]
