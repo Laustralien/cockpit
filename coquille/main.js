@@ -155,6 +155,9 @@ class Backend {
     this.enAttente = new Map()
     this.prochainAppel = 1
     this.surEvenement = () => {}
+    // Garde pour nommer CE backend dans le journal et dans le message de panne : sans lui,
+    // plusieurs fenetres ecrivent au meme endroit et on ne sait plus laquelle a crie.
+    this.nom = nom
     // La sortie d'erreur du backend n'est PAS le protocole : elle va au journal de la
     // coquille, sinon une panne de demarrage serait invisible.
     this.vivant = true
@@ -165,7 +168,7 @@ class Backend {
     })
     this.processus.stderr.on('data', (bloc) => {
       const texte = `${bloc}`.trimEnd()
-      journaliser('backend.stderr', texte)
+      journaliser(`backend.stderr[${this.nom ?? 'defaut'}]`, texte)
       // Gardees pour les JOINDRE au rejet : sans elles, une panne de demarrage du backend
       // arrive dans l'interface comme une erreur de flux, qui ne nomme rien.
       this.dernieresPlaintes.push(texte)
@@ -186,7 +189,7 @@ class Backend {
       const plaintes = this.dernieresPlaintes.join(' | ')
       this.echouer(
         new Error(
-          `le backend s'est arrete (code ${code})${plaintes ? ` : ${plaintes}` : ''}`
+          `le backend [${this.nom ?? 'defaut'}] s'est arrete (code ${code})${plaintes ? ` : ${plaintes}` : ''}`
         )
       )
     })
@@ -435,6 +438,9 @@ ipcMain.handle('cockpit:commande', async (evenement, commande, arguments_) => {
 })
 
 function ramener(fenetre) {
+  // Entre `close` et `closed` la fenetre est encore dans la table mais deja detruite :
+  // la ramener leverait sur `isMinimized`.
+  if (fenetre.isDestroyed()) return
   if (fenetre.isMinimized()) fenetre.restore()
   fenetre.focus()
 }
@@ -442,10 +448,13 @@ function ramener(fenetre) {
 /** Ouvre la fenetre d'un profil, ou ramene celle qui l'a deja. */
 function ouvrirLaFenetre(nom = null) {
   const existante = fenetres.get(nom)
-  if (existante) {
+  if (existante && !existante.fenetre.isDestroyed()) {
     ramener(existante.fenetre)
     return existante.fenetre
   }
+  // Une entree dont la fenetre est deja detruite (entre `close` et `closed`) ne sert plus
+  // a rien : la garder ferait ramener un cadre mort au lieu d'en ouvrir un nouveau.
+  if (existante) fenetres.delete(nom)
   // Cree ici et non par le backend : un profil tout juste cree doit deja figurer dans la
   // liste que la page redemande.
   fs.mkdirSync(profils.dossierDuProfil(app.getPath('userData'), nom), { recursive: true })
@@ -520,7 +529,6 @@ function ouvrirLaFenetre(nom = null) {
  * ouvrir de fenetre sur l'ecran de quelqu'un.
  */
 function armerLeBanc(fenetre) {
-  const fs = require('node:fs')
   const destination = process.env.COCKPIT_BANC_CAPTURE
   const plaintes = []
   // Les erreurs de la page ne remontent pas dans stdout du processus principal : sans cet

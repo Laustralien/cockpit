@@ -146,7 +146,16 @@ pub(crate) fn binaire_du_service() -> Result<std::path::PathBuf, String> {
     // Une seule copie par version, commune a tous les profils.
     let racine = crate::chemins::calculer_la_racine_des_donnees()
         .ok_or_else(|| "dossier de donnees introuvable".to_string())?;
-    poser_la_copie_du_service(&exe, &racine.join("service"), env!("CARGO_PKG_VERSION"))
+    poser_la_copie_du_service(&exe, &dossier_des_copies(&racine), env!("CARGO_PKG_VERSION"))
+}
+
+/// Ou vivent les copies du service : sous la RACINE des donnees, jamais sous le dossier
+/// d'un profil. Une seule copie sert toutes les fenetres, quel que soit leur profil, donc
+/// `signaler_un_service_d_une_autre_version` doit regarder au meme endroit que
+/// `binaire_du_service` — fonction a part pour que ce lien soit eprouvable sans lancer de
+/// service ni poser de variable d'environnement.
+pub(crate) fn dossier_des_copies(racine: &std::path::Path) -> std::path::PathBuf {
+    racine.join("service")
 }
 
 /// Pose (si besoin) une copie du binaire dans `dossier` et rend son chemin.
@@ -282,8 +291,10 @@ pub fn demarrer(chemin: &std::path::Path) -> Result<(), String> {
 /// qui se comporte mal envoie alors chercher la panne dans du code qui n'est pas celui qui
 /// tourne.
 fn signaler_un_service_d_une_autre_version() {
-    let Some(donnees) = crate::chemins::dossier_donnees() else { return };
-    let Some(posee) = version_du_service_pose(&donnees.join("service")) else { return };
+    // Meme dossier que `binaire_du_service` : la copie est sous la RACINE, pas sous le
+    // dossier d'un profil nomme, ou rien n'aurait jamais ete trouve.
+    let Some(racine) = crate::chemins::calculer_la_racine_des_donnees() else { return };
+    let Some(posee) = version_du_service_pose(&dossier_des_copies(&racine)) else { return };
     if posee == env!("CARGO_PKG_VERSION") {
         return;
     }
@@ -548,6 +559,19 @@ mod tests {
         // Le nom temporaire qu'utilise `poser_la_copie_du_service` avant de renommer.
         std::fs::write(dossier.join(".cockpit-service-0.64.0.1234"), b"x").unwrap();
         assert_eq!(version_du_service_pose(dossier).as_deref(), Some("0.63.0"));
+    }
+
+    /// La copie du service vit sous la RACINE, jamais sous un dossier de profil : sinon
+    /// `signaler_un_service_d_une_autre_version` chercherait au mauvais endroit pour une
+    /// fenetre a profil nomme et ne trouverait jamais rien.
+    #[test]
+    fn le_dossier_des_copies_est_sous_la_racine_peu_importe_le_profil() {
+        let racine = PathBuf::from("/donnees/cockpit");
+        assert_eq!(dossier_des_copies(&racine), racine.join("service"));
+        // Le calcul ne regarde que la racine qu'on lui donne : un dossier de profil nomme
+        // passe en racine donnerait la meme reponse, preuve qu'aucun profil n'entre en jeu.
+        let racine_profil = PathBuf::from("/donnees/cockpit/profils/travail");
+        assert_eq!(dossier_des_copies(&racine_profil), racine_profil.join("service"));
     }
 
     /// Les shells lances par le service ne doivent pas croire appartenir a un profil : un
