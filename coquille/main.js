@@ -180,7 +180,9 @@ class Backend {
     // exception qui ne dit ni quel binaire, ni pourquoi.
     this.processus.on('error', (e) => {
       this.vivant = false
-      this.echouer(new Error(`backend introuvable ou illisible (${chemin}) : ${e.message}`))
+      this.echouer(
+        new Error(`backend [${this.nom ?? 'defaut'}] introuvable ou illisible (${chemin}) : ${e.message}`)
+      )
     })
     this.processus.on('exit', (code) => {
       this.vivant = false
@@ -488,7 +490,9 @@ function ouvrirLaFenetre(nom = null) {
     derniereActive = entree
   })
   fenetre.on('closed', () => {
-    fenetres.delete(nom)
+    // Une entree deja remplacee (fenetre detruite reouverte entre-temps pour ce meme
+    // profil) ne doit pas etre effacee ici : ce serait celle de la fenetre NEUVE.
+    if (fenetres.get(nom) === entree) fenetres.delete(nom)
     parPage.delete(idDeLaPage)
     if (derniereActive === entree) derniereActive = null
   })
