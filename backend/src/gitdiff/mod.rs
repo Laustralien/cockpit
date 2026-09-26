@@ -5,6 +5,7 @@
 use serde::Serialize;
 use tokio::process::Command;
 
+pub mod depart;
 pub mod worktree;
 
 use crate::commande::SansConsole;

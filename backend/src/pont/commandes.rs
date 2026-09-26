@@ -1794,6 +1794,15 @@ pub async fn appeler(
             ).await?))
         })
         .await,
+        "jira_demarrer" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_demarrer(etat,
+                serde_json::from_value(prendre(a, "projet", "projet"))
+                    .map_err(|e| format!("argument projet : {e}"))?,
+                serde_json::from_value(prendre(a, "cle", "cle"))
+                    .map_err(|e| format!("argument cle : {e}"))?,
+            ).await?))
+        })
+        .await,
         _ => return None,
     })
 }

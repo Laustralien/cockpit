@@ -205,3 +205,53 @@ async fn lister_transitions(jira: &Jira, cle: &str) -> Result<Vec<Transition>, S
         .await?;
     modele::lire_transitions(&corps)
 }
+
+#[derive(Debug, serde::Serialize)]
+pub struct Demarrage {
+    pub branche: String,
+    pub creee: bool,
+    pub base: Option<String>,
+    /// Le nom de la transition appliquee ; `None` si le ticket etait deja en cours.
+    pub transition: Option<String>,
+    /// **LA BRANCHE EST GARDEE MEME SI LE STATUT N'A PAS SUIVI** : on le dit, on n'annule pas.
+    pub erreur_transition: Option<String>,
+}
+
+#[commande]
+pub async fn jira_demarrer(state: &crate::AppState, projet: String, cle: String) -> Result<Demarrage, String> {
+    let jira = Jira::depuis(&state.db)?;
+    let nom = crate::resolve_db_project_name(state, &projet).await;
+    let depot = state.db.get_project_by_name(&nom)?.path;
+    if depot.trim().is_empty() {
+        return Err(format!("le projet {projet} n'a pas de dossier sur cette machine"));
+    }
+    let liaison = config::liaison(&state.db, &nom)?;
+    let ticket = lire_le_ticket(&jira, &cle).await?.ticket;
+    let branche = branche::nom_de_branche(
+        &liaison.gabarit,
+        &ticket.cle,
+        &ticket.type_ticket,
+        &ticket.resume,
+        &config::types_branche(&state.db),
+    );
+    let depart = crate::gitdiff::depart::partir_de_la_base(&depot, &branche).await?;
+    let (transition, erreur_transition) = passer_en_cours(&jira, &ticket).await;
+    Ok(Demarrage { branche, creee: depart.creee, base: depart.base, transition, erreur_transition })
+}
+
+async fn passer_en_cours(jira: &Jira, ticket: &Ticket) -> (Option<String>, Option<String>) {
+    if ticket.categorie_statut == "indeterminate" {
+        return (None, None);
+    }
+    let transitions = match lister_transitions(jira, &ticket.cle).await {
+        Ok(t) => t,
+        Err(e) => return (None, Some(e)),
+    };
+    let Some(t) = modele::transition_en_cours(&transitions) else {
+        return (None, Some("aucune transition vers un statut en cours n'est proposee pour ce ticket".to_string()));
+    };
+    match transitionner(jira, &ticket.cle, &t.id).await {
+        Ok(()) => (Some(t.nom.clone()), None),
+        Err(e) => (None, Some(e)),
+    }
+}
