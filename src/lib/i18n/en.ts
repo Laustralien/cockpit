@@ -107,6 +107,7 @@ export const en: Catalog = {
   "header.docs": "Documentation — every feature by example",
   "header.settings": "Settings",
   "header.theme": "Switch theme",
+  "header.profils": "Windows and profiles",
 
   "sidebar.terminals": "Terminals",
   "sidebar.projects": "Projects",
@@ -933,6 +934,7 @@ export const en: Catalog = {
   "palette.dashMonitoring": "Dashboard — Monitoring",
   "palette.dashTerminals": "Dashboard — Terminals",
   "palette.dashContainers": "Dashboard — Containers",
+  "palette.newWindow": "New window…",
   "settings.ia.title": "AI providers",
   "settings.ia.retourListe": "All agents",
   "settings.ia.section.consignes": "Instructions",
@@ -1111,4 +1113,14 @@ export const en: Catalog = {
   "settings.import.running": "Importing…",
   "settings.language": "Language",
   "settings.languageHelp": "The interface switches immediately, no restart needed.",
+
+  // Profile windows
+  "profils.titre": "Open a window",
+  "profils.defaut": "Default",
+  "profils.courant": "this window",
+  "profils.ouvert": "open",
+  "profils.nouveau": "New profile",
+  "profils.nouveauPlaceholder": "profile-name",
+  "profils.creer": "Create and open",
+  "profils.regle": "1 to 32 characters: a-z, 0-9 and -, not starting with -.",
 };
