@@ -258,6 +258,47 @@ pub fn transition_en_cours(t: &[Transition]) -> Option<&Transition> {
     t.iter().find(|t| t.categorie_vers == "indeterminate")
 }
 
+// --- Ce que Cockpit envoie ---
+
+/// `duree` au format de Jira : `1h30m`, `2d`, `45m`.
+pub fn corps_de_saisie(duree: &str, commentaire: Option<&str>) -> Result<serde_json::Value, String> {
+    let duree = duree.trim();
+    if duree.is_empty() {
+        return Err("duree vide".to_string());
+    }
+    let mut corps = serde_json::json!({ "timeSpent": duree });
+    if let Some(c) = commentaire.map(str::trim).filter(|c| !c.is_empty()) {
+        corps["comment"] = serde_json::Value::String(c.to_string());
+    }
+    Ok(corps)
+}
+
+pub fn corps_de_creation(
+    cle_projet: &str,
+    type_id: &str,
+    resume: &str,
+    description: Option<&str>,
+    assigne: &str,
+) -> Result<serde_json::Value, String> {
+    let resume = resume.trim();
+    if resume.is_empty() {
+        return Err("resume vide".to_string());
+    }
+    if type_id.trim().is_empty() {
+        return Err("type de ticket non choisi".to_string());
+    }
+    let mut champs = serde_json::json!({
+        "project": { "key": cle_projet },
+        "issuetype": { "id": type_id.trim() },
+        "summary": resume,
+        "assignee": { "name": assigne },
+    });
+    if let Some(d) = description.map(str::trim).filter(|d| !d.is_empty()) {
+        champs["description"] = serde_json::Value::String(d.to_string());
+    }
+    Ok(serde_json::json!({ "fields": champs }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -339,5 +380,27 @@ mod tests {
     fn une_reponse_illisible_est_une_erreur_lisible() {
         let e = lire_recherche("<html>proxy</html>", BASE).unwrap_err();
         assert!(e.contains("illisible"), "{e}");
+    }
+
+    #[test]
+    fn le_corps_de_saisie_porte_la_duree_et_le_commentaire() {
+        let c = corps_de_saisie(" 1h30m ", Some("revue")).unwrap();
+        assert_eq!(c, serde_json::json!({"timeSpent": "1h30m", "comment": "revue"}));
+        let sans = corps_de_saisie("2h", Some("  ")).unwrap();
+        assert_eq!(sans, serde_json::json!({"timeSpent": "2h"}));
+        assert!(corps_de_saisie("  ", None).is_err());
+    }
+
+    #[test]
+    fn le_corps_de_creation_assigne_le_ticket() {
+        let c = corps_de_creation("CCM", "1", " Corriger ", Some("desc"), "tlegendre").unwrap();
+        assert_eq!(
+            c,
+            serde_json::json!({"fields": {
+                "project": {"key": "CCM"}, "issuetype": {"id": "1"}, "summary": "Corriger",
+                "assignee": {"name": "tlegendre"}, "description": "desc"}})
+        );
+        assert!(corps_de_creation("CCM", "1", "  ", None, "x").is_err());
+        assert!(corps_de_creation("CCM", "", "Titre", None, "x").is_err());
     }
 }
