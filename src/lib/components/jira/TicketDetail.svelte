@@ -25,10 +25,13 @@
   let occupe = $state(false);
 
   $effect(() => {
-    void charger(cle);
+    // Lu de facon synchrone : sinon l'effet ne suit pas `liaison` quand elle arrive
+    // apres coup (un `await` avant la lecture la sort du suivi reactif de Svelte).
+    const l = liaison;
+    void charger(cle, l);
   });
 
-  async function charger(c: string) {
+  async function charger(c: string, l: LiaisonJira | null) {
     detail = null;
     transitions = [];
     apercu = "";
@@ -39,8 +42,8 @@
       const tr = await jiraTransitions(c);
       if (c !== cle) return;
       transitions = tr;
-      if (liaison) {
-        const a = await jiraApercuBranche(liaison.gabarit, d.ticket.cle, d.ticket.type_ticket, d.ticket.resume);
+      if (l) {
+        const a = await jiraApercuBranche(l.gabarit, d.ticket.cle, d.ticket.type_ticket, d.ticket.resume);
         if (c !== cle) return;
         apercu = a;
       }
