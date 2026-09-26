@@ -12,6 +12,16 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Jira Server/Data Center : le tableau de bord et l'onglet d'un projet listent tes tickets
+  Jira assignés (filtrés sur les clés du projet quand elles sont renseignées). Change leur
+  statut, commente, saisis du temps ou crée un ticket sans quitter Cockpit.
+- Jira : le bouton « Démarrer » crée la branche du ticket depuis `main` (ou `master`) à jour,
+  nommée selon le gabarit du projet, et fait passer le ticket en cours.
+- Réglages → Jira : renseigne l'adresse du serveur et un jeton d'accès personnel pour
+  connecter Cockpit à ta Jira Server/Data Center.
+
 ## [0.89.1] — 2026-09-25
 
 ### Fixed
