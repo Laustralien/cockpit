@@ -156,7 +156,10 @@ pub async fn jira_types_ticket(state: &crate::AppState, cle_projet: String) -> R
     modele::lire_types(&corps)
 }
 
-/// Cree le ticket en me l'assignant, et rend sa cle.
+/// Cree le ticket en me l'assignant, et rend sa cle. Sur les instances Jira ou `assignee`
+/// n'est pas sur l'ecran de creation, retente sans ce champ puis assigne a part (voir
+/// `assigner_apres_coup`) : le ticket existe deja, mieux vaut le rendre non assigne que de
+/// perdre la creation pour un champ que Jira ne veut pas au bon endroit.
 #[commande]
 pub async fn jira_creer_ticket(
     state: &crate::AppState,
@@ -168,9 +171,28 @@ pub async fn jira_creer_ticket(
     let cle_projet = jql::normaliser_cle_de_projet(&cle_projet)?;
     let jira = Jira::depuis(&state.db)?;
     let moi = moi(&jira).await?;
-    let corps = modele::corps_de_creation(&cle_projet, &type_id, &resume, description.as_deref(), &moi.name)?;
-    let reponse = jira.envoyer(Method::POST, "/rest/api/2/issue", &[], Some(corps)).await?;
-    modele::lire_ticket_cree(&reponse)
+    let corps = modele::corps_de_creation(&cle_projet, &type_id, &resume, description.as_deref(), Some(&moi.name))?;
+    match jira.envoyer(Method::POST, "/rest/api/2/issue", &[], Some(corps)).await {
+        Ok(reponse) => modele::lire_ticket_cree(&reponse),
+        Err(e) if modele::refus_du_champ_assignee(&e) => {
+            let corps = modele::corps_de_creation(&cle_projet, &type_id, &resume, description.as_deref(), None)?;
+            let reponse = jira.envoyer(Method::POST, "/rest/api/2/issue", &[], Some(corps)).await?;
+            let cle = modele::lire_ticket_cree(&reponse)?;
+            assigner_apres_coup(&jira, &cle, &moi.name).await;
+            Ok(cle)
+        }
+        Err(e) => Err(e),
+    }
+}
+
+/// Le ticket existe deja : un echec ici n'annule rien, on le journalise seulement.
+async fn assigner_apres_coup(jira: &Jira, cle: &str, nom: &str) {
+    let resultat = jira
+        .envoyer(Method::PUT, &format!("/rest/api/2/issue/{cle}/assignee"), &[], Some(serde_json::json!({ "name": nom })))
+        .await;
+    if let Err(e) = resultat {
+        log::warn!("jira : ticket {cle} cree mais non assigne - {e}");
+    }
 }
 
 async fn transitionner(jira: &Jira, cle: &str, transition_id: &str) -> Result<(), String> {

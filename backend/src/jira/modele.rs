@@ -273,12 +273,14 @@ pub fn corps_de_saisie(duree: &str, commentaire: Option<&str>) -> Result<serde_j
     Ok(corps)
 }
 
+/// `assigne` a `None` : pas de champ `assignee` du tout, pour les instances Jira ou il n'est
+/// pas sur l'ecran de creation (voir `refus_du_champ_assignee`).
 pub fn corps_de_creation(
     cle_projet: &str,
     type_id: &str,
     resume: &str,
     description: Option<&str>,
-    assigne: &str,
+    assigne: Option<&str>,
 ) -> Result<serde_json::Value, String> {
     let resume = resume.trim();
     if resume.is_empty() {
@@ -291,12 +293,20 @@ pub fn corps_de_creation(
         "project": { "key": cle_projet },
         "issuetype": { "id": type_id.trim() },
         "summary": resume,
-        "assignee": { "name": assigne },
     });
+    if let Some(a) = assigne {
+        champs["assignee"] = serde_json::json!({ "name": a });
+    }
     if let Some(d) = description.map(str::trim).filter(|d| !d.is_empty()) {
         champs["description"] = serde_json::Value::String(d.to_string());
     }
     Ok(serde_json::json!({ "fields": champs }))
+}
+
+/// Le POST de creation a echoue a cause du champ `assignee` (absent de l'ecran de creation
+/// sur certaines instances Jira) : on peut retenter sans lui, puis assigner a part.
+pub fn refus_du_champ_assignee(erreur: &str) -> bool {
+    erreur.to_lowercase().contains("assignee")
 }
 
 #[cfg(test)]
@@ -393,14 +403,33 @@ mod tests {
 
     #[test]
     fn le_corps_de_creation_assigne_le_ticket() {
-        let c = corps_de_creation("CCM", "1", " Corriger ", Some("desc"), "tlegendre").unwrap();
+        let c = corps_de_creation("CCM", "1", " Corriger ", Some("desc"), Some("tlegendre")).unwrap();
         assert_eq!(
             c,
             serde_json::json!({"fields": {
                 "project": {"key": "CCM"}, "issuetype": {"id": "1"}, "summary": "Corriger",
                 "assignee": {"name": "tlegendre"}, "description": "desc"}})
         );
-        assert!(corps_de_creation("CCM", "1", "  ", None, "x").is_err());
-        assert!(corps_de_creation("CCM", "", "Titre", None, "x").is_err());
+        assert!(corps_de_creation("CCM", "1", "  ", None, Some("x")).is_err());
+        assert!(corps_de_creation("CCM", "", "Titre", None, Some("x")).is_err());
+    }
+
+    #[test]
+    fn le_corps_de_creation_sans_assignation_omet_le_champ() {
+        let c = corps_de_creation("CCM", "1", "Corriger", None, None).unwrap();
+        assert_eq!(
+            c,
+            serde_json::json!({"fields": {
+                "project": {"key": "CCM"}, "issuetype": {"id": "1"}, "summary": "Corriger"}})
+        );
+    }
+
+    #[test]
+    fn detecte_un_refus_qui_porte_sur_l_assignation() {
+        assert!(refus_du_champ_assignee(
+            "requete refusee par Jira : assignee : le champ assignee ne peut pas etre defini"
+        ));
+        assert!(!refus_du_champ_assignee("resume vide"));
+        assert!(!refus_du_champ_assignee("jeton Jira invalide ou expire"));
     }
 }
