@@ -58,7 +58,7 @@
     try {
       await action(c);
       notify(succes, "success");
-      if (c === cle) await charger(c);
+      if (c === cle) await charger(c, liaison);
       onChange();
     } catch (e) {
       notify(String(e));
@@ -91,7 +91,7 @@
       const d = await jiraDemarrer(liaison.projet, c);
       notify($trad(d.creee ? "jira.brancheCreee" : "jira.brancheReprise", { branche: d.branche }), "success");
       if (d.erreur_transition) notify($trad("jira.transitionEchouee", { erreur: d.erreur_transition }));
-      if (c === cle) await charger(c);
+      if (c === cle) await charger(c, liaison);
       onChange();
     } catch (e) {
       notify(String(e));
