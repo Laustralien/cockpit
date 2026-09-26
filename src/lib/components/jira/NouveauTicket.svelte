@@ -36,11 +36,15 @@
   async function chargerTypes() {
     types = [];
     typeId = "";
-    if (!/^[A-Z][A-Z0-9_]*$/.test(cleNormalisee)) return;
+    const k = cleNormalisee;
+    if (!/^[A-Z][A-Z0-9_]*$/.test(k)) return;
     try {
-      types = await jiraTypesTicket(cleNormalisee);
+      const t = await jiraTypesTicket(k);
+      if (k !== cleNormalisee) return;
+      types = t;
       typeId = types[0]?.id ?? "";
     } catch (e) {
+      if (k !== cleNormalisee) return;
       notify(String(e));
     }
   }
