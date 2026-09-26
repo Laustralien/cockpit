@@ -26,6 +26,16 @@ pub fn verifier_cle_de_ticket(cle: &str) -> Result<(), String> {
     }
 }
 
+/// Majuscules et espaces retires, puis validation : ce qui entre dans un chemin ou un corps.
+pub fn normaliser_cle_de_projet(brut: &str) -> Result<String, String> {
+    let cle = brut.trim().to_uppercase();
+    if cle_de_projet_valide(&cle) {
+        Ok(cle)
+    } else {
+        Err(format!("cle de projet Jira invalide : {cle}"))
+    }
+}
+
 /// « ccm, ABC;abc DEF » → `["CCM", "ABC", "DEF"]` : majuscules, sans doublon, dans l'ordre saisi.
 pub fn decouper_cles(brut: &str) -> Vec<String> {
     let mut cles: Vec<String> = Vec::new();
@@ -67,6 +77,12 @@ mod tests {
         assert!(!cle_de_projet_valide("2AB"));
         assert!(!cle_de_projet_valide("CCM) OR (1=1"));
         assert!(!cle_de_projet_valide(""));
+    }
+
+    #[test]
+    fn normalise_puis_valide_une_cle_de_projet() {
+        assert_eq!(normaliser_cle_de_projet(" ccm ").unwrap(), "CCM");
+        assert!(normaliser_cle_de_projet("CCM-1").unwrap_err().contains("invalide"));
     }
 
     #[test]

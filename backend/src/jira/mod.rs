@@ -149,10 +149,7 @@ pub async fn jira_saisir_temps(
 
 #[commande]
 pub async fn jira_types_ticket(state: &crate::AppState, cle_projet: String) -> Result<Vec<TypeTicket>, String> {
-    let cle_projet = cle_projet.trim().to_uppercase();
-    if !jql::cle_de_projet_valide(&cle_projet) {
-        return Err(format!("cle de projet Jira invalide : {cle_projet}"));
-    }
+    let cle_projet = jql::normaliser_cle_de_projet(&cle_projet)?;
     let corps = Jira::depuis(&state.db)?
         .envoyer(Method::GET, &format!("/rest/api/2/issue/createmeta/{cle_projet}/issuetypes"), &[], None)
         .await?;
@@ -168,10 +165,7 @@ pub async fn jira_creer_ticket(
     resume: String,
     description: Option<String>,
 ) -> Result<String, String> {
-    let cle_projet = cle_projet.trim().to_uppercase();
-    if !jql::cle_de_projet_valide(&cle_projet) {
-        return Err(format!("cle de projet Jira invalide : {cle_projet}"));
-    }
+    let cle_projet = jql::normaliser_cle_de_projet(&cle_projet)?;
     let jira = Jira::depuis(&state.db)?;
     let moi = moi(&jira).await?;
     let corps = modele::corps_de_creation(&cle_projet, &type_id, &resume, description.as_deref(), &moi.name)?;
