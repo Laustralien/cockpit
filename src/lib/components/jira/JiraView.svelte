@@ -10,6 +10,7 @@
   import { jiraConfig, jiraLiaisons, jiraMesTickets, type LiaisonJira, type TicketJira } from "../../api/jira";
   import { grouperParCategorie, liaisonDuTicket, clesDuFiltre } from "../../jira/tickets";
   import TicketDetail from "./TicketDetail.svelte";
+  import NouveauTicket from "./NouveauTicket.svelte";
 
   let { projet = null }: { projet?: string | null } = $props();
 
@@ -19,9 +20,11 @@
   let tickets: TicketJira[] = $state([]);
   let chargement = $state(false);
   let ouvert: string | null = $state(null);
+  let creation = $state(false);
 
   const groupes = $derived(grouperParCategorie(tickets));
   const ticketOuvert = $derived(tickets.find((t) => t.cle === ouvert) ?? null);
+  const cleParDefaut = $derived(clesDuFiltre(filtre, liaisons)?.[0] ?? "");
 
   onMount(async () => {
     filtre = projet ?? "";
@@ -85,6 +88,7 @@
         </select>
       {/if}
       <button class="btn" onclick={rafraichir} disabled={chargement}>{$trad("common.refresh")}</button>
+      <button class="btn primary" onclick={() => (creation = true)}>{$trad("jira.nouveau")}</button>
     </div>
 
     <div class="contenu" class:avec-detail={!!ouvert}>
@@ -101,6 +105,14 @@
         />
       {/if}
     </div>
+    {#if creation}
+      <NouveauTicket
+        {liaisons}
+        {cleParDefaut}
+        onClose={() => (creation = false)}
+        onCree={(cle) => { creation = false; ouvert = cle; void rafraichir(); }}
+      />
+    {/if}
   {/if}
 </div>
 
