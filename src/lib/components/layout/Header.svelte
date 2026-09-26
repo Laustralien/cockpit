@@ -8,6 +8,7 @@
   import BoutonCompte from "../compte/BoutonCompte.svelte";
   import JaugeConsommation from "./JaugeConsommation.svelte";
   import { choixDeProfilOuvert, profilCourant, chargerLeProfilCourant } from "../../stores/profil";
+  import { signalerErreur } from "../../stores/errors";
 
   // Cloche TOUJOURS visible : c'est le point d'entree unique des notifications, l'utilisateur
   // ne doit pas avoir a fouiller les parametres pour savoir s'il y a du neuf. Le badge porte
@@ -21,7 +22,7 @@
 
   // Le nom du profil ne change pas pendant la vie de la fenetre : lu une fois.
   onMount(() => {
-    chargerLeProfilCourant().catch(() => {});
+    chargerLeProfilCourant().catch((e) => signalerErreur("entete.profil", String(e)));
   });
 </script>
 
@@ -52,7 +53,7 @@
     <button
       class="header-btn profil-btn"
       onclick={() => choixDeProfilOuvert.set(true)}
-      title={$trad("header.profils")}
+      title={$profilCourant ? `${$trad("header.profils")} — ${$profilCourant}` : $trad("header.profils")}
       aria-label={$trad("header.profils")}
     >
       &#10697;{#if $profilCourant}<span class="profil-nom">{$profilCourant}</span>{/if}
@@ -112,5 +113,8 @@
   }
   .zoom-value:hover { color: var(--text-primary); }
   .profil-btn { width: auto; gap: 0.35rem; padding: 0 0.5rem; }
-  .profil-nom { font-size: 0.8rem; font-weight: 600; }
+  .profil-nom {
+    font-size: 0.8rem; font-weight: 600;
+    max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
 </style>
