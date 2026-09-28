@@ -80,8 +80,8 @@ help most.
 **Manual AppImage** — grab the latest from the [releases page](https://github.com/jguevel-tech/cockpit/releases/latest):
 
 ```sh
-chmod +x Cockpit_*_amd64.AppImage
-./Cockpit_*_amd64.AppImage
+chmod +x Cockpit-*.AppImage
+./Cockpit-*.AppImage
 ```
 
 **From source** — see [Development](#development).

@@ -59,13 +59,20 @@ done
 # --- Derniere version publiee ---
 
 step "Recherche de la derniere version"
-TAG=$($DL "https://api.github.com/repos/${REPO}/releases/latest" \
-  | sed -n 's/.*"tag_name" *: *"\([^"]*\)".*/\1/p' | head -n 1)
-[ -n "$TAG" ] || die "Impossible de determiner la derniere version (GitHub injoignable ou aucune release publiee)."
+RELEASE=$($DL "https://api.github.com/repos/${REPO}/releases/latest") \
+  || die "Impossible de joindre GitHub pour trouver la derniere version."
+TAG=$(printf '%s\n' "$RELEASE" | sed -n 's/.*"tag_name" *: *"\([^"]*\)".*/\1/p' | head -n 1)
+[ -n "$TAG" ] || die "Impossible de determiner la derniere version (aucune release publiee)."
 
 VERSION="${TAG#v}"
-ASSET="Cockpit_${VERSION}_amd64.AppImage"
-URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET}"
+# **LE NOM DU FICHIER SE LIT DANS LA RELEASE, IL NE SE DEVINE PAS.** Il a change avec la
+# chaine de construction (`Cockpit_<version>_amd64.AppImage` du temps de Tauri,
+# `Cockpit-<version>.AppImage` depuis Electron), et le nom ecrit en dur faisait echouer
+# l'installation. On prend l'adresse de la seule AppImage publiee.
+URL=$(printf '%s\n' "$RELEASE" \
+  | sed -n 's/.*"browser_download_url" *: *"\([^"]*\.AppImage\)".*/\1/p' | head -n 1)
+[ -n "$URL" ] || die "La release ${TAG} ne contient aucune AppImage."
+ASSET="${URL##*/}"
 info "  version ${GREEN}${VERSION}${RESET}"
 
 # --- Telechargement ---
