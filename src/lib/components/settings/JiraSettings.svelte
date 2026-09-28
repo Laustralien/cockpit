@@ -80,14 +80,18 @@
       <input class="input" type="email" bind:value={email} placeholder={$trad("jira.reglages.emailExemple")} />
     </label>
     <label class="champ">
-      <span class="etiquette">{$trad("jira.reglages.jeton")}</span>
+      <span class="etiquette">
+        {$trad("jira.reglages.jeton")}
+        {#if jetonPose}<span class="ok">✓ {$trad("jira.reglages.jetonEnregistre")}</span>{/if}
+      </span>
       <input
         class="input"
         type="password"
         autocomplete="off"
         bind:value={jeton}
-        placeholder={jetonPose ? $trad("jira.reglages.jetonPose") : ""}
+        placeholder={jetonPose ? "••••••••" : ""}
       />
+      {#if jetonPose}<span class="field-hint">{$trad("jira.reglages.jetonPose")}</span>{/if}
     </label>
   </section>
 
@@ -128,7 +132,8 @@
   .champ { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.8rem; }
   /* Au-dessus du champ, pas a sa gauche : la largeur fixe de `.field-label` cassait
      « Jeton d'acces personnel » sur deux lignes. */
-  .etiquette { color: var(--text-muted); }
+  .etiquette { color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; }
+  .field-hint { display: block; margin-top: 0.3rem; font-size: 0.72rem; color: var(--text-muted); }
   .ligne { display: grid; grid-template-columns: 1fr auto 1fr 26px; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
   .repli { color: var(--text-secondary); font-size: 0.87rem; }
   .actions { display: flex; gap: 0.6rem; align-items: center; }

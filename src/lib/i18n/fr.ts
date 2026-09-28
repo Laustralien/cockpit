@@ -1140,6 +1140,7 @@ export const fr = {
   "jira.reglages.emailExemple": "prenom.nom@exemple.org",
   "jira.reglages.jeton": "Jeton d'API ou jeton d'accès personnel",
   "jira.reglages.jetonPose": "Jeton enregistré — laisser vide pour le garder",
+  "jira.reglages.jetonEnregistre": "Jeton enregistré",
   "jira.reglages.tester": "Tester la connexion",
   "jira.reglages.connecteEn": "Connecté en tant que {nom}",
   "jira.reglages.enregistre": "Réglages Jira enregistrés",

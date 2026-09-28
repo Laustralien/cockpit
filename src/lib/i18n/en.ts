@@ -1131,6 +1131,7 @@ export const en: Catalog = {
   "jira.reglages.emailExemple": "first.last@example.org",
   "jira.reglages.jeton": "API token or personal access token",
   "jira.reglages.jetonPose": "Token saved — leave empty to keep it",
+  "jira.reglages.jetonEnregistre": "Token saved",
   "jira.reglages.tester": "Test connection",
   "jira.reglages.connecteEn": "Connected as {nom}",
   "jira.reglages.enregistre": "Jira settings saved",
