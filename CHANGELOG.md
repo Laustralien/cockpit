@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.90.0] — 2026-09-28
+
 ### Added
 
 - Jira Server/Data Center : le tableau de bord et l'onglet d'un projet listent tes tickets
