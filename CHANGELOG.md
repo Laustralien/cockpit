@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Jira Cloud : Cockpit se connecte aussi à ta Jira Cloud, par e-mail du compte et jeton
+  d'API (Réglages → Jira). La détection Cloud/Server-DC et le choix d'authentification sont
+  automatiques ; recherche et assignation fonctionnent désormais sur les deux.
+
 ## [0.90.0] — 2026-09-28
 
 ### Added
