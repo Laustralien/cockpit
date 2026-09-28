@@ -17,7 +17,7 @@ REPO="jguevel-tech/cockpit"
 BIN_DIR="${HOME}/.local/bin"
 APP_DIR="${HOME}/.local/share/cockpit"
 DESKTOP_DIR="${HOME}/.local/share/applications"
-ICON_DIR="${HOME}/.local/share/icons/hicolor/128x128/apps"
+ICON_DIR="${HOME}/.local/share/icons/hicolor"
 
 # Couleurs seulement si la sortie est un terminal (sinon on pollue les logs/pipes).
 if [ -t 1 ]; then
@@ -93,11 +93,21 @@ ln -sf "${APP_DIR}/Cockpit.AppImage" "${BIN_DIR}/cockpit"
 
 step "Integration au menu des applications"
 # L'icone est extraite de l'AppImage elle-meme : pas de fichier a heberger a cote.
-( cd "$APP_DIR" && "${APP_DIR}/Cockpit.AppImage" --appimage-extract 'usr/share/icons/hicolor/128x128/apps/*.png' >/dev/null 2>&1 ) || true
-if [ -d "${APP_DIR}/squashfs-root" ]; then
-  find "${APP_DIR}/squashfs-root" -name '*.png' -exec cp -f {} "${ICON_DIR}/cockpit.png" \; 2>/dev/null || true
-  rm -rf "${APP_DIR}/squashfs-root"
+# **AUCUNE TAILLE ECRITE EN DUR.** Le script cherchait `128x128`, la taille de l'epoque Tauri ;
+# depuis Electron l'icone est en `256x256`, et le menu recevait une entree sans icone. On
+# recopie toutes les tailles que l'AppImage porte, chacune a sa place.
+( cd "$APP_DIR" && "${APP_DIR}/Cockpit.AppImage" --appimage-extract 'usr/share/icons/hicolor/*' >/dev/null 2>&1 ) || true
+SOURCES_ICONES="${APP_DIR}/squashfs-root/usr/share/icons/hicolor"
+if [ -d "$SOURCES_ICONES" ]; then
+  for taille in "$SOURCES_ICONES"/*/apps/cockpit.png; do
+    [ -f "$taille" ] || continue
+    dossier="${ICON_DIR}/$(basename "$(dirname "$(dirname "$taille")")")/apps"
+    mkdir -p "$dossier" && cp -f "$taille" "$dossier/cockpit.png"
+  done
 fi
+rm -rf "${APP_DIR}/squashfs-root"
+ls "${ICON_DIR}"/*/apps/cockpit.png >/dev/null 2>&1 \
+  || info "  (icone introuvable dans l'AppImage : l'entree du menu n'en aura pas)"
 
 cat > "${DESKTOP_DIR}/cockpit.desktop" <<DESKTOP
 [Desktop Entry]
@@ -106,6 +116,7 @@ Name=Cockpit
 Comment=One place to run all your projects
 Exec=${BIN_DIR}/cockpit
 Icon=cockpit
+StartupWMClass=cockpit
 Terminal=false
 Categories=Development;
 DESKTOP
