@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.91.1] — 2026-09-28
+
 ### Fixed
 
 - Kubernetes : chaque cluster retient son namespace dans un projet. Passer d'un cluster à
