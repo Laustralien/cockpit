@@ -735,7 +735,7 @@ export const en: Catalog = {
   "docs.menu.kubernetes": "Kubernetes",
   "docs.menu.jira": "Jira",
   "docs.jira.heading": "Jira",
-  "docs.jira.connexion": "Cockpit connects to your <strong>Jira Server or Data Center</strong> with a <strong>personal access token</strong> (Settings → Jira). The address must start with <strong>https://</strong>: the token goes with every request and must never travel in clear text. It stays on this machine and does not travel with your account.",
+  "docs.jira.connexion": "Cockpit connects to your <strong>Jira Cloud</strong> (account e-mail and API token) or your <strong>Jira Server / Data Center</strong> (personal access token), in Settings → Jira. It recognises Cloud by its <strong>atlassian.net</strong> address. The address must start with <strong>https://</strong>: the token goes with every request and must never travel in clear text. It stays on this machine and does not travel with your account.",
   "docs.jira.tickets": "The dashboard and a project's tab list <strong>the tickets assigned to you</strong>, filtered on the project's Jira keys (project settings). Change a status, comment, log time or create a ticket. <strong>Start</strong> creates the ticket's branch from an up-to-date <strong>main</strong>, named after the project's template, and moves the ticket to in progress. It refuses while tracked files are modified.",
   "docs.jira.demoCle": "CCM-1234",
   "docs.jira.demoResume": "Fix the invoice export",

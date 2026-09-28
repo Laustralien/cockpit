@@ -173,8 +173,8 @@ mod tests {
 
     #[test]
     fn detecte_jira_cloud_a_l_hote() {
-        assert!(est_cloud("https://ccmbenchmark.atlassian.net"));
-        assert!(est_cloud("https://ccmbenchmark.atlassian.net/"));
+        assert!(est_cloud("https://exemple.atlassian.net"));
+        assert!(est_cloud("https://exemple.atlassian.net/"));
         assert!(!est_cloud("https://jira.exemple.org"));
         assert!(
             !est_cloud("https://atlassian.net.exemple.org"),

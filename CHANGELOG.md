@@ -18,6 +18,11 @@ le script de release.
   d'API (Réglages → Jira). La détection Cloud/Server-DC et le choix d'authentification sont
   automatiques ; recherche et assignation fonctionnent désormais sur les deux.
 
+### Fixed
+
+- Plugins : un plugin créé depuis Cockpit ne porte plus un auteur écrit en dur (un nom
+  d'entreprise et une adresse e-mail qui n'étaient pas les tiens).
+
 ## [0.90.0] — 2026-09-28
 
 ### Added

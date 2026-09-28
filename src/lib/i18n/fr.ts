@@ -744,7 +744,7 @@ export const fr = {
   "docs.menu.kubernetes": "Kubernetes",
   "docs.menu.jira": "Jira",
   "docs.jira.heading": "Jira",
-  "docs.jira.connexion": "Cockpit se connecte à ta <strong>Jira Server ou Data Center</strong> avec un <strong>jeton d'accès personnel</strong> (Réglages → Jira). L'adresse doit commencer par <strong>https://</strong> : le jeton part à chaque requête et ne doit pas circuler en clair. Il reste sur cette machine et ne voyage pas avec ton compte.",
+  "docs.jira.connexion": "Cockpit se connecte à ta <strong>Jira Cloud</strong> (e-mail du compte et jeton d'API) ou à ta <strong>Jira Server / Data Center</strong> (jeton d'accès personnel), dans Réglages → Jira. Il reconnaît Cloud à son adresse en <strong>atlassian.net</strong>. L'adresse doit commencer par <strong>https://</strong> : le jeton part à chaque requête et ne doit pas circuler en clair. Il reste sur cette machine et ne voyage pas avec ton compte.",
   "docs.jira.tickets": "Le tableau de bord et l'onglet d'un projet listent <strong>tes tickets assignés</strong>, filtrés sur les clés Jira du projet (Paramètres du projet). Change un statut, commente, saisis du temps ou crée un ticket. <strong>Démarrer</strong> crée la branche du ticket depuis <strong>main</strong> à jour, nommée selon le gabarit du projet, et passe le ticket en cours. Il refuse si des fichiers suivis sont modifiés.",
   "docs.jira.demoCle": "CCM-1234",
   "docs.jira.demoResume": "Corriger l'export des factures",

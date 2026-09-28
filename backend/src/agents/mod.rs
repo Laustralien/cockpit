@@ -541,10 +541,8 @@ pub fn create_plugin(name: &str, description: &str) -> Result<(), String> {
         "name": name,
         "version": "0.1.0",
         "description": description,
-        "author": {
-            "name": "CCM Benchmark",
-            "email": "jguevel@ccmbenchmark.com"
-        }
+        // PAS de champ `author` : il est facultatif, et il portait en dur un nom d'entreprise
+        // et une adresse e-mail reelle, recopies dans le plugin de chaque utilisateur.
     });
     let manifest_str = serde_json::to_string_pretty(&manifest)
         .map_err(|e| format!("json: {}", e))?;

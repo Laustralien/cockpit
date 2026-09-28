@@ -220,9 +220,9 @@ if [ -n "${COCKPIT_BANC_JIRA:-}" ]; then
   image jira-1-reglages
   clic "${COCKPIT_BANC_JIRA_X:-375}" "${COCKPIT_BANC_JIRA_Y:-339}" 3
   image jira-2-ecran
-  clic 965 244 1          # l adresse
+  clic 965 263 1          # l adresse
   python3 "$OUTILS" taper "http://jira.exemple.org" 2>/dev/null || true
-  clic "${COCKPIT_BANC_JIRA_SAUVER_X:-630}" "${COCKPIT_BANC_JIRA_SAUVER_Y:-645}" 3
+  clic "${COCKPIT_BANC_JIRA_SAUVER_X:-630}" "${COCKPIT_BANC_JIRA_SAUVER_Y:-742}" 3
   image jira-3-http-refuse
   echo "images jira : $TRAVAIL/img"
   exit 0

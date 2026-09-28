@@ -481,25 +481,25 @@ mod tests {
 
     #[test]
     fn lit_moi_et_le_ticket_cree() {
-        let m = lire_moi(r#"{"name":"tlegendre","displayName":"T. Legendre"}"#).unwrap();
-        assert_eq!(m.name, "tlegendre");
-        assert_eq!(m.nom_affiche, "T. Legendre");
+        let m = lire_moi(r#"{"name":"jdupont","displayName":"J. Dupont"}"#).unwrap();
+        assert_eq!(m.name, "jdupont");
+        assert_eq!(m.nom_affiche, "J. Dupont");
         assert_eq!(m.account_id, "", "absent sur Server/DC");
         assert_eq!(lire_ticket_cree(r#"{"id":"1","key":"CCM-42","self":"x"}"#).unwrap(), "CCM-42");
     }
 
     #[test]
     fn lit_moi_cote_cloud_sans_name() {
-        let m = lire_moi(r#"{"accountId":"5b10ac8d82e05b22cc7d4ef5","displayName":"T. Legendre"}"#).unwrap();
+        let m = lire_moi(r#"{"accountId":"5b10ac8d82e05b22cc7d4ef5","displayName":"J. Dupont"}"#).unwrap();
         assert_eq!(m.name, "", "Cloud n'envoie pas name");
         assert_eq!(m.account_id, "5b10ac8d82e05b22cc7d4ef5");
-        assert_eq!(m.nom_affiche, "T. Legendre");
+        assert_eq!(m.nom_affiche, "J. Dupont");
     }
 
     #[test]
     fn choisit_la_forme_d_assignation_selon_cloud() {
-        let moi = Moi { name: "tlegendre".to_string(), nom_affiche: "T. Legendre".to_string(), account_id: "acc-123".to_string() };
-        assert_eq!(assigne_de(&moi, false), Some(Assigne::Nom("tlegendre")));
+        let moi = Moi { name: "jdupont".to_string(), nom_affiche: "J. Dupont".to_string(), account_id: "acc-123".to_string() };
+        assert_eq!(assigne_de(&moi, false), Some(Assigne::Nom("jdupont")));
         assert_eq!(assigne_de(&moi, true), Some(Assigne::Compte("acc-123")));
     }
 
@@ -507,7 +507,7 @@ mod tests {
     fn n_assigne_personne_si_l_identifiant_attendu_est_vide() {
         // Un compte sans accountId (Cloud) ou sans name (Server/DC, improbable mais pas
         // impossible) ne doit jamais envoyer `{"name": ""}` / `{"accountId": ""}` a Jira.
-        let moi = Moi { name: String::new(), nom_affiche: "T. Legendre".to_string(), account_id: String::new() };
+        let moi = Moi { name: String::new(), nom_affiche: "J. Dupont".to_string(), account_id: String::new() };
         assert_eq!(assigne_de(&moi, false), None, "name vide sur Server/DC");
         assert_eq!(assigne_de(&moi, true), None, "accountId vide sur Cloud");
     }
@@ -529,12 +529,12 @@ mod tests {
 
     #[test]
     fn le_corps_de_creation_assigne_le_ticket_par_name() {
-        let c = corps_de_creation("CCM", "1", " Corriger ", Some("desc"), Some(Assigne::Nom("tlegendre"))).unwrap();
+        let c = corps_de_creation("CCM", "1", " Corriger ", Some("desc"), Some(Assigne::Nom("jdupont"))).unwrap();
         assert_eq!(
             c,
             serde_json::json!({"fields": {
                 "project": {"key": "CCM"}, "issuetype": {"id": "1"}, "summary": "Corriger",
-                "assignee": {"name": "tlegendre"}, "description": "desc"}})
+                "assignee": {"name": "jdupont"}, "description": "desc"}})
         );
         assert!(corps_de_creation("CCM", "1", "  ", None, Some(Assigne::Nom("x"))).is_err());
         assert!(corps_de_creation("CCM", "", "Titre", None, Some(Assigne::Nom("x"))).is_err());
