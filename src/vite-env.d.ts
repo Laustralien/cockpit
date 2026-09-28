@@ -4,8 +4,7 @@ declare const __BUILD_TIME__: string;
 declare module "@shikijs/langs/*";
 declare module "@shikijs/themes/*";
 declare module "shiki/core";
-declare module "shiki/engine/oniguruma";
-declare module "shiki/wasm";
+declare module "shiki/engine/javascript";
 declare module "@xterm/xterm/css/xterm.css";
 
 // Import brut d'un fichier texte par Vite (CHANGELOG.md embarque dans les parametres)

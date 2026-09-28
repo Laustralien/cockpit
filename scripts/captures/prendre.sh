@@ -182,7 +182,7 @@ sleep 3
 # Un bus DBus a nous : le verrou d'instance unique passe par la, et sans ca le lancement rend
 # la main a l'instance deja ouverte en sortant avec un code 0.
 lancer() {
-  COCKPIT_HARNAIS="$JETON" dbus-run-session -- "$APPIMAGE" >"$TRAVAIL/app.log" 2>&1 &
+  COCKPIT_TAILLE_FIXE=1 COCKPIT_HARNAIS="$JETON" dbus-run-session -- "$APPIMAGE" >"$TRAVAIL/app.log" 2>&1 &
   sleep 22
 }
 clic()   { python3 "$OUTILS" cliquer "$1" "$2"; sleep "${3:-3}"; }

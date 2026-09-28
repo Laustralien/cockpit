@@ -97,7 +97,7 @@ AGENT
 
 Xvfb "$ECRAN" -screen 0 1680x1050x24 -nolisten tcp >/dev/null 2>&1 &
 sleep 2
-lancer() { COCKPIT_HARNAIS="$JETON" dbus-run-session -- "$BINAIRE" >>"$TRAVAIL/app.log" 2>&1 & sleep 20; }
+lancer() { COCKPIT_TAILLE_FIXE=1 COCKPIT_HARNAIS="$JETON" dbus-run-session -- "$BINAIRE" >>"$TRAVAIL/app.log" 2>&1 & sleep 20; }
 clic()   { python3 "$OUTILS" cliquer "$1" "$2"; sleep "${3:-2}"; }
 image()  { python3 "$OUTILS" capturer "$TRAVAIL/img/$1.png" >/dev/null; }
 
@@ -108,7 +108,14 @@ P="$TRAVAIL/home/projets/boutique-vinyles"
 mkdir -p "$P"
 git -C "$P" init -q -b main 2>/dev/null || true
 git -C "$P" config user.email banc@exemple.test; git -C "$P" config user.name Banc
-echo "demo" > "$P/README.md"; git -C "$P" add -A; git -C "$P" commit -qm "Poser les bases"
+# La barre des terminaux, au-dessus de la liste, a fait descendre les projets : le clic de
+# selection tombe sur le SECOND. Son dossier doit exister lui aussi, sinon Fichiers et Git
+# repondent « no such file or directory » et l'on eprouve une panne qui n'en est pas une.
+mkdir -p "$TRAVAIL/home/projets/api-facturation"
+printf 'fn main() {\n    let total: u32 = 42; // commentaire\n    println!("{}", total);\n}\n' > "$TRAVAIL/home/projets/api-facturation/main.rs"
+echo "demo" > "$P/README.md"
+printf 'fn main() {\n    let total: u32 = 42; // commentaire\n    println!("{}", total);\n}\n' > "$P/main.rs"
+git -C "$P" add -A; git -C "$P" commit -qm "Poser les bases"
 
 lancer
 clic 105 296 3            # le projet « boutique-vinyles » (le premier de la liste)
@@ -190,6 +197,34 @@ if [ -n "${COCKPIT_BANC_CURSEUR:-}" ]; then
   clic 900 500 3
   image curseur-3-apres-le-service
   echo "images curseur : $TRAVAIL/img"
+  exit 0
+fi
+
+# **LA COLORATION DES FICHIERS DOIT SE VOIR.** Elle avait disparu : la politique de securite de
+# la page refusait le moteur en WebAssembly. Un fichier Rust doit sortir en couleurs.
+if [ -n "${COCKPIT_BANC_FICHIERS:-}" ]; then
+  clic 900 500 1
+  clic 797 127 5          # l onglet Fichiers
+  image fichiers-1-liste
+  clic "${COCKPIT_BANC_FICHIER_X:-400}" "${COCKPIT_BANC_FICHIER_Y:-297}" 4
+  image fichiers-2-code
+  echo "images fichiers : $TRAVAIL/img"
+  exit 0
+fi
+
+# **JIRA : LES REGLAGES, ET UNE ADRESSE EN http:// REFUSEE.** Le jeton part a chaque requete :
+# il ne doit pas circuler en clair.
+if [ -n "${COCKPIT_BANC_JIRA:-}" ]; then
+  clic 900 500 1          # ferme le menu des liens
+  clic 1275 55 3          # l engrenage
+  image jira-1-reglages
+  clic "${COCKPIT_BANC_JIRA_X:-375}" "${COCKPIT_BANC_JIRA_Y:-339}" 3
+  image jira-2-ecran
+  clic 965 244 1          # l adresse
+  python3 "$OUTILS" taper "http://jira.exemple.org" 2>/dev/null || true
+  clic "${COCKPIT_BANC_JIRA_SAUVER_X:-630}" "${COCKPIT_BANC_JIRA_SAUVER_Y:-645}" 3
+  image jira-3-http-refuse
+  echo "images jira : $TRAVAIL/img"
   exit 0
 fi
 

@@ -69,11 +69,11 @@
       <p>{$trad("jira.reglages.intro")}</p>
     </div>
     <label class="champ">
-      <span class="field-label">{$trad("jira.reglages.url")}</span>
+      <span class="etiquette">{$trad("jira.reglages.url")}</span>
       <input class="input" bind:value={url} placeholder={$trad("jira.reglages.urlExemple")} />
     </label>
     <label class="champ">
-      <span class="field-label">{$trad("jira.reglages.jeton")}</span>
+      <span class="etiquette">{$trad("jira.reglages.jeton")}</span>
       <input
         class="input"
         type="password"
@@ -108,15 +108,20 @@
     </button>
   </section>
 
-  <div class="actions">
+  <!-- Dans une section, comme le reste : posee a nu sous les cartes, la rangee collait ses
+       boutons au bord arrondi du bloc (regle « du texte colle au bord d'une surface »). -->
+  <section class="card actions">
     <button class="btn primary" onclick={enregistrer} disabled={enregistrement}>{$trad("common.save")}</button>
     <button class="btn" onclick={tester} disabled={!jetonPose}>{$trad("jira.reglages.tester")}</button>
     {#if connecte}<span class="ok">✓ {connecte}</span>{/if}
-  </div>
+  </section>
 </div>
 
 <style>
   .champ { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.8rem; }
+  /* Au-dessus du champ, pas a sa gauche : la largeur fixe de `.field-label` cassait
+     « Jeton d'acces personnel » sur deux lignes. */
+  .etiquette { color: var(--text-muted); }
   .ligne { display: grid; grid-template-columns: 1fr auto 1fr 26px; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
   .repli { color: var(--text-secondary); font-size: 0.87rem; }
   .actions { display: flex; gap: 0.6rem; align-items: center; }

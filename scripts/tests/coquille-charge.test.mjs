@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aplatir } from "../../src/lib/coquille.ts";
+import { aplatir, messageDErreur } from "../../src/lib/coquille.ts";
 
 /** Ce que Svelte pose autour d'une valeur reactive : un Proxy, que le clonage refuse. */
 function commeUnEtat(valeur) {
@@ -58,4 +58,14 @@ test("un tableau de valeurs simples est quand meme remis a plat", () => {
   const plat = aplatir(charge);
   assert.notEqual(plat, charge);
   assert.deepEqual(structuredClone(plat).noms, ["a", "b"]);
+});
+
+test("un refus du backend se lit sans le prefixe d'Electron", () => {
+  // La forme exacte vue a l'ecran le 2026-09-28.
+  const e = new Error("Error invoking remote method 'cockpit:commande': Error: adresse Jira refusee");
+  assert.equal(messageDErreur(e), "adresse Jira refusee");
+  assert.equal(String(messageDErreur(e)), "adresse Jira refusee");
+  // Un message qui ne vient pas du pont passe tel quel, et un texte nu aussi.
+  assert.equal(messageDErreur(new Error("autre panne")), "autre panne");
+  assert.equal(messageDErreur("deja nu"), "deja nu");
 });

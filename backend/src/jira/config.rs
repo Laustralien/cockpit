@@ -34,8 +34,15 @@ pub fn normaliser_url(brut: &str) -> Result<String, String> {
     if url.is_empty() {
         return Ok(String::new());
     }
-    if !(url.starts_with("https://") || url.starts_with("http://")) {
-        return Err(format!("adresse Jira invalide (http:// ou https:// attendu) : {url}"));
+    // **LE JETON NE PASSE PAS EN CLAIR SUR LE RESEAU.** Il part a chaque requete : en http,
+    // n'importe qui sur le chemin le lirait. Seule la machine elle-meme est admise en http.
+    let local = ["http://localhost", "http://127.0.0.1", "http://[::1]"]
+        .iter()
+        .any(|p| url == *p || url.starts_with(&format!("{p}:")) || url.starts_with(&format!("{p}/")));
+    if !url.starts_with("https://") && !local {
+        return Err(format!(
+            "adresse Jira refusee : https:// est obligatoire, le jeton ne doit pas circuler en clair ({url})"
+        ));
     }
     Ok(url.to_string())
 }
@@ -134,6 +141,9 @@ mod tests {
         assert_eq!(normaliser_url(" https://jira.exemple.org/ ").unwrap(), "https://jira.exemple.org");
         assert_eq!(normaliser_url("").unwrap(), "");
         assert!(normaliser_url("jira.exemple.org").is_err());
+        assert!(normaliser_url("http://jira.exemple.org").is_err(), "le jeton passerait en clair");
+        assert!(normaliser_url("http://localhost:8080").is_ok());
+        assert!(normaliser_url("http://localhost.exemple.org").is_err());
     }
 
     #[test]

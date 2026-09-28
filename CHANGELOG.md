@@ -30,6 +30,8 @@ le script de release.
 
 - Fichiers : la coloration syntaxique est de retour. Les fichiers s'affichaient en texte brut,
   sans couleur, en lecture comme en édition.
+- Les messages d'erreur ne commencent plus par « Error: Error invoking remote method… » : ils
+  disent directement ce qui s'est passé.
 
 ## [0.89.1] — 2026-09-25
 
