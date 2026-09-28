@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 const CLE_URL: &str = "jira_url";
 pub const CLE_JETON: &str = "jira_jeton";
+const CLE_EMAIL: &str = "jira_email";
 const CLE_TYPES: &str = "jira_types_branche";
 
 #[derive(Debug, Serialize)]
@@ -18,7 +19,17 @@ pub struct ConfigJira {
     pub url: String,
     /// Le jeton est pose. **Jamais le jeton lui-meme.**
     pub jeton_pose: bool,
+    /// L'e-mail n'est pas un secret (contrairement au jeton) : il peut remonter au front.
+    pub email: String,
     pub types_branche: Correspondance,
+}
+
+/// Vrai si l'hote de l'URL est un domaine `*.atlassian.net` : c'est Jira Cloud, qui demande
+/// une authentification differente (e-mail + jeton) de Server/Data Center (jeton seul).
+pub fn est_cloud(url: &str) -> bool {
+    let sans_schema = url.split_once("://").map(|(_, reste)| reste).unwrap_or(url);
+    let hote = sans_schema.split(['/', ':']).next().unwrap_or("");
+    hote.ends_with(".atlassian.net")
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -55,6 +66,10 @@ pub fn jeton(db: &Database) -> Option<String> {
     db.get_setting(CLE_JETON).filter(|v| !v.trim().is_empty())
 }
 
+pub fn email(db: &Database) -> Option<String> {
+    db.get_setting(CLE_EMAIL).filter(|v| !v.trim().is_empty())
+}
+
 pub fn types_branche(db: &Database) -> Correspondance {
     db.get_setting(CLE_TYPES)
         .and_then(|v| serde_json::from_str(&v).ok())
@@ -65,15 +80,29 @@ pub fn lire(db: &Database) -> ConfigJira {
     ConfigJira {
         url: url(db).unwrap_or_default(),
         jeton_pose: jeton(db).is_some(),
+        email: email(db).unwrap_or_default(),
         types_branche: types_branche(db),
     }
 }
 
 /// Un jeton absent ou vide GARDE le precedent : le champ du jeton s'affiche vide une fois pose.
-pub fn poser(db: &Database, url: &str, jeton: Option<&str>, types: Option<Correspondance>) -> Result<ConfigJira, String> {
+///
+/// L'e-mail n'obeit pas a la meme regle : **`Some` (meme vide) remplace toujours l'e-mail**,
+/// `None` le garde. C'est ce qui permet a l'interface d'effacer l'e-mail en envoyant une
+/// chaine vide, la ou un jeton vide ne peut que vouloir dire « inchange ».
+pub fn poser(
+    db: &Database,
+    url: &str,
+    jeton: Option<&str>,
+    email: Option<&str>,
+    types: Option<Correspondance>,
+) -> Result<ConfigJira, String> {
     db.set_setting(CLE_URL, &normaliser_url(url)?)?;
     if let Some(j) = jeton.map(str::trim).filter(|j| !j.is_empty()) {
         db.set_setting(CLE_JETON, j)?;
+    }
+    if let Some(e) = email {
+        db.set_setting(CLE_EMAIL, e.trim())?;
     }
     if let Some(t) = types {
         db.set_setting(CLE_TYPES, &serde_json::to_string(&t).map_err(|e| e.to_string())?)?;
@@ -137,6 +166,17 @@ mod tests {
     }
 
     #[test]
+    fn detecte_jira_cloud_a_l_hote() {
+        assert!(est_cloud("https://ccmbenchmark.atlassian.net"));
+        assert!(est_cloud("https://ccmbenchmark.atlassian.net/"));
+        assert!(!est_cloud("https://jira.exemple.org"));
+        assert!(
+            !est_cloud("https://atlassian.net.exemple.org"),
+            "piege : l'hote ne se termine pas par .atlassian.net"
+        );
+    }
+
+    #[test]
     fn normalise_l_adresse() {
         assert_eq!(normaliser_url(" https://jira.exemple.org/ ").unwrap(), "https://jira.exemple.org");
         assert_eq!(normaliser_url("").unwrap(), "");
@@ -149,7 +189,7 @@ mod tests {
     #[test]
     fn le_jeton_n_est_jamais_rendu() {
         let db = base();
-        let c = poser(&db, "https://jira.exemple.org/", Some(" secret "), None).unwrap();
+        let c = poser(&db, "https://jira.exemple.org/", Some(" secret "), None, None).unwrap();
         assert!(c.jeton_pose);
         assert_eq!(c.url, "https://jira.exemple.org");
         assert_eq!(jeton(&db).unwrap(), "secret");
@@ -159,10 +199,22 @@ mod tests {
     #[test]
     fn un_jeton_vide_garde_l_ancien() {
         let db = base();
-        poser(&db, "https://j.org", Some("secret"), None).unwrap();
-        poser(&db, "https://j.org", Some("  "), None).unwrap();
-        poser(&db, "https://j.org", None, None).unwrap();
+        poser(&db, "https://j.org", Some("secret"), None, None).unwrap();
+        poser(&db, "https://j.org", Some("  "), None, None).unwrap();
+        poser(&db, "https://j.org", None, None, None).unwrap();
         assert_eq!(jeton(&db).unwrap(), "secret");
+    }
+
+    #[test]
+    fn un_e_mail_pose_remplace_toujours_meme_vide_none_le_garde() {
+        let db = base();
+        assert_eq!(poser(&db, "https://j.org", None, None, None).unwrap().email, "");
+        let c = poser(&db, "https://j.org", None, Some("prenom.nom@exemple.org"), None).unwrap();
+        assert_eq!(c.email, "prenom.nom@exemple.org");
+        let c = poser(&db, "https://j.org", None, None, None).unwrap();
+        assert_eq!(c.email, "prenom.nom@exemple.org", "None garde l'e-mail precedent");
+        let c = poser(&db, "https://j.org", None, Some(""), None).unwrap();
+        assert_eq!(c.email, "", "Some vide efface l'e-mail, contrairement au jeton");
     }
 
     #[test]
@@ -170,7 +222,7 @@ mod tests {
         let db = base();
         assert_eq!(types_branche(&db), correspondance_par_defaut());
         let t = HashMap::from([("Bogue".to_string(), "fix".to_string()), ("*".to_string(), "feat".to_string())]);
-        poser(&db, "https://j.org", None, Some(t.clone())).unwrap();
+        poser(&db, "https://j.org", None, None, Some(t.clone())).unwrap();
         assert_eq!(types_branche(&db), t);
     }
 

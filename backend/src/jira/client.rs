@@ -21,17 +21,50 @@ fn client() -> &'static reqwest::Client {
 pub struct Jira {
     base: String,
     jeton: String,
+    email: String,
+    cloud: bool,
+}
+
+/// La forme d'authentification a envoyer : Cloud veut du Basic (e-mail + jeton), Server/DC
+/// du Bearer (jeton seul). Extrait en fonction pure pour la tester sans requete HTTP.
+#[derive(Debug, PartialEq)]
+pub(crate) enum Authentification {
+    Basic { email: String, jeton: String },
+    Bearer(String),
+}
+
+/// Un e-mail vide veut dire Server/DC (Bearer) ; non vide, Cloud (Basic).
+pub(crate) fn authentification(email: &str, jeton: &str) -> Authentification {
+    if email.is_empty() {
+        Authentification::Bearer(jeton.to_string())
+    } else {
+        Authentification::Basic { email: email.to_string(), jeton: jeton.to_string() }
+    }
 }
 
 impl Jira {
     pub fn depuis(db: &Database) -> Result<Self, String> {
         let base = config::url(db).ok_or("Jira n'est pas configure : renseigne son adresse dans les reglages")?;
         let jeton = config::jeton(db).ok_or("Jira n'est pas configure : pose un jeton d'acces personnel dans les reglages")?;
-        Ok(Self { base, jeton })
+        let email = config::email(db).unwrap_or_default();
+        let cloud = config::est_cloud(&base);
+        if cloud && email.is_empty() {
+            return Err(
+                "Jira Cloud demande l'e-mail du compte en plus du jeton d'API : renseigne-le dans les reglages"
+                    .to_string(),
+            );
+        }
+        Ok(Self { base, jeton, email, cloud })
     }
 
     pub fn base(&self) -> &str {
         &self.base
+    }
+
+    /// Vrai si l'instance est Jira Cloud (voir `config::est_cloud`) : ce qui change la
+    /// recherche (`/rest/api/3/search/jql`) et la forme de l'assignation (`accountId`).
+    pub fn cloud(&self) -> bool {
+        self.cloud
     }
 
     /// Rend le corps de la reponse en texte ; tout statut hors 2xx devient un message lisible.
@@ -44,8 +77,11 @@ impl Jira {
     ) -> Result<String, String> {
         let mut demande = client()
             .request(methode, format!("{}{chemin}", self.base))
-            .bearer_auth(&self.jeton)
             .header(reqwest::header::ACCEPT, "application/json");
+        demande = match authentification(&self.email, &self.jeton) {
+            Authentification::Basic { email, jeton } => demande.basic_auth(email, Some(jeton)),
+            Authentification::Bearer(jeton) => demande.bearer_auth(jeton),
+        };
         if !requete.is_empty() {
             demande = demande.query(requete);
         }
@@ -122,5 +158,38 @@ mod tests {
         let db = Database::new(":memory:").unwrap();
         let e = Jira::depuis(&db).err().unwrap();
         assert!(e.contains("pas configure"), "{e}");
+    }
+
+    #[test]
+    fn choisit_bearer_sans_e_mail_et_basic_avec() {
+        assert_eq!(authentification("", "tok"), Authentification::Bearer("tok".to_string()));
+        assert_eq!(
+            authentification("a@exemple.org", "tok"),
+            Authentification::Basic { email: "a@exemple.org".to_string(), jeton: "tok".to_string() }
+        );
+    }
+
+    #[test]
+    fn jira_cloud_sans_e_mail_est_un_refus_lisible() {
+        let db = Database::new(":memory:").unwrap();
+        config::poser(&db, "https://x.atlassian.net", Some("tok"), None, None).unwrap();
+        let e = Jira::depuis(&db).err().unwrap();
+        assert!(e.contains("Jira Cloud demande l'e-mail"), "{e}");
+    }
+
+    #[test]
+    fn jira_cloud_avec_e_mail_est_accepte_et_se_sait_cloud() {
+        let db = Database::new(":memory:").unwrap();
+        config::poser(&db, "https://x.atlassian.net", Some("tok"), Some("a@exemple.org"), None).unwrap();
+        let jira = Jira::depuis(&db).unwrap();
+        assert!(jira.cloud());
+    }
+
+    #[test]
+    fn jira_server_n_est_pas_cloud() {
+        let db = Database::new(":memory:").unwrap();
+        config::poser(&db, "https://jira.exemple.org", Some("tok"), None, None).unwrap();
+        let jira = Jira::depuis(&db).unwrap();
+        assert!(!jira.cloud());
     }
 }

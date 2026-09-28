@@ -32,9 +32,10 @@ pub async fn jira_poser_config(
     state: &crate::AppState,
     url: String,
     jeton: Option<String>,
+    email: Option<String>,
     types_branche: Option<Correspondance>,
 ) -> Result<ConfigJira, String> {
-    config::poser(&state.db, &url, jeton.as_deref(), types_branche)
+    config::poser(&state.db, &url, jeton.as_deref(), email.as_deref(), types_branche)
 }
 
 /// Rend le nom affiche du compte : de quoi confirmer que c'est le bon.
