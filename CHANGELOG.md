@@ -27,6 +27,11 @@ le script de release.
 - Terminaux : le curseur revient quand le programme qui l'avait masqué (claude, vim, htop)
   s'arrête sans le remettre, et après un redémarrage du service des terminaux.
 
+### Fixed
+
+- Fichiers : la coloration syntaxique est de retour. Les fichiers s'affichaient en texte brut,
+  sans couleur, en lecture comme en édition.
+
 ## [0.89.0] — 2026-09-24
 
 ### Added
