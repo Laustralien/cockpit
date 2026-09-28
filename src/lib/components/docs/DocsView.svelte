@@ -8,7 +8,7 @@
    * elles suivent le theme. Chaque bloc = une legende d'une ligne + une maquette.
    */
   type SectionId =
-    | "demarrer" | "terminaux" | "fichiers" | "git" | "docker" | "kubernetes"
+    | "demarrer" | "terminaux" | "fichiers" | "git" | "docker" | "kubernetes" | "jira"
     | "taches" | "palette" | "dashboard" | "apparence" | "compte" | "maj" | "raccourcis";
 
   const MENU: { id: SectionId; labelKey: Parameters<typeof translate>[0]; icon: string }[] = [
@@ -19,6 +19,7 @@
     { id: "git", labelKey: "docs.menu.git", icon: "⎇" },
     { id: "docker", labelKey: "docs.menu.docker", icon: "🐳" },
     { id: "kubernetes", labelKey: "docs.menu.kubernetes", icon: "☸" },
+    { id: "jira", labelKey: "docs.menu.jira", icon: "🎫" },
     { id: "taches", labelKey: "docs.menu.tasks", icon: "✓" },
     { id: "palette", labelKey: "docs.menu.palette", icon: "⌘" },
     { id: "apparence", labelKey: "docs.menu.appearance", icon: "🎨" },
@@ -204,6 +205,30 @@
         <p>{@html $trad("docs.files.images")}</p>
         <div class="demo">
           <div class="d-checker"><span class="d-imgbox">logo.png</span></div>
+        </div>
+      </div>
+
+    {:else if section === "jira"}
+      <h3>{$trad("docs.jira.heading")}</h3>
+
+      <div class="block">
+        <p>{@html $trad("docs.jira.connexion")}</p>
+        <div class="demo">
+          <div class="d-row">{$trad("jira.reglages.url")} <span class="d-count">{$trad("jira.reglages.urlExemple")}</span></div>
+          <div class="d-row">{$trad("jira.reglages.jeton")} <span class="d-count">••••••••</span> <span class="d-spring"></span><span class="d-btn small">{$trad("jira.reglages.tester")}</span></div>
+        </div>
+      </div>
+
+      <div class="block">
+        <p>{@html $trad("docs.jira.tickets")}</p>
+        <div class="demo">
+          <div class="d-tabs">
+            <span class="d-tab active">{$trad("jira.tousLesProjets")}</span>
+            <span class="d-spring"></span>
+            <span class="d-btn small">{$trad("jira.nouveau")}</span>
+          </div>
+          <div class="d-row"><strong>{$trad("docs.jira.demoCle")}</strong> {$trad("docs.jira.demoResume")} <span class="d-badge mod">{$trad("jira.aFaire")}</span> <span class="d-spring"></span><span class="d-btn small">{$trad("jira.demarrer")}</span></div>
+          <div class="d-row"><span class="d-stat">{$trad("docs.jira.demoBranche")}</span></div>
         </div>
       </div>
 

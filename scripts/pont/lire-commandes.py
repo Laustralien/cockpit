@@ -64,6 +64,7 @@ SOURCES = [
     ('backend/src/lib.rs', 'crate::'),
     ('backend/src/compte/mod.rs', 'crate::compte::'),
     ('backend/src/compte/synchro.rs', 'crate::compte::synchro::'),
+    ('backend/src/jira/mod.rs', 'crate::jira::'),
 ]
 def compter_les_attributs(chemin):
     """Combien d'attributs de commande ce fichier porte VRAIMENT.

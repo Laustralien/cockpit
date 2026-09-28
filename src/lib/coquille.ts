@@ -58,9 +58,27 @@ export function aplatir(arguments_: Record<string, unknown>): Record<string, unk
   return arguments_;
 }
 
+/// Ce qu'Electron ajoute devant tout refus qui traverse `ipcRenderer.invoke`.
+const PREFIXE_ELECTRON = /^(?:Error: )?Error invoking remote method '[^']*': (?:Error: )?/;
+
+/**
+ * Le message d'un refus, tel que le backend l'a ecrit.
+ *
+ * **L'UTILISATEUR LISAIT « Error: Error invoking remote method 'cockpit:commande': Error: »
+ * devant chaque message d'erreur**, sur tous les ecrans : Electron enveloppe le refus dans une
+ * `Error` et y colle son propre prefixe. Sous Tauri, un refus arrivait en texte nu, et tout
+ * l'interface l'affiche par `String(e)` : on rend donc le texte nu, a la seule porte.
+ */
+export function messageDErreur(e: unknown): string {
+  const brut = e instanceof Error ? e.message : String(e);
+  return brut.replace(PREFIXE_ELECTRON, "");
+}
+
 /** Appelle une commande. Celles de la coquille commencent par `coquille:`, les autres vont au backend. */
 export function invoke<T>(commande: string, arguments_?: Record<string, unknown>): Promise<T> {
-  return preload().invoke(commande, aplatir(arguments_ ?? {})) as Promise<T>;
+  return (preload().invoke(commande, aplatir(arguments_ ?? {})) as Promise<T>).catch((e: unknown) => {
+    throw messageDErreur(e);
+  });
 }
 
 /** Ce qu'on appelle pour cesser d'ecouter. */

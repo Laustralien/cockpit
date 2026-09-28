@@ -3,7 +3,7 @@
 Ce qui n'est PAS traitable est SAUTE ET NOMME : une commande silencieusement absente
 donnerait une interface qui s'affiche et ment, ce que le pont refuse deja par principe.
 """
-import json, re, sys, io
+import json, os, re, sys, io
 
 cmds = json.load(open(sys.argv[1]))
 
@@ -102,4 +102,4 @@ print(f'branches generees : {len(lignes)}  (dont {len(portees)} via facade, {len
 print(f'sautees : {len(sautees)}')
 for n, r in sautees: print(f'    {n:34} {r}')
 json.dump({'portees': portees, 'directes': directes},
-          open('/tmp/claude-1000/-home-jguevel-Documents-workspace-core-cockpit/a538524f-3d44-40c1-8fa1-3db12cc57bac/scratchpad/plan.json', 'w'))
+          open(os.path.join(os.path.dirname(os.path.abspath(sys.argv[1])), 'plan.json'), 'w'))

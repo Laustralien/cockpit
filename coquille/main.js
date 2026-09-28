@@ -118,7 +118,8 @@ function servirInterface(cible) {
     // posent des styles a la volee ; `img-src data: blob:` parce que le fond d'ecran et les
     // avatars sont des data URL ; `connect-src` pour les APIs des fournisseurs d'IA et la
     // synchronisation. Il n'y a PAS de `script-src 'unsafe-eval'` : le code de la page est
-    // compile, et le pont ne fait rien evaluer.
+    // compile, et le pont ne fait rien evaluer. Pas davantage de `'wasm-unsafe-eval'` : la
+    // coloration (Shiki) tourne sur son moteur JavaScript, voir `src/lib/shiki.ts`.
     const entetes = new Headers(reponse.headers)
     entetes.set(
       'Content-Security-Policy',
@@ -512,7 +513,14 @@ function ouvrirLaFenetre(nom = null) {
   })
 
   // Affichee seulement quand elle a quelque chose a montrer : sinon on voit un cadre vide.
-  fenetre.once('ready-to-show', () => fenetre.show())
+  // Maximisee d'emblee : 1400x900 n'est que la taille qu'elle reprend quand on la restaure.
+  // Pas au banc : ses captures et ses clics a coordonnees fixes exigent la meme taille quel
+  // que soit l'ecran. Les bancs interactifs ne posent pas COCKPIT_BANC_CAPTURE, d'ou la
+  // seconde variable, posee par chacun d'eux.
+  fenetre.once('ready-to-show', () => {
+    if (!process.env.COCKPIT_BANC_CAPTURE && !process.env.COCKPIT_TAILLE_FIXE) fenetre.maximize()
+    fenetre.show()
+  })
   // La mort du moteur de rendu laissait une fenetre blanche sans un mot : c'est l'autre
   // forme que prend « une erreur au lancement » vue de l'utilisateur.
   fenetre.webContents.on('render-process-gone', (_e, details) =>

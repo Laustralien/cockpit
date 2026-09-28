@@ -1,7 +1,7 @@
 // Highlighter Shiki en bundle fin : uniquement les langages utiles,
 // pour ne pas embarquer les ~220 grammaires du bundle complet dans le binaire.
 import { createHighlighterCore } from "shiki/core";
-import { createOnigurumaEngine } from "shiki/engine/oniguruma";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import { signalerErreur } from "./stores/errors";
 
 // Les modules shiki/* sont declares en ambient (vite-env.d.ts), sans types :
@@ -50,7 +50,13 @@ function getHighlighter(): Promise<Highlighter> {
       import("@shikijs/langs/ini"),
       import("@shikijs/langs/twig"),
     ],
-    engine: createOnigurumaEngine(import("shiki/wasm")),
+    // **LE MOTEUR JAVASCRIPT, PAS CELUI EN WEBASSEMBLY.** Le moteur Oniguruma compile un
+    // module WebAssembly, que la politique de securite de la page refuse : tout fichier
+    // s'affichait sans couleur. L'ouvrir (`'wasm-unsafe-eval'`) aurait permis a n'importe
+    // quel script de la page de compiler du code. Le moteur JavaScript traduit les grammaires
+    // en expressions regulieres natives : les 32 langages ci-dessus passent (verifie le
+    // 2026-09-28), et il n'y a plus de fichier .wasm a embarquer.
+    engine: createJavaScriptRegexEngine(),
   }));
 }
 

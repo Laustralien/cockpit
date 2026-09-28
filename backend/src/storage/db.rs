@@ -191,6 +191,10 @@ impl Database {
             "ALTER TABLE projects ADD COLUMN summary_prompt TEXT DEFAULT NULL",
             [],
         );
+        // Migration: liaison d'un projet a Jira (cles de projets Jira, gabarit de branche).
+        // NULL = non lie / gabarit par defaut. Pas dans `formes.rs` : non synchronise.
+        let _ = conn.execute("ALTER TABLE projects ADD COLUMN jira_cles TEXT DEFAULT NULL", []);
+        let _ = conn.execute("ALTER TABLE projects ADD COLUMN jira_gabarit_branche TEXT DEFAULT NULL", []);
 
         // Migration: echeance optionnelle d'une tache (date ISO "2026-08-20", NULL = sans)
         let _ = conn.execute(

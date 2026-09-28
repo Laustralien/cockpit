@@ -15,12 +15,14 @@
   import TerminalTab from "./TerminalTab.svelte";
   import FilesTab from "./FilesTab.svelte";
   import GitTab from "./GitTab.svelte";
+  import JiraTab from "../jira/JiraTab.svelte";
   import InlineEdit from "../ui/InlineEdit.svelte";
   import { notify } from "../../stores/toast";
   import { trad } from "../../i18n";
   import { signalerErreur } from "../../stores/errors";
   import { demanderConfirmation } from "../../stores/confirm";
   import { agentPrefere } from "../../stores/llm";
+  import { liaisonsJira, chargerLiaisonsJira } from "../../stores/jira";
 
   let { name }: { name: string } = $props();
   let urls: Url[] = $state([]);
@@ -73,6 +75,8 @@
     const healthTimer = setInterval(checkQuickUrls, 60_000);
     return () => { clearInterval(timer); clearInterval(healthTimer); };
   });
+
+  onMount(() => void chargerLiaisonsJira());
 
   async function loadFailedRecordings() {
     try { failedRecordings = await getFailedRecordings(name); } catch (e) {
@@ -183,6 +187,7 @@
     { id: "terminal" as const, labelKey: "tab.terminal" as const, component: TerminalTab },
     { id: "files" as const, labelKey: "tab.files" as const, component: FilesTab },
     { id: "git" as const, labelKey: "tab.git" as const, component: GitTab },
+    { id: "jira" as const, labelKey: "tab.jira" as const, component: JiraTab, jira: true as const },
     { id: "kubernetes" as const, labelKey: "tab.kubernetes" as const, component: KubernetesTab },
     { id: "plugins" as const, labelKey: "tab.plugins" as const, component: PluginsTab, capacite: "plugins" as const },
     { id: "settings" as const, labelKey: "tab.settings" as const, component: SettingsTab },
@@ -192,6 +197,7 @@
   /// apparaitre apres coup serait plus deroutant qu'un onglet qui rend un message.
   const ongletsVisibles = $derived(
     tabs.filter((t) => {
+      if ("jira" in t) return $liaisonsJira.some((l) => l.projet === name);
       const capacite = "capacite" in t ? t.capacite : null;
       return !capacite || !$agentPrefere || $agentPrefere[capacite];
     }),

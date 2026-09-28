@@ -365,6 +365,13 @@ contexts:
       cluster: cluster-demo
       user: cluster-demo
       namespace: {NAMESPACE}
+  # Un second contexte sur le meme serveur : de quoi eprouver le passage d'un cluster a
+  # l'autre, et que chacun garde son namespace.
+  - name: cluster-qlf
+    context:
+      cluster: cluster-demo
+      user: cluster-demo
+      namespace: {NAMESPACE}
 users:
   - name: cluster-demo
     user:

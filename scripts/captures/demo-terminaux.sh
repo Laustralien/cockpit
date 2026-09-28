@@ -91,7 +91,7 @@ Xvfb "$ECRAN" -screen 0 1680x1050x24 -nolisten tcp >/dev/null 2>&1 &
 XVFB=$!
 sleep 3
 
-lancer() { COCKPIT_HARNAIS="$JETON" dbus-run-session -- "$BINAIRE" >>"$TRAVAIL/app.log" 2>&1 & sleep 22; }
+lancer() { COCKPIT_TAILLE_FIXE=1 COCKPIT_HARNAIS="$JETON" dbus-run-session -- "$BINAIRE" >>"$TRAVAIL/app.log" 2>&1 & sleep 22; }
 clic() { python3 "$OUTILS" cliquer "$1" "$2"; sleep "${3:-2}"; }
 frappe() { python3 "$OUTILS" taper "$1"; sleep "${2:-2}"; }
 

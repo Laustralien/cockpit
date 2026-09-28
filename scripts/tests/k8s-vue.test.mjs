@@ -8,7 +8,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  filtrer, grouper, compter, formaterCpu, formaterRam, age, grouperLesNamespaces, appliquer, appliquerLesMesures, cibleDeDemarrage, enFamilles, comptesDesFiltres, appliquerLeFiltre, peutAllerA,
+  filtrer, grouper, compter, formaterCpu, formaterRam, age, grouperLesNamespaces, appliquer, appliquerLesMesures, cibleDeDemarrage, namespaceRetenu, retenir, enFamilles, comptesDesFiltres, appliquerLeFiltre, peutAllerA,
 } from "../../src/lib/k8s/vue.ts";
 
 const T = Date.parse("2026-09-17T12:00:00Z");
@@ -287,4 +287,23 @@ test("une saisie qui n'est pas un nom de namespace est refusee", () => {
   assert.equal(peutAllerA("MAJUSCULES", []), false);
   assert.equal(peutAllerA("-tiret", []), false);
   assert.equal(peutAllerA("a".repeat(254), []), false);
+});
+
+test("chaque cluster garde son dernier namespace", () => {
+  // Signale le 2026-09-28 : passer de la prod a la qualification faisait oublier la prod.
+  let c = retenir({}, "prod", "equipe-a");
+  c = retenir(c, "qlf", "equipe-a-staging");
+  assert.equal(namespaceRetenu(c, "prod"), "equipe-a");
+  assert.equal(namespaceRetenu(c, "qlf"), "equipe-a-staging");
+  assert.equal(c.contexte, "qlf", "on regarde le dernier choisi");
+  assert.equal(namespaceRetenu(c, "inconnu"), null);
+});
+
+test("un reglage d'avant ce changement vaut encore pour son cluster, et n'est pas perdu", () => {
+  const ancien = { contexte: "prod", namespace: "equipe-a", fenetre: 300 };
+  assert.equal(namespaceRetenu(ancien, "prod"), "equipe-a");
+  assert.equal(namespaceRetenu(ancien, "qlf"), null);
+  const apres = retenir(ancien, "qlf", "equipe-a-staging");
+  assert.equal(namespaceRetenu(apres, "prod"), "equipe-a", "le premier choix ailleurs ne l'efface pas");
+  assert.equal(apres.fenetre, 300, "la periode reglee reste");
 });

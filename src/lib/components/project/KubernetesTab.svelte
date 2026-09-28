@@ -30,7 +30,8 @@
     filtrer, grouper, formaterCpu, formaterRam, age, grouperLesNamespaces,
     appliquer, appliquerLesMesures, cibleDeDemarrage, enFamilles, comptesDesFiltres,
     appliquerLeFiltre, peutAllerA, unifier, deSorte, filtrerLesElements, ensemble,
-    type Pod, type Mesure, type Filtre, type Workload,
+    namespaceRetenu, retenir,
+    type Pod, type Mesure, type Filtre, type Workload, type CibleRetenue,
   } from "../../k8s/vue";
   import {
     noter, depuisEnregistre, fusionner, type Historique,
@@ -89,6 +90,8 @@
   let detacheurs: Detacher[] = [];
 
   const cle = $derived(`k8s.cible.${name}`);
+  /// Ce que le projet retient, tel qu'il a ete relu puis complete a chaque geste.
+  let retenue: CibleRetenue = {};
   /// Ce qui est declare et ce qui tourne, rassemble. Un objet sans pod y figure, un pod dont
   /// le createur a disparu aussi : les deux existent, et les deux se cherchent.
   const elements = $derived(unifier(declares, grouper(pods)));
@@ -188,12 +191,7 @@
       return;
     }
     const reglages = await getAppSettings().catch(() => ({}) as Record<string, string>);
-    let vise: {
-      contexte?: string;
-      namespace?: string;
-      fenetre?: number;
-      rythme?: number;
-    } = {};
+    let vise: CibleRetenue = {};
     try {
       vise = JSON.parse(reglages[cle] ?? "{}");
       if (typeof vise.fenetre === "number") fenetreSecondes = vise.fenetre;
@@ -202,13 +200,14 @@
       // Un reglage illisible ne doit pas empecher d'ouvrir l'ecran : on repart du defaut.
       vise = {};
     }
+    retenue = vise;
     const servables = contextes.filter((c) => !c.obstacle);
     const depart =
       servables.find((c) => c.nom === vise.contexte) ??
       servables.find((c) => c.courant) ??
       servables[0];
     if (!depart) return;
-    await choisirLeCluster(depart.nom, vise.namespace ?? null, false);
+    await choisirLeCluster(depart.nom, namespaceRetenu(vise, depart.nom), false);
   }
 
   /**
@@ -223,6 +222,8 @@
     namespaceVise: string | null = null,
     enregistrer = true,
   ) {
+    // Un cluster choisi a la main revient sur SON dernier namespace, pas sur celui du contexte.
+    namespaceVise ??= namespaceRetenu(retenue, nom);
     contexte = nom;
     ouvert = null;
     pods = [];
@@ -259,10 +260,8 @@
 
   /// Ce qu'on retient d'un projet : ou l'on regarde, et comment.
   function enregistrerLaCible() {
-    void setAppSetting(
-      cle,
-      JSON.stringify({ contexte, namespace, fenetre: fenetreSecondes, rythme: rafraichissement }),
-    ).catch((e) => signalerErreur("k8s.reglage", String(e)));
+    retenue = { ...retenir(retenue, contexte, namespace), fenetre: fenetreSecondes, rythme: rafraichissement };
+    void setAppSetting(cle, JSON.stringify(retenue)).catch((e) => signalerErreur("k8s.reglage", String(e)));
   }
 
   /// Lit la liste ENTIERE, puis passe le relais au flux. C'est la seule lecture complete.
