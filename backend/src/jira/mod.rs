@@ -54,7 +54,8 @@ pub async fn jira_tester(state: &crate::AppState) -> Result<String, String> {
 
 /// `cles_projets` absent : tous mes tickets. Liste vide : aucun (voir `jql::mes_tickets`).
 ///
-/// Cloud retire `/rest/api/2/search` : il faut `/rest/api/3/search/jql`, memes parametres.
+/// Cloud retire `/rest/api/2/search` : il faut `/rest/api/3/search/jql`, memes parametres,
+/// paginee (`nextPageToken`/`isLast`) — voir `chercher_cote_cloud`.
 #[commande]
 pub async fn jira_mes_tickets(
     state: &crate::AppState,
@@ -64,16 +65,43 @@ pub async fn jira_mes_tickets(
         return Ok(vec![]);
     };
     let jira = Jira::depuis(&state.db)?;
-    let chemin = if jira.cloud() { "/rest/api/3/search/jql" } else { "/rest/api/2/search" };
+    if jira.cloud() {
+        return chercher_cote_cloud(&jira, &jql).await;
+    }
     let corps = jira
         .envoyer(
             Method::GET,
-            chemin,
+            "/rest/api/2/search",
             &[("jql", jql.as_str()), ("fields", CHAMPS_LISTE), ("maxResults", "200")],
             None,
         )
         .await?;
     modele::lire_recherche(&corps, jira.base())
+}
+
+/// Au-dela, on rend la main avec ce qu'on a deja : mieux vaut une liste tronquee qu'une
+/// boucle qui ne rendrait jamais la main si Jira renvoyait un `nextPageToken` qui boucle.
+const PAGES_MAX: u8 = 5;
+
+/// `/rest/api/3/search/jql` (Cloud) pagine : chaque reponse porte au plus `maxResults`
+/// tickets et dit s'il en reste (`isLast`/`nextPageToken`). Il faut boucler pour tout avoir.
+async fn chercher_cote_cloud(jira: &Jira, jql: &str) -> Result<Vec<Ticket>, String> {
+    let mut tickets = Vec::new();
+    let mut jeton: Option<String> = None;
+    for _ in 0..PAGES_MAX {
+        let mut requete = vec![("jql", jql), ("fields", CHAMPS_LISTE), ("maxResults", "200")];
+        if let Some(j) = jeton.as_deref() {
+            requete.push(("nextPageToken", j));
+        }
+        let corps = jira.envoyer(Method::GET, "/rest/api/3/search/jql", &requete, None).await?;
+        let (page, suite) = modele::lire_page_recherche(&corps, jira.base())?;
+        tickets.extend(page);
+        match suite {
+            Some(j) => jeton = Some(j),
+            None => break,
+        }
+    }
+    Ok(tickets)
 }
 
 #[commande]
@@ -183,7 +211,7 @@ pub async fn jira_creer_ticket(
     let jira = Jira::depuis(&state.db)?;
     let moi = moi(&jira).await?;
     let assigne = modele::assigne_de(&moi, jira.cloud());
-    let corps = modele::corps_de_creation(&cle_projet, &type_id, &resume, description.as_deref(), Some(assigne))?;
+    let corps = modele::corps_de_creation(&cle_projet, &type_id, &resume, description.as_deref(), assigne)?;
     match jira.envoyer(Method::POST, "/rest/api/2/issue", &[], Some(corps)).await {
         Ok(reponse) => modele::lire_ticket_cree(&reponse),
         Err(e) if modele::refus_du_champ_assignee(&e) => {
@@ -198,8 +226,10 @@ pub async fn jira_creer_ticket(
 }
 
 /// Le ticket existe deja : un echec ici n'annule rien, on le journalise seulement. Meme objet
-/// que sur la creation (`{"accountId": ..}` sur Cloud, `{"name": ..}` sinon).
-async fn assigner_apres_coup(jira: &Jira, cle: &str, assigne: modele::Assigne<'_>) {
+/// que sur la creation (`{"accountId": ..}` sur Cloud, `{"name": ..}` sinon). `None` (compte
+/// sans identifiant utilisable) : rien a envoyer, on ne tente meme pas la requete.
+async fn assigner_apres_coup(jira: &Jira, cle: &str, assigne: Option<modele::Assigne<'_>>) {
+    let Some(assigne) = assigne else { return };
     let resultat = jira
         .envoyer(Method::PUT, &format!("/rest/api/2/issue/{cle}/assignee"), &[], Some(assigne.valeur()))
         .await;
