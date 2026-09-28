@@ -27,18 +27,33 @@ pub struct Jira {
 
 /// La forme d'authentification a envoyer : Cloud veut du Basic (e-mail + jeton), Server/DC
 /// du Bearer (jeton seul). Extrait en fonction pure pour la tester sans requete HTTP.
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub(crate) enum Authentification {
     Basic { email: String, jeton: String },
     Bearer(String),
 }
 
-/// Un e-mail vide veut dire Server/DC (Bearer) ; non vide, Cloud (Basic).
-pub(crate) fn authentification(email: &str, jeton: &str) -> Authentification {
-    if email.is_empty() {
-        Authentification::Bearer(jeton.to_string())
-    } else {
+/// **LE JETON NE PARAIT JAMAIS EN CLAIR, MEME DANS UN LOG DE DEBUG** : un `#[derive(Debug)]`
+/// l'aurait imprime tel quel a la moindre `dbg!`/`log::debug!` sur cette valeur.
+impl std::fmt::Debug for Authentification {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Authentification::Basic { email, .. } => {
+                f.debug_struct("Basic").field("email", email).field("jeton", &"***").finish()
+            }
+            Authentification::Bearer(_) => f.debug_tuple("Bearer").field(&"***").finish(),
+        }
+    }
+}
+
+/// Basic seulement sur Cloud ET avec un e-mail renseigne ; Bearer sinon, y compris sur
+/// Server/DC ou un e-mail trainerait dans les reglages (bascule Cloud -> Server/DC sans
+/// l'effacer) : Server/DC ne sait pas faire de Basic, l'e-mail n'y change donc rien.
+pub(crate) fn authentification(cloud: bool, email: &str, jeton: &str) -> Authentification {
+    if cloud && !email.is_empty() {
         Authentification::Basic { email: email.to_string(), jeton: jeton.to_string() }
+    } else {
+        Authentification::Bearer(jeton.to_string())
     }
 }
 
@@ -78,7 +93,7 @@ impl Jira {
         let mut demande = client()
             .request(methode, format!("{}{chemin}", self.base))
             .header(reqwest::header::ACCEPT, "application/json");
-        demande = match authentification(&self.email, &self.jeton) {
+        demande = match authentification(self.cloud, &self.email, &self.jeton) {
             Authentification::Basic { email, jeton } => demande.basic_auth(email, Some(jeton)),
             Authentification::Bearer(jeton) => demande.bearer_auth(jeton),
         };
@@ -161,12 +176,34 @@ mod tests {
     }
 
     #[test]
-    fn choisit_bearer_sans_e_mail_et_basic_avec() {
-        assert_eq!(authentification("", "tok"), Authentification::Bearer("tok".to_string()));
+    fn choisit_basic_seulement_sur_cloud_avec_un_e_mail() {
         assert_eq!(
-            authentification("a@exemple.org", "tok"),
+            authentification(true, "a@exemple.org", "tok"),
             Authentification::Basic { email: "a@exemple.org".to_string(), jeton: "tok".to_string() }
         );
+        assert_eq!(
+            authentification(true, "", "tok"),
+            Authentification::Bearer("tok".to_string()),
+            "Cloud sans e-mail retombe sur Bearer"
+        );
+    }
+
+    #[test]
+    fn server_dc_reste_en_bearer_meme_avec_un_e_mail_enregistre() {
+        // Un e-mail peut trainer dans les reglages (bascule Cloud -> Server/DC sans l'effacer) :
+        // Server/DC ignore l'e-mail et reste en Bearer, jamais en Basic.
+        assert_eq!(
+            authentification(false, "a@exemple.org", "tok"),
+            Authentification::Bearer("tok".to_string())
+        );
+    }
+
+    #[test]
+    fn le_jeton_ne_parait_jamais_dans_le_debug_de_l_authentification() {
+        let basic = authentification(true, "a@exemple.org", "secret-token");
+        assert!(!format!("{basic:?}").contains("secret-token"), "{basic:?}");
+        let bearer = authentification(false, "", "secret-token");
+        assert!(!format!("{bearer:?}").contains("secret-token"), "{bearer:?}");
     }
 
     #[test]

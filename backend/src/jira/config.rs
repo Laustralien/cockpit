@@ -26,10 +26,16 @@ pub struct ConfigJira {
 
 /// Vrai si l'hote de l'URL est un domaine `*.atlassian.net` : c'est Jira Cloud, qui demande
 /// une authentification differente (e-mail + jeton) de Server/Data Center (jeton seul).
+///
+/// **ANALYSE PAR UN VRAI PARSEUR D'URL, PAS UN DECOUPAGE MAISON** : un decoupage sur `://`
+/// puis `/`/`:` se laisse piegier par `?.atlassian.net` (requete) ou `#.atlassian.net`
+/// (fragment) pris pour l'hote, et rate `user:pass@hote` (les identifiants avant `@`).
+/// `Url::parse` + `host_str()` isole l'hote correctement dans tous ces cas.
 pub fn est_cloud(url: &str) -> bool {
-    let sans_schema = url.split_once("://").map(|(_, reste)| reste).unwrap_or(url);
-    let hote = sans_schema.split(['/', ':']).next().unwrap_or("");
-    hote.ends_with(".atlassian.net")
+    reqwest::Url::parse(url)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_lowercase))
+        .is_some_and(|hote| hote.ends_with(".atlassian.net"))
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -174,6 +180,20 @@ mod tests {
             !est_cloud("https://atlassian.net.exemple.org"),
             "piege : l'hote ne se termine pas par .atlassian.net"
         );
+    }
+
+    #[test]
+    fn detecte_jira_cloud_sans_se_faire_piegier_par_la_requete_ou_le_fragment() {
+        assert!(
+            !est_cloud("https://evil.org?.atlassian.net"),
+            "l'hote est evil.org, .atlassian.net n'est que la requete"
+        );
+        assert!(
+            !est_cloud("https://evil.org#.atlassian.net"),
+            "l'hote est evil.org, .atlassian.net n'est que le fragment"
+        );
+        assert!(est_cloud("https://u:p@x.atlassian.net"), "les identifiants ne changent pas l'hote");
+        assert!(est_cloud("https://X.ATLASSIAN.NET"), "la casse de l'hote ne compte pas");
     }
 
     #[test]
