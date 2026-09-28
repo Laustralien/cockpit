@@ -21,17 +21,65 @@ fn client() -> &'static reqwest::Client {
 pub struct Jira {
     base: String,
     jeton: String,
+    email: String,
+    cloud: bool,
+}
+
+/// La forme d'authentification a envoyer : Cloud veut du Basic (e-mail + jeton), Server/DC
+/// du Bearer (jeton seul). Extrait en fonction pure pour la tester sans requete HTTP.
+#[derive(PartialEq)]
+pub(crate) enum Authentification {
+    Basic { email: String, jeton: String },
+    Bearer(String),
+}
+
+/// **LE JETON NE PARAIT JAMAIS EN CLAIR, MEME DANS UN LOG DE DEBUG** : un `#[derive(Debug)]`
+/// l'aurait imprime tel quel a la moindre `dbg!`/`log::debug!` sur cette valeur.
+impl std::fmt::Debug for Authentification {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Authentification::Basic { email, .. } => {
+                f.debug_struct("Basic").field("email", email).field("jeton", &"***").finish()
+            }
+            Authentification::Bearer(_) => f.debug_tuple("Bearer").field(&"***").finish(),
+        }
+    }
+}
+
+/// Basic seulement sur Cloud ET avec un e-mail renseigne ; Bearer sinon, y compris sur
+/// Server/DC ou un e-mail trainerait dans les reglages (bascule Cloud -> Server/DC sans
+/// l'effacer) : Server/DC ne sait pas faire de Basic, l'e-mail n'y change donc rien.
+pub(crate) fn authentification(cloud: bool, email: &str, jeton: &str) -> Authentification {
+    if cloud && !email.is_empty() {
+        Authentification::Basic { email: email.to_string(), jeton: jeton.to_string() }
+    } else {
+        Authentification::Bearer(jeton.to_string())
+    }
 }
 
 impl Jira {
     pub fn depuis(db: &Database) -> Result<Self, String> {
         let base = config::url(db).ok_or("Jira n'est pas configure : renseigne son adresse dans les reglages")?;
         let jeton = config::jeton(db).ok_or("Jira n'est pas configure : pose un jeton d'acces personnel dans les reglages")?;
-        Ok(Self { base, jeton })
+        let email = config::email(db).unwrap_or_default();
+        let cloud = config::est_cloud(&base);
+        if cloud && email.is_empty() {
+            return Err(
+                "Jira Cloud demande l'e-mail du compte en plus du jeton d'API : renseigne-le dans les reglages"
+                    .to_string(),
+            );
+        }
+        Ok(Self { base, jeton, email, cloud })
     }
 
     pub fn base(&self) -> &str {
         &self.base
+    }
+
+    /// Vrai si l'instance est Jira Cloud (voir `config::est_cloud`) : ce qui change la
+    /// recherche (`/rest/api/3/search/jql`) et la forme de l'assignation (`accountId`).
+    pub fn cloud(&self) -> bool {
+        self.cloud
     }
 
     /// Rend le corps de la reponse en texte ; tout statut hors 2xx devient un message lisible.
@@ -44,8 +92,11 @@ impl Jira {
     ) -> Result<String, String> {
         let mut demande = client()
             .request(methode, format!("{}{chemin}", self.base))
-            .bearer_auth(&self.jeton)
             .header(reqwest::header::ACCEPT, "application/json");
+        demande = match authentification(self.cloud, &self.email, &self.jeton) {
+            Authentification::Basic { email, jeton } => demande.basic_auth(email, Some(jeton)),
+            Authentification::Bearer(jeton) => demande.bearer_auth(jeton),
+        };
         if !requete.is_empty() {
             demande = demande.query(requete);
         }
@@ -122,5 +173,60 @@ mod tests {
         let db = Database::new(":memory:").unwrap();
         let e = Jira::depuis(&db).err().unwrap();
         assert!(e.contains("pas configure"), "{e}");
+    }
+
+    #[test]
+    fn choisit_basic_seulement_sur_cloud_avec_un_e_mail() {
+        assert_eq!(
+            authentification(true, "a@exemple.org", "tok"),
+            Authentification::Basic { email: "a@exemple.org".to_string(), jeton: "tok".to_string() }
+        );
+        assert_eq!(
+            authentification(true, "", "tok"),
+            Authentification::Bearer("tok".to_string()),
+            "Cloud sans e-mail retombe sur Bearer"
+        );
+    }
+
+    #[test]
+    fn server_dc_reste_en_bearer_meme_avec_un_e_mail_enregistre() {
+        // Un e-mail peut trainer dans les reglages (bascule Cloud -> Server/DC sans l'effacer) :
+        // Server/DC ignore l'e-mail et reste en Bearer, jamais en Basic.
+        assert_eq!(
+            authentification(false, "a@exemple.org", "tok"),
+            Authentification::Bearer("tok".to_string())
+        );
+    }
+
+    #[test]
+    fn le_jeton_ne_parait_jamais_dans_le_debug_de_l_authentification() {
+        let basic = authentification(true, "a@exemple.org", "secret-token");
+        assert!(!format!("{basic:?}").contains("secret-token"), "{basic:?}");
+        let bearer = authentification(false, "", "secret-token");
+        assert!(!format!("{bearer:?}").contains("secret-token"), "{bearer:?}");
+    }
+
+    #[test]
+    fn jira_cloud_sans_e_mail_est_un_refus_lisible() {
+        let db = Database::new(":memory:").unwrap();
+        config::poser(&db, "https://x.atlassian.net", Some("tok"), None, None).unwrap();
+        let e = Jira::depuis(&db).err().unwrap();
+        assert!(e.contains("Jira Cloud demande l'e-mail"), "{e}");
+    }
+
+    #[test]
+    fn jira_cloud_avec_e_mail_est_accepte_et_se_sait_cloud() {
+        let db = Database::new(":memory:").unwrap();
+        config::poser(&db, "https://x.atlassian.net", Some("tok"), Some("a@exemple.org"), None).unwrap();
+        let jira = Jira::depuis(&db).unwrap();
+        assert!(jira.cloud());
+    }
+
+    #[test]
+    fn jira_server_n_est_pas_cloud() {
+        let db = Database::new(":memory:").unwrap();
+        config::poser(&db, "https://jira.exemple.org", Some("tok"), None, None).unwrap();
+        let jira = Jira::depuis(&db).unwrap();
+        assert!(!jira.cloud());
     }
 }

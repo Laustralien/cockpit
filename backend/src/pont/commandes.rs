@@ -1678,6 +1678,8 @@ pub async fn appeler(
                     .map_err(|e| format!("argument url : {e}"))?,
                 serde_json::from_value(prendre(a, "jeton", "jeton"))
                     .map_err(|e| format!("argument jeton : {e}"))?,
+                serde_json::from_value(prendre(a, "email", "email"))
+                    .map_err(|e| format!("argument email : {e}"))?,
                 serde_json::from_value(prendre(a, "typesBranche", "types_branche"))
                     .map_err(|e| format!("argument typesBranche : {e}"))?,
             ).await?))

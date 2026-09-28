@@ -50,9 +50,41 @@ pub struct DetailTicket {
 
 #[derive(Debug, Deserialize)]
 pub struct Moi {
+    #[serde(default)]
     pub name: String,
     #[serde(default, rename = "displayName")]
     pub nom_affiche: String,
+    /// Rempli par Cloud (`/myself`), absent sur Server/DC.
+    #[serde(default, rename = "accountId")]
+    pub account_id: String,
+}
+
+/// La forme d'assignation a envoyer : Cloud identifie le compte par `accountId`, Server/DC
+/// par `name`. `assigne_de` choisit d'apres `Jira::cloud()`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Assigne<'a> {
+    Nom(&'a str),
+    Compte(&'a str),
+}
+
+impl Assigne<'_> {
+    pub fn valeur(&self) -> serde_json::Value {
+        match self {
+            Assigne::Nom(n) => serde_json::json!({ "name": n }),
+            Assigne::Compte(c) => serde_json::json!({ "accountId": c }),
+        }
+    }
+}
+
+/// `None` si l'identifiant attendu (accountId sur Cloud, name sur Server/DC) est vide : on
+/// n'envoie jamais `{"name": ""}` ou `{"accountId": ""}`, que Jira pourrait prendre pour une
+/// desassignation ou refuser autrement.
+pub fn assigne_de(moi: &Moi, cloud: bool) -> Option<Assigne<'_>> {
+    if cloud {
+        (!moi.account_id.is_empty()).then_some(Assigne::Compte(&moi.account_id))
+    } else {
+        (!moi.name.is_empty()).then_some(Assigne::Nom(&moi.name))
+    }
 }
 
 // --- Ce que Jira envoie ---
@@ -128,6 +160,13 @@ struct IssueJira {
 struct RechercheJira {
     #[serde(default)]
     issues: Vec<IssueJira>,
+    /// Cloud seulement (pagination de `/rest/api/3/search/jql`) : absent sur Server/DC.
+    #[serde(default, rename = "nextPageToken")]
+    next_page_token: Option<String>,
+    /// Absent sur Server/DC (`#[serde(default)]` vaut alors `false`, sans consequence : seule
+    /// `lire_page_recherche`, utilisee cote Cloud, regarde ce champ).
+    #[serde(default, rename = "isLast")]
+    is_last: bool,
 }
 
 #[derive(Deserialize)]
@@ -163,7 +202,9 @@ struct TypeJira {
 
 #[derive(Deserialize)]
 struct TypesJira {
-    #[serde(default)]
+    /// Server/DC : `values`. Cloud : `issueTypes` — meme `createmeta/{projet}/issuetypes`,
+    /// forme differente ; sans l'alias, Cloud ne proposait plus aucun type a la creation.
+    #[serde(default, alias = "issueTypes")]
     values: Vec<TypeJira>,
 }
 
@@ -214,6 +255,16 @@ fn vers_ticket(i: IssueJira, base: &str) -> (Ticket, Vec<Commentaire>) {
 pub fn lire_recherche(corps: &str, base: &str) -> Result<Vec<Ticket>, String> {
     let r: RechercheJira = lire(corps)?;
     Ok(r.issues.into_iter().map(|i| vers_ticket(i, base).0).collect())
+}
+
+/// Une page de `/rest/api/3/search/jql` (Cloud) : les tickets, et le jeton de la page
+/// suivante s'il en reste une (`None` des que `isLast` vaut vrai, meme si Jira laissait
+/// trainer un `nextPageToken` perime).
+pub fn lire_page_recherche(corps: &str, base: &str) -> Result<(Vec<Ticket>, Option<String>), String> {
+    let r: RechercheJira = lire(corps)?;
+    let suite = if r.is_last { None } else { r.next_page_token };
+    let tickets = r.issues.into_iter().map(|i| vers_ticket(i, base).0).collect();
+    Ok((tickets, suite))
 }
 
 pub fn lire_ticket(corps: &str, base: &str) -> Result<DetailTicket, String> {
@@ -280,7 +331,7 @@ pub fn corps_de_creation(
     type_id: &str,
     resume: &str,
     description: Option<&str>,
-    assigne: Option<&str>,
+    assigne: Option<Assigne>,
 ) -> Result<serde_json::Value, String> {
     let resume = resume.trim();
     if resume.is_empty() {
@@ -295,7 +346,7 @@ pub fn corps_de_creation(
         "summary": resume,
     });
     if let Some(a) = assigne {
-        champs["assignee"] = serde_json::json!({ "name": a });
+        champs["assignee"] = a.valeur();
     }
     if let Some(d) = description.map(str::trim).filter(|d| !d.is_empty()) {
         champs["description"] = serde_json::Value::String(d.to_string());
@@ -354,6 +405,43 @@ mod tests {
         assert_eq!(t[1].priorite, "", "une priorite nulle devient vide");
     }
 
+    /// Cloud (`/rest/api/3/search/jql`) : meme forme `{"issues":[...]}`, plus la pagination
+    /// (`nextPageToken`, `isLast`) et sans `description` demandee dans la liste.
+    const RECHERCHE_CLOUD: &str = r#"{"issues":[
+      {"key":"CCM-1234","fields":{"summary":"Correction login",
+        "status":{"name":"En cours","statusCategory":{"key":"indeterminate"}},
+        "issuetype":{"name":"Bug"},"priority":{"name":"Major"},"project":{"key":"CCM"},
+        "updated":"2026-09-25T10:12:00.000+0200"}}],
+      "nextPageToken":"CAEaAggD","isLast":true}"#;
+
+    #[test]
+    fn lit_une_recherche_cloud_avec_pagination() {
+        let t = lire_recherche(RECHERCHE_CLOUD, BASE).unwrap();
+        assert_eq!(t.len(), 1);
+        assert_eq!(t[0].cle, "CCM-1234");
+        assert_eq!(t[0].description, "", "pas demandee dans la liste");
+    }
+
+    const RECHERCHE_CLOUD_PAGE_SUIVANTE: &str = r#"{"issues":[
+      {"key":"CCM-1","fields":{"summary":"Un","status":{"name":"A faire","statusCategory":{"key":"new"}},
+        "issuetype":{"name":"Bug"},"priority":null,"project":{"key":"CCM"},
+        "updated":"2026-09-20T08:00:00.000+0200"}}],
+      "nextPageToken":"CAEaAggD","isLast":false}"#;
+
+    #[test]
+    fn lire_page_recherche_annonce_le_jeton_de_la_page_suivante_si_pas_derniere() {
+        let (tickets, suite) = lire_page_recherche(RECHERCHE_CLOUD_PAGE_SUIVANTE, BASE).unwrap();
+        assert_eq!(tickets.len(), 1);
+        assert_eq!(suite.as_deref(), Some("CAEaAggD"));
+    }
+
+    #[test]
+    fn lire_page_recherche_ne_rend_rien_a_suivre_sur_la_derniere_page() {
+        let (tickets, suite) = lire_page_recherche(RECHERCHE_CLOUD, BASE).unwrap();
+        assert_eq!(tickets.len(), 1);
+        assert_eq!(suite, None, "isLast:true arrete la pagination meme si nextPageToken trainait");
+    }
+
     #[test]
     fn lit_un_ticket_et_ses_commentaires() {
         let d = lire_ticket(TICKET, BASE).unwrap();
@@ -378,12 +466,50 @@ mod tests {
         assert_eq!(t.iter().map(|x| x.nom.as_str()).collect::<Vec<_>>(), vec!["Bug", "Story"]);
     }
 
+    /// Cloud (`/rest/api/2/issue/createmeta/{projet}/issuetypes`) rend la liste sous
+    /// `issueTypes`, pas `values` (Server/DC) : sans alias, la creation de ticket ne
+    /// proposait plus aucun type sur Cloud.
+    const TYPES_CLOUD: &str = r#"{"issueTypes":[
+      {"id":"1","name":"Bug","subtask":false},
+      {"id":"5","name":"Sous-tache","subtask":true}],"maxResults":50,"startAt":0,"total":2}"#;
+
+    #[test]
+    fn lit_les_types_cote_cloud_sous_issue_types() {
+        let t = lire_types(TYPES_CLOUD).unwrap();
+        assert_eq!(t.iter().map(|x| x.nom.as_str()).collect::<Vec<_>>(), vec!["Bug"]);
+    }
+
     #[test]
     fn lit_moi_et_le_ticket_cree() {
         let m = lire_moi(r#"{"name":"tlegendre","displayName":"T. Legendre"}"#).unwrap();
         assert_eq!(m.name, "tlegendre");
         assert_eq!(m.nom_affiche, "T. Legendre");
+        assert_eq!(m.account_id, "", "absent sur Server/DC");
         assert_eq!(lire_ticket_cree(r#"{"id":"1","key":"CCM-42","self":"x"}"#).unwrap(), "CCM-42");
+    }
+
+    #[test]
+    fn lit_moi_cote_cloud_sans_name() {
+        let m = lire_moi(r#"{"accountId":"5b10ac8d82e05b22cc7d4ef5","displayName":"T. Legendre"}"#).unwrap();
+        assert_eq!(m.name, "", "Cloud n'envoie pas name");
+        assert_eq!(m.account_id, "5b10ac8d82e05b22cc7d4ef5");
+        assert_eq!(m.nom_affiche, "T. Legendre");
+    }
+
+    #[test]
+    fn choisit_la_forme_d_assignation_selon_cloud() {
+        let moi = Moi { name: "tlegendre".to_string(), nom_affiche: "T. Legendre".to_string(), account_id: "acc-123".to_string() };
+        assert_eq!(assigne_de(&moi, false), Some(Assigne::Nom("tlegendre")));
+        assert_eq!(assigne_de(&moi, true), Some(Assigne::Compte("acc-123")));
+    }
+
+    #[test]
+    fn n_assigne_personne_si_l_identifiant_attendu_est_vide() {
+        // Un compte sans accountId (Cloud) ou sans name (Server/DC, improbable mais pas
+        // impossible) ne doit jamais envoyer `{"name": ""}` / `{"accountId": ""}` a Jira.
+        let moi = Moi { name: String::new(), nom_affiche: "T. Legendre".to_string(), account_id: String::new() };
+        assert_eq!(assigne_de(&moi, false), None, "name vide sur Server/DC");
+        assert_eq!(assigne_de(&moi, true), None, "accountId vide sur Cloud");
     }
 
     #[test]
@@ -402,16 +528,27 @@ mod tests {
     }
 
     #[test]
-    fn le_corps_de_creation_assigne_le_ticket() {
-        let c = corps_de_creation("CCM", "1", " Corriger ", Some("desc"), Some("tlegendre")).unwrap();
+    fn le_corps_de_creation_assigne_le_ticket_par_name() {
+        let c = corps_de_creation("CCM", "1", " Corriger ", Some("desc"), Some(Assigne::Nom("tlegendre"))).unwrap();
         assert_eq!(
             c,
             serde_json::json!({"fields": {
                 "project": {"key": "CCM"}, "issuetype": {"id": "1"}, "summary": "Corriger",
                 "assignee": {"name": "tlegendre"}, "description": "desc"}})
         );
-        assert!(corps_de_creation("CCM", "1", "  ", None, Some("x")).is_err());
-        assert!(corps_de_creation("CCM", "", "Titre", None, Some("x")).is_err());
+        assert!(corps_de_creation("CCM", "1", "  ", None, Some(Assigne::Nom("x"))).is_err());
+        assert!(corps_de_creation("CCM", "", "Titre", None, Some(Assigne::Nom("x"))).is_err());
+    }
+
+    #[test]
+    fn le_corps_de_creation_assigne_le_ticket_par_account_id_sur_cloud() {
+        let c = corps_de_creation("CCM", "1", "Corriger", None, Some(Assigne::Compte("acc-123"))).unwrap();
+        assert_eq!(
+            c,
+            serde_json::json!({"fields": {
+                "project": {"key": "CCM"}, "issuetype": {"id": "1"}, "summary": "Corriger",
+                "assignee": {"accountId": "acc-123"}}})
+        );
     }
 
     #[test]
