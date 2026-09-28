@@ -38,14 +38,23 @@ pub async fn jira_poser_config(
     config::poser(&state.db, &url, jeton.as_deref(), email.as_deref(), types_branche)
 }
 
-/// Rend le nom affiche du compte : de quoi confirmer que c'est le bon.
+/// Rend le nom affiche du compte : de quoi confirmer que c'est le bon. Cloud ne renvoie que
+/// `accountId` (pas `name`) : sans lui, on ne rendrait jamais rien pour ces comptes-la.
 #[commande]
 pub async fn jira_tester(state: &crate::AppState) -> Result<String, String> {
     let moi = moi(&Jira::depuis(&state.db)?).await?;
-    Ok(if moi.nom_affiche.is_empty() { moi.name } else { moi.nom_affiche })
+    Ok(if !moi.nom_affiche.is_empty() {
+        moi.nom_affiche
+    } else if !moi.name.is_empty() {
+        moi.name
+    } else {
+        moi.account_id
+    })
 }
 
 /// `cles_projets` absent : tous mes tickets. Liste vide : aucun (voir `jql::mes_tickets`).
+///
+/// Cloud retire `/rest/api/2/search` : il faut `/rest/api/3/search/jql`, memes parametres.
 #[commande]
 pub async fn jira_mes_tickets(
     state: &crate::AppState,
@@ -55,10 +64,11 @@ pub async fn jira_mes_tickets(
         return Ok(vec![]);
     };
     let jira = Jira::depuis(&state.db)?;
+    let chemin = if jira.cloud() { "/rest/api/3/search/jql" } else { "/rest/api/2/search" };
     let corps = jira
         .envoyer(
             Method::GET,
-            "/rest/api/2/search",
+            chemin,
             &[("jql", jql.as_str()), ("fields", CHAMPS_LISTE), ("maxResults", "200")],
             None,
         )
@@ -172,24 +182,26 @@ pub async fn jira_creer_ticket(
     let cle_projet = jql::normaliser_cle_de_projet(&cle_projet)?;
     let jira = Jira::depuis(&state.db)?;
     let moi = moi(&jira).await?;
-    let corps = modele::corps_de_creation(&cle_projet, &type_id, &resume, description.as_deref(), Some(&moi.name))?;
+    let assigne = modele::assigne_de(&moi, jira.cloud());
+    let corps = modele::corps_de_creation(&cle_projet, &type_id, &resume, description.as_deref(), Some(assigne))?;
     match jira.envoyer(Method::POST, "/rest/api/2/issue", &[], Some(corps)).await {
         Ok(reponse) => modele::lire_ticket_cree(&reponse),
         Err(e) if modele::refus_du_champ_assignee(&e) => {
             let corps = modele::corps_de_creation(&cle_projet, &type_id, &resume, description.as_deref(), None)?;
             let reponse = jira.envoyer(Method::POST, "/rest/api/2/issue", &[], Some(corps)).await?;
             let cle = modele::lire_ticket_cree(&reponse)?;
-            assigner_apres_coup(&jira, &cle, &moi.name).await;
+            assigner_apres_coup(&jira, &cle, assigne).await;
             Ok(cle)
         }
         Err(e) => Err(e),
     }
 }
 
-/// Le ticket existe deja : un echec ici n'annule rien, on le journalise seulement.
-async fn assigner_apres_coup(jira: &Jira, cle: &str, nom: &str) {
+/// Le ticket existe deja : un echec ici n'annule rien, on le journalise seulement. Meme objet
+/// que sur la creation (`{"accountId": ..}` sur Cloud, `{"name": ..}` sinon).
+async fn assigner_apres_coup(jira: &Jira, cle: &str, assigne: modele::Assigne<'_>) {
     let resultat = jira
-        .envoyer(Method::PUT, &format!("/rest/api/2/issue/{cle}/assignee"), &[], Some(serde_json::json!({ "name": nom })))
+        .envoyer(Method::PUT, &format!("/rest/api/2/issue/{cle}/assignee"), &[], Some(assigne.valeur()))
         .await;
     if let Err(e) = resultat {
         log::warn!("jira : ticket {cle} cree mais non assigne - {e}");
