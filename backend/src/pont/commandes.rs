@@ -1667,6 +1667,142 @@ pub async fn appeler(
             ).await?))
         })
         .await,
+        "jira_config" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_config(etat, 
+            ).await?))
+        })
+        .await,
+        "jira_poser_config" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_poser_config(etat,
+                serde_json::from_value(prendre(a, "url", "url"))
+                    .map_err(|e| format!("argument url : {e}"))?,
+                serde_json::from_value(prendre(a, "jeton", "jeton"))
+                    .map_err(|e| format!("argument jeton : {e}"))?,
+                serde_json::from_value(prendre(a, "typesBranche", "types_branche"))
+                    .map_err(|e| format!("argument typesBranche : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_tester" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_tester(etat, 
+            ).await?))
+        })
+        .await,
+        "jira_mes_tickets" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_mes_tickets(etat,
+                serde_json::from_value(prendre(a, "clesProjets", "cles_projets"))
+                    .map_err(|e| format!("argument clesProjets : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_ticket" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_ticket(etat,
+                serde_json::from_value(prendre(a, "cle", "cle"))
+                    .map_err(|e| format!("argument cle : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_transitions" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_transitions(etat,
+                serde_json::from_value(prendre(a, "cle", "cle"))
+                    .map_err(|e| format!("argument cle : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_liaisons" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_liaisons(etat, 
+            ).await?))
+        })
+        .await,
+        "jira_liaison" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_liaison(etat,
+                serde_json::from_value(prendre(a, "projet", "projet"))
+                    .map_err(|e| format!("argument projet : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_poser_liaison" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_poser_liaison(etat,
+                serde_json::from_value(prendre(a, "projet", "projet"))
+                    .map_err(|e| format!("argument projet : {e}"))?,
+                serde_json::from_value(prendre(a, "cles", "cles"))
+                    .map_err(|e| format!("argument cles : {e}"))?,
+                serde_json::from_value(prendre(a, "gabarit", "gabarit"))
+                    .map_err(|e| format!("argument gabarit : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_apercu_branche" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_apercu_branche(etat,
+                serde_json::from_value(prendre(a, "gabarit", "gabarit"))
+                    .map_err(|e| format!("argument gabarit : {e}"))?,
+                serde_json::from_value(prendre(a, "cle", "cle"))
+                    .map_err(|e| format!("argument cle : {e}"))?,
+                serde_json::from_value(prendre(a, "typeTicket", "type_ticket"))
+                    .map_err(|e| format!("argument typeTicket : {e}"))?,
+                serde_json::from_value(prendre(a, "resume", "resume"))
+                    .map_err(|e| format!("argument resume : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_transitionner" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_transitionner(etat,
+                serde_json::from_value(prendre(a, "cle", "cle"))
+                    .map_err(|e| format!("argument cle : {e}"))?,
+                serde_json::from_value(prendre(a, "transitionId", "transition_id"))
+                    .map_err(|e| format!("argument transitionId : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_commenter" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_commenter(etat,
+                serde_json::from_value(prendre(a, "cle", "cle"))
+                    .map_err(|e| format!("argument cle : {e}"))?,
+                serde_json::from_value(prendre(a, "texte", "texte"))
+                    .map_err(|e| format!("argument texte : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_saisir_temps" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_saisir_temps(etat,
+                serde_json::from_value(prendre(a, "cle", "cle"))
+                    .map_err(|e| format!("argument cle : {e}"))?,
+                serde_json::from_value(prendre(a, "duree", "duree"))
+                    .map_err(|e| format!("argument duree : {e}"))?,
+                serde_json::from_value(prendre(a, "commentaire", "commentaire"))
+                    .map_err(|e| format!("argument commentaire : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_types_ticket" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_types_ticket(etat,
+                serde_json::from_value(prendre(a, "cleProjet", "cle_projet"))
+                    .map_err(|e| format!("argument cleProjet : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_creer_ticket" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_creer_ticket(etat,
+                serde_json::from_value(prendre(a, "cleProjet", "cle_projet"))
+                    .map_err(|e| format!("argument cleProjet : {e}"))?,
+                serde_json::from_value(prendre(a, "typeId", "type_id"))
+                    .map_err(|e| format!("argument typeId : {e}"))?,
+                serde_json::from_value(prendre(a, "resume", "resume"))
+                    .map_err(|e| format!("argument resume : {e}"))?,
+                serde_json::from_value(prendre(a, "description", "description"))
+                    .map_err(|e| format!("argument description : {e}"))?,
+            ).await?))
+        })
+        .await,
+        "jira_demarrer" => typer(async {
+            valeur(serde_json::to_value(crate::jira::jira_demarrer(etat,
+                serde_json::from_value(prendre(a, "projet", "projet"))
+                    .map_err(|e| format!("argument projet : {e}"))?,
+                serde_json::from_value(prendre(a, "cle", "cle"))
+                    .map_err(|e| format!("argument cle : {e}"))?,
+            ).await?))
+        })
+        .await,
         _ => return None,
     })
 }

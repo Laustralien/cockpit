@@ -2,6 +2,8 @@
   import { getProjectSettings, updateProjectSettings, deleteDbProject } from "../../api/scanner";
   import { composeDetecte, type ComposeDetecte } from "../../api/docker";
   import { getProjectSummaryPrompt, setProjectSummaryPrompt } from "../../api/recorder";
+  import { jiraLiaison, jiraPoserLiaison, jiraApercuBranche } from "../../api/jira";
+  import { chargerLiaisonsJira } from "../../stores/jira";
   import { loadProjects } from "../../stores/projects";
   import { notify } from "../../stores/toast";
   import { goHome, forgetProjectTab } from "../../stores/ui";
@@ -24,6 +26,9 @@
   let dependsOnStr = $state("");
   let summaryPrompt = $state("");
   let saving = $state(false);
+  let jiraCles = $state("");
+  let jiraGabarit = $state("");
+  let jiraApercu = $state("");
 
   onMount(async () => {
     try {
@@ -34,7 +39,21 @@
       dependsOnStr = settings.depends_on.join(", ");
     } catch (e) { notify($trad("projectSettings.loadFailed", { error: String(e) })); }
     try { summaryPrompt = (await getProjectSummaryPrompt(name)) ?? ""; } catch (e) { notify(String(e)); }
+    try {
+      const l = await jiraLiaison(name);
+      jiraCles = l.cles.join(", ");
+      jiraGabarit = l.gabarit;
+    } catch (e) { notify(String(e)); }
     await relireLaDetection();
+  });
+
+  // L'apercu est calcule par le backend : une seule regle de nommage, la sienne.
+  $effect(() => {
+    const gabarit = jiraGabarit;
+    const cle = `${jiraCles.split(/[,;\s]+/).find(Boolean)?.toUpperCase() ?? "ABC"}-123`;
+    jiraApercuBranche(gabarit, cle, "Bug", "Corriger l'écran de connexion")
+      .then((b) => (jiraApercu = b))
+      .catch(() => (jiraApercu = ""));
   });
 
   // Ce qui a remplace le champ ou l'on saisissait un chemin : on AFFICHE ce qui a ete trouve, et
@@ -59,6 +78,8 @@
       const deps = dependsOnStr.split(",").map(s => s.trim()).filter(Boolean);
       await updateProjectSettings(name, path, composeFile, description, deps);
       await setProjectSummaryPrompt(name, summaryPrompt.trim() || null);
+      await jiraPoserLiaison(name, jiraCles, jiraGabarit);
+      await chargerLiaisonsJira();
       await loadProjects();
       notify($trad("projectSettings.saved"), "success");
     } catch(e) { notify(String(e)); }
@@ -130,6 +151,19 @@
         <textarea bind:value={summaryPrompt} rows="6" placeholder={$trad("projectSettings.summaryPromptPlaceholder")}></textarea>
       </label>
 
+      <label>
+        {$trad("projectSettings.jiraCles")}
+        <input type="text" bind:value={jiraCles} placeholder={$trad("projectSettings.jiraClesExemple")} />
+        <span class="field-hint">{$trad("projectSettings.jiraClesAide")}</span>
+      </label>
+
+      <label>
+        {$trad("projectSettings.jiraGabarit")}
+        <input type="text" bind:value={jiraGabarit} />
+        <span class="field-hint">{$trad("projectSettings.jiraGabaritAide")}</span>
+        {#if jiraApercu}<code>{$trad("projectSettings.jiraApercu", { branche: jiraApercu })}</code>{/if}
+      </label>
+
       <button class="btn-save" onclick={save} disabled={saving}>
         {saving ? $trad("projectSettings.saving") : $trad("common.save")}
       </button>
@@ -168,6 +202,7 @@
     background: var(--bg-secondary); color: var(--text-primary);
   }
   textarea { resize: vertical; }
+  .field-hint { display: block; margin-top: 0.3rem; font-size: 0.72rem; color: var(--text-muted); }
   /* Le fichier compose ne se saisit plus : il se constate. Le bloc a la meme place et le
      meme rythme que les champs voisins, pour que l'oeil ne cherche pas. */
   .compose { margin-bottom: 0.75rem; }

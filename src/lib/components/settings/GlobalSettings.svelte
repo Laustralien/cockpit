@@ -30,6 +30,7 @@
   import { onMount, onDestroy } from "svelte";
   import AppearanceSettings from "./AppearanceSettings.svelte";
   import KubernetesSettings from "./KubernetesSettings.svelte";
+  import JiraSettings from "./JiraSettings.svelte";
   import CarteCompte from "../compte/CarteCompte.svelte";
   import FournisseurDetail from "./FournisseurDetail.svelte";
   import { marked } from "marked";
@@ -67,7 +68,7 @@
   const changelogHtml = $derived(rendre(MORCEAUX.tete, "tete", $locale));
   const resteHtml = $derived(toutLHistorique ? rendre(MORCEAUX.reste, "reste", $locale) : "");
 
-  type SettingsView = "general" | "appearance" | "ia" | "kubernetes" | "meetings" | "projects";
+  type SettingsView = "general" | "appearance" | "ia" | "kubernetes" | "jira" | "meetings" | "projects";
   let view: SettingsView = $state("general");
 
   /// Le fournisseur dont on regarde le detail, ou `null` pour la liste.
@@ -106,6 +107,7 @@
     { id: "appearance", icon: "◐", labelKey: "settings.menu.appearance" },
     { id: "ia", icon: "✳", labelKey: "settings.menu.ia" },
     { id: "kubernetes", icon: "☸", labelKey: "settings.menu.kubernetes" },
+    { id: "jira", icon: "◆", labelKey: "settings.menu.jira" },
     { id: "meetings", icon: "⏺", labelKey: "settings.menu.meetings" },
     { id: "projects", icon: "▤", labelKey: "settings.menu.projects" },
   ];
@@ -639,6 +641,9 @@
 
       {:else if view === "kubernetes"}
         <KubernetesSettings />
+
+      {:else if view === "jira"}
+        <JiraSettings />
 
       {:else if view === "meetings"}
         <section class="card">

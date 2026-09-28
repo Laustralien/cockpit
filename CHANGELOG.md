@@ -12,9 +12,24 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Jira Server/Data Center : le tableau de bord et l'onglet d'un projet listent tes tickets
+  Jira assignés (filtrés sur les clés du projet quand elles sont renseignées). Change leur
+  statut, commente, saisis du temps ou crée un ticket sans quitter Cockpit.
+- Jira : le bouton « Démarrer » crée la branche du ticket depuis `main` (ou `master`) à jour,
+  nommée selon le gabarit du projet, et fait passer le ticket en cours.
+- Réglages → Jira : renseigne l'adresse du serveur et un jeton d'accès personnel pour
+  connecter Cockpit à ta Jira Server/Data Center.
+
 ### Changed
 
 - La fenêtre s'ouvre maximisée.
+
+### Fixed
+
+- Fichiers : la coloration syntaxique est de retour. Les fichiers s'affichaient en texte brut,
+  sans couleur, en lecture comme en édition.
 
 ## [0.89.1] — 2026-09-25
 
@@ -26,11 +41,6 @@ le script de release.
   maintenant (effectif au prochain démarrage du service des terminaux).
 - Terminaux : le curseur revient quand le programme qui l'avait masqué (claude, vim, htop)
   s'arrête sans le remettre, et après un redémarrage du service des terminaux.
-
-### Fixed
-
-- Fichiers : la coloration syntaxique est de retour. Les fichiers s'affichaient en texte brut,
-  sans couleur, en lecture comme en édition.
 
 ## [0.89.0] — 2026-09-24
 

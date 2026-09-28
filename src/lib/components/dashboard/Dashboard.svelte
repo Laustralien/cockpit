@@ -2,6 +2,7 @@
   import { dashboardView } from "../../stores/ui";
   import { trad } from "../../i18n";
   import TasksView from "./TasksView.svelte";
+  import JiraView from "../jira/JiraView.svelte";
   import MonitoringView from "./MonitoringView.svelte";
   import TerminalsView from "./TerminalsView.svelte";
   import ContainersView from "./ContainersView.svelte";
@@ -14,6 +15,9 @@
       <h2 class="menu-title">{$trad("dashboard.title")}</h2>
       <button class="dash-menu-item" class:active={$dashboardView === "tasks"} onclick={() => dashboardView.set("tasks")}>
         {$trad("dashboard.tasksTab")}
+      </button>
+      <button class="dash-menu-item" class:active={$dashboardView === "jira"} onclick={() => dashboardView.set("jira")}>
+        {$trad("dashboard.jiraTab")}
       </button>
       <button class="dash-menu-item" class:active={$dashboardView === "monitoring"} onclick={() => dashboardView.set("monitoring")}>
         {$trad("dashboard.monitoringTab")}
@@ -28,6 +32,8 @@
 
     {#if $dashboardView === "tasks"}
       <TasksView />
+    {:else if $dashboardView === "jira"}
+      <JiraView />
     {:else if $dashboardView === "monitoring"}
       <MonitoringView />
     {:else if $dashboardView === "terminals"}
