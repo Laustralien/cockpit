@@ -1,13 +1,15 @@
 import { invoke } from "../coquille";
 
 /**
- * Jira Server / Data Center, vu du frontend. **LE JETON N'EST JAMAIS ICI** : on n'en connait
- * que `jeton_pose`. Toute la logique (JQL, nommage de branche, git) vit cote Rust.
+ * Jira Cloud ou Server / Data Center, vu du frontend. **LE JETON N'EST JAMAIS ICI** : on n'en
+ * connait que `jeton_pose`. Toute la logique (JQL, nommage de branche, git) vit cote Rust.
  */
 
 export interface ConfigJira {
   url: string;
   jeton_pose: boolean;
+  /** Pas un secret (contrairement au jeton) : requis sur Jira Cloud, vide sur Server/DC. */
+  email: string;
   /** Type de ticket Jira → type de branche ; `*` = tous les autres. */
   types_branche: Record<string, string>;
 }
@@ -40,8 +42,12 @@ export interface DemarrageJira {
 }
 
 export const jiraConfig = () => invoke<ConfigJira>("jira_config");
-export const jiraPoserConfig = (url: string, jeton: string | null, typesBranche: Record<string, string> | null) =>
-  invoke<ConfigJira>("jira_poser_config", { url, jeton, typesBranche });
+export const jiraPoserConfig = (
+  url: string,
+  jeton: string | null,
+  email: string | null,
+  typesBranche: Record<string, string> | null,
+) => invoke<ConfigJira>("jira_poser_config", { url, jeton, email, typesBranche });
 export const jiraTester = () => invoke<string>("jira_tester");
 export const jiraMesTickets = (clesProjets: string[] | null) =>
   invoke<TicketJira[]>("jira_mes_tickets", { clesProjets });

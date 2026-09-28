@@ -1,7 +1,8 @@
 <script lang="ts">
   /**
-   * Connexion a Jira Server / Data Center. Le jeton saisi part au backend et n'en revient
-   * jamais : le champ reste vide une fois le jeton pose, et le laisser vide le garde.
+   * Connexion a Jira Cloud ou Server / Data Center. Le jeton saisi part au backend et n'en
+   * revient jamais : le champ reste vide une fois le jeton pose, et le laisser vide le garde.
+   * L'e-mail n'est pas un secret : il est renvoye par jira_config et affiche tel quel.
    */
   import { onMount } from "svelte";
   import { notify } from "../../stores/toast";
@@ -9,6 +10,7 @@
   import { jiraConfig, jiraPoserConfig, jiraTester, type ConfigJira } from "../../api/jira";
 
   let url = $state("");
+  let email = $state("");
   let jeton = $state("");
   let jetonPose = $state(false);
   let types: { jira: string; branche: string }[] = $state([]);
@@ -26,6 +28,7 @@
 
   function appliquer(c: ConfigJira) {
     url = c.url;
+    email = c.email;
     jetonPose = c.jeton_pose;
     jeton = "";
     repli = c.types_branche["*"] ?? "feature";
@@ -43,7 +46,7 @@
   async function enregistrer() {
     enregistrement = true;
     try {
-      appliquer(await jiraPoserConfig(url, jeton.trim() || null, correspondance()));
+      appliquer(await jiraPoserConfig(url, jeton.trim() || null, email, correspondance()));
       notify($trad("jira.reglages.enregistre"), "success");
     } catch (e) {
       notify(String(e));
@@ -71,6 +74,10 @@
     <label class="champ">
       <span class="etiquette">{$trad("jira.reglages.url")}</span>
       <input class="input" bind:value={url} placeholder={$trad("jira.reglages.urlExemple")} />
+    </label>
+    <label class="champ">
+      <span class="etiquette">{$trad("jira.reglages.email")}</span>
+      <input class="input" type="email" bind:value={email} placeholder={$trad("jira.reglages.emailExemple")} />
     </label>
     <label class="champ">
       <span class="etiquette">{$trad("jira.reglages.jeton")}</span>
