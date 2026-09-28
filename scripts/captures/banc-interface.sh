@@ -343,6 +343,32 @@ SQL
   exit 0
 fi
 
+# **CHAQUE CLUSTER GARDE SON NAMESPACE.** Signale le 2026-09-28 : passer de la prod a la
+# qualification faisait oublier le namespace de la prod, a rechoisir a chaque retour.
+if [ -n "${COCKPIT_BANC_K8S_CLUSTERS:-}" ]; then
+  clic 941 127 1
+  clic 941 127 14         # Kubernetes, sur cluster-demo
+  clic 610 228 2          # le selecteur de namespace
+  clic 450 364 8          # « boutique-demo »
+  image clusters-1-demo-boutique
+  clic "${COCKPIT_BANC_CLUSTER_X:-410}" 228 2   # le selecteur de cluster
+  image clusters-2-liste
+  clic "${COCKPIT_BANC_QLF_X:-450}" "${COCKPIT_BANC_QLF_Y:-355}" 8   # « cluster-qlf »
+  image clusters-3-qlf
+  clic 610 228 2
+  image clusters-3b-liste-ns
+  clic 450 "${COCKPIT_BANC_NS2_Y:-468}" 8          # un autre namespace sur qlf
+  image clusters-4-qlf-autre
+  clic "${COCKPIT_BANC_CLUSTER_X:-410}" 228 2
+  clic "${COCKPIT_BANC_DEMO_X:-450}" "${COCKPIT_BANC_DEMO_Y:-320}" 8  # retour sur cluster-demo
+  image clusters-5-retour-demo
+  clic "${COCKPIT_BANC_CLUSTER_X:-410}" 228 2
+  clic "${COCKPIT_BANC_QLF_X:-450}" "${COCKPIT_BANC_QLF_Y:-355}" 8
+  image clusters-6-retour-qlf
+  echo "images clusters : $TRAVAIL/img"
+  exit 0
+fi
+
 if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
   clic 941 127 1          # ferme le menu des liens, reste ouvert apres sa capture
   clic 941 127 14         # l onglet Kubernetes (a droite de Git)

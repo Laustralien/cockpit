@@ -12,6 +12,11 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Kubernetes : chaque cluster retient son namespace dans un projet. Passer d'un cluster à
+  l'autre faisait oublier le namespace du premier, qu'il fallait rechoisir à chaque retour.
+
 ## [0.91.0] — 2026-09-28
 
 ### Added
