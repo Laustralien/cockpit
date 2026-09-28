@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.91.0] — 2026-09-28
+
 ### Added
 
 - Jira Cloud : Cockpit se connecte aussi à ta Jira Cloud, par e-mail du compte et jeton
