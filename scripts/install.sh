@@ -17,7 +17,7 @@ REPO="jguevel-tech/cockpit"
 BIN_DIR="${HOME}/.local/bin"
 APP_DIR="${HOME}/.local/share/cockpit"
 DESKTOP_DIR="${HOME}/.local/share/applications"
-ICON_DIR="${HOME}/.local/share/icons/hicolor/128x128/apps"
+ICON_DIR="${HOME}/.local/share/icons/hicolor"
 
 # Couleurs seulement si la sortie est un terminal (sinon on pollue les logs/pipes).
 if [ -t 1 ]; then
@@ -59,13 +59,20 @@ done
 # --- Derniere version publiee ---
 
 step "Recherche de la derniere version"
-TAG=$($DL "https://api.github.com/repos/${REPO}/releases/latest" \
-  | sed -n 's/.*"tag_name" *: *"\([^"]*\)".*/\1/p' | head -n 1)
-[ -n "$TAG" ] || die "Impossible de determiner la derniere version (GitHub injoignable ou aucune release publiee)."
+RELEASE=$($DL "https://api.github.com/repos/${REPO}/releases/latest") \
+  || die "Impossible de joindre GitHub pour trouver la derniere version."
+TAG=$(printf '%s\n' "$RELEASE" | sed -n 's/.*"tag_name" *: *"\([^"]*\)".*/\1/p' | head -n 1)
+[ -n "$TAG" ] || die "Impossible de determiner la derniere version (aucune release publiee)."
 
 VERSION="${TAG#v}"
-ASSET="Cockpit_${VERSION}_amd64.AppImage"
-URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET}"
+# **LE NOM DU FICHIER SE LIT DANS LA RELEASE, IL NE SE DEVINE PAS.** Il a change avec la
+# chaine de construction (`Cockpit_<version>_amd64.AppImage` du temps de Tauri,
+# `Cockpit-<version>.AppImage` depuis Electron), et le nom ecrit en dur faisait echouer
+# l'installation. On prend l'adresse de la seule AppImage publiee.
+URL=$(printf '%s\n' "$RELEASE" \
+  | sed -n 's/.*"browser_download_url" *: *"\([^"]*\.AppImage\)".*/\1/p' | head -n 1)
+[ -n "$URL" ] || die "La release ${TAG} ne contient aucune AppImage."
+ASSET="${URL##*/}"
 info "  version ${GREEN}${VERSION}${RESET}"
 
 # --- Telechargement ---
@@ -86,11 +93,21 @@ ln -sf "${APP_DIR}/Cockpit.AppImage" "${BIN_DIR}/cockpit"
 
 step "Integration au menu des applications"
 # L'icone est extraite de l'AppImage elle-meme : pas de fichier a heberger a cote.
-( cd "$APP_DIR" && "${APP_DIR}/Cockpit.AppImage" --appimage-extract 'usr/share/icons/hicolor/128x128/apps/*.png' >/dev/null 2>&1 ) || true
-if [ -d "${APP_DIR}/squashfs-root" ]; then
-  find "${APP_DIR}/squashfs-root" -name '*.png' -exec cp -f {} "${ICON_DIR}/cockpit.png" \; 2>/dev/null || true
-  rm -rf "${APP_DIR}/squashfs-root"
+# **AUCUNE TAILLE ECRITE EN DUR.** Le script cherchait `128x128`, la taille de l'epoque Tauri ;
+# depuis Electron l'icone est en `256x256`, et le menu recevait une entree sans icone. On
+# recopie toutes les tailles que l'AppImage porte, chacune a sa place.
+( cd "$APP_DIR" && "${APP_DIR}/Cockpit.AppImage" --appimage-extract 'usr/share/icons/hicolor/*' >/dev/null 2>&1 ) || true
+SOURCES_ICONES="${APP_DIR}/squashfs-root/usr/share/icons/hicolor"
+if [ -d "$SOURCES_ICONES" ]; then
+  for taille in "$SOURCES_ICONES"/*/apps/cockpit.png; do
+    [ -f "$taille" ] || continue
+    dossier="${ICON_DIR}/$(basename "$(dirname "$(dirname "$taille")")")/apps"
+    mkdir -p "$dossier" && cp -f "$taille" "$dossier/cockpit.png"
+  done
 fi
+rm -rf "${APP_DIR}/squashfs-root"
+ls "${ICON_DIR}"/*/apps/cockpit.png >/dev/null 2>&1 \
+  || info "  (icone introuvable dans l'AppImage : l'entree du menu n'en aura pas)"
 
 cat > "${DESKTOP_DIR}/cockpit.desktop" <<DESKTOP
 [Desktop Entry]
@@ -99,6 +116,7 @@ Name=Cockpit
 Comment=One place to run all your projects
 Exec=${BIN_DIR}/cockpit
 Icon=cockpit
+StartupWMClass=cockpit
 Terminal=false
 Categories=Development;
 DESKTOP
