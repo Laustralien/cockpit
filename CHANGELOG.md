@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.92.0] — 2026-09-29
+
 ### Changed
 
 - La barre de menus « File, Edit, View, Window, Help » en haut de la fenêtre disparaît : elle
