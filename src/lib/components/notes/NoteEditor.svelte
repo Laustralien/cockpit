@@ -653,7 +653,15 @@
      `:global` est obligatoire — le contenu vient de `innerHTML`, donc Svelte ne voit pas
      ces balises et eliminerait la regle. */
   .editor.liens-actifs :global(a) { cursor: pointer; text-decoration: underline; }
-  .editor-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+  /* **LA BARRE D'OUTILS SUIT L'ECRITURE.** Une longue note fait defiler la PAGE, pas la zone
+     de texte : la barre sortait de l'ecran, et il fallait remonter chercher le gras (signale
+     le 2026-09-29). Collante en haut, elle reste a portee ou que l'on ecrive. Fond OPAQUE,
+     sinon le texte qui defile dessous transparait (regle des surfaces flottantes). */
+  .editor-header {
+    display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 2; background: var(--surface-base);
+    padding: 0.35rem 0;
+  }
   .file-title { font-weight: 600; font-size: 0.9rem; }
 
   .toolbar { display: flex; align-items: center; gap: 0.15rem; margin-left: auto; flex-wrap: wrap; }

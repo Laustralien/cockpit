@@ -12,6 +12,17 @@ le script de release.
 
 ## [Unreleased]
 
+### Changed
+
+- La barre de menus « File, Edit, View, Window, Help » en haut de la fenêtre disparaît : elle
+  prenait une ligne sans rien apporter. Ctrl + / Ctrl − / Ctrl 0 règlent toujours le zoom, et
+  le pourcentage de l'en-tête suit maintenant ces raccourcis.
+
+### Fixed
+
+- Notes : la barre de mise en forme (gras, titres, listes…) reste visible en haut quand on
+  écrit une longue note, au lieu de défiler hors de l'écran.
+
 ## [0.91.1] — 2026-09-28
 
 ### Fixed

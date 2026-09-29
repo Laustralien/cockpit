@@ -9,7 +9,7 @@
 // **CE QUI NE CHANGE PAS.** Le service de terminaux reste le binaire Rust, detache, avec son
 // protocole binaire a lui. Il ne sait pas qui l'affiche et n'a pas a le savoir.
 
-const { app, BrowserWindow, protocol, net, shell, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, Menu, protocol, net, shell, ipcMain, dialog } = require('electron')
 const path = require('node:path')
 const { pathToFileURL } = require('node:url')
 const { spawn } = require('node:child_process')
@@ -519,6 +519,16 @@ app.whenReady().then(() => {
       `bac a sable ${process.argv.includes('--no-sandbox') ? 'DESACTIVE' : 'actif'}`
   )
   servirInterface()
+  // **PAS DE MENU D'ELECTRON.** Celui d'office (File, Edit, View, Window, Help) prenait une
+  // ligne en haut de la fenetre sans rien apporter, et son zoom contournait celui de
+  // l'interface : le pourcentage de l'en-tete ne suivait plus. Le zoom au clavier est repris
+  // par l'interface (App.svelte). Sous macOS le menu reste, reduit : c'est lui qui porte
+  // Cmd+C / Cmd+V dans les champs, et la barre de menus y est hors de la fenetre.
+  Menu.setApplicationMenu(
+    process.platform === 'darwin'
+      ? Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }])
+      : null
+  )
   ouvrirLaFenetre()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) ouvrirLaFenetre()

@@ -161,36 +161,36 @@ echo "── la visite"
 lancer
 image taches            # le tableau de bord : les taches de tous les projets
 
-clic 398 187 3          # « Monitoring », dans la colonne du tableau de bord
+clic 398 159 3          # « Monitoring », dans la colonne du tableau de bord
 # Sans ce clic, l'ecran affiche « cliquez sur Instantane ou Direct » : la legende promettrait
 # des chiffres au-dessus d'une carte vide.
-clic 1140 111 5         # « Instantane » : les mesures apparaissent
+clic 1140 83 5         # « Instantane » : les mesures apparaissent
 image monitoring
 
-clic 104 168 3          # le projet, dans la barre laterale
+clic 104 140 3          # le projet, dans la barre laterale
 # La colonne Notes est un arbre : sans clic sur une note, elle affiche « selectionnez un
 # fichier », et la legende parlerait de notes qu'on ne voit pas.
-clic 360 232 3          # la premiere note
+clic 360 204 3          # la premiere note
 image workspace         # notes et taches du projet, cote a cote
 
 onglet terminal
-clic 790 512 10         # « ouvrir un terminal »
-clic 800 400 1          # le focus dedans
+clic 790 484 10         # « ouvrir un terminal »
+clic 800 372 1          # le focus dedans
 frappe "git status --short --branch"
 frappe "git log --oneline -3" 3
 image terminal
 
 onglet git 4
-clic 392 304 4          # le fichier modifie, pour afficher son diff
+clic 392 276 4          # le fichier modifie, pour afficher son diff
 image git
 
 onglet fichiers 4
-clic 360 273 2          # deplier `src`
-clic 391 296 4          # le premier fichier dedans
+clic 360 245 2          # deplier `src`
+clic 391 268 4          # le premier fichier dedans
 image fichiers
 
-clic 1155 28 3          # la roue crantee : les parametres
-clic 372 269 4          # l'entree « IA »
+clic 1155 0 3          # la roue crantee : les parametres
+clic 372 241 4          # l'entree « IA »
 image ia                # n'importe quel agent, au choix
 
 echo "── assemblage"

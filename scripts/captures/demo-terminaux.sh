@@ -109,11 +109,11 @@ python3 "$OUTILS" preparer "$COCKPIT_DB" "$TRAVAIL/home/projets" "$LANGUE"
 
 echo "── mise en place : un terminal, et un compteur qui tourne"
 lancer
-clic 104 168 3        # le projet, dans la barre laterale
+clic 104 140 3        # le projet, dans la barre laterale
 python3 "$OUTILS" onglet terminal
 sleep 4
-clic 790 512 10       # « ouvrir un terminal »
-clic 800 400 1        # le focus dedans
+clic 790 484 10       # « ouvrir un terminal »
+clic 800 372 1        # le focus dedans
 frappe "./compteur.sh" 6
 
 echo "── phase 1 : ca tourne, fenetre ouverte"
@@ -141,7 +141,7 @@ image relancee
 #
 # Ne PAS viser le projet a la place : la section TERMINAUX pousse la liste des projets vers le
 # bas, et les coordonnees du debut de la sequence ne designent plus la meme ligne.
-clic 104 106 4        # le terminal, dans la barre laterale
+clic 104 78 4        # le terminal, dans la barre laterale
 sleep 2
 echo "── ce que le service a garde pendant l'absence :"
 python3 "$OUTILS" arreter "COCKPIT_HARNAIS=$JETON" --lister-service || true

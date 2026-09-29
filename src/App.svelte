@@ -14,7 +14,7 @@
   import { loadProjects } from "./lib/stores/projects";
   import { langueImposee } from "./lib/api/workspace";
   import { setLocale } from "./lib/i18n";
-  import { zoomIn, zoomOut } from "./lib/stores/ui";
+  import { zoomIn, zoomOut, zoomReset } from "./lib/stores/ui";
   import { startUpdateWatcher } from "./lib/stores/update";
   import { startTodoDueWatcher } from "./lib/stores/todoAlerts";
   import { startSystemAlerts } from "./lib/stores/systemAlerts";
@@ -38,6 +38,18 @@
     lastZoomStep = now;
     if (e.deltaY < 0) zoomIn();
     else zoomOut();
+  }
+
+  /// Ctrl + / Ctrl - / Ctrl 0 : les raccourcis que portait le menu d'Electron, retire. Ils
+  /// passent maintenant par le zoom de l'interface, donc l'en-tete affiche le bon palier.
+  function onKeydown(e: KeyboardEvent) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    if (e.key === "=" || e.key === "+") zoomIn();
+    else if (e.key === "-") zoomOut();
+    else if (e.key === "0") zoomReset();
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
   }
 
   void loadReportingSettings();
@@ -107,8 +119,10 @@
     const stopSystemAlerts = startSystemAlerts();
     const stopSynchro = demarrerLaSynchro();
     window.addEventListener("wheel", onWheel, { capture: true, passive: false });
+    window.addEventListener("keydown", onKeydown, { capture: true });
     return () => {
       window.removeEventListener("wheel", onWheel, { capture: true });
+      window.removeEventListener("keydown", onKeydown, { capture: true });
       stopUpdateWatcher();
       stopTodoDueWatcher();
       stopSystemAlerts();
