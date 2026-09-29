@@ -19,6 +19,9 @@ le script de release.
   affiche le nom du profil courant ou te laisse en choisir un autre ; la palette (Ctrl+K) offre
   un raccourci « Nouvelle fenêtre… ». Revenir sur un profil déjà ouvert ramène sa fenêtre au
   premier plan.
+- Jira : chaque ticket montre ses branches locales, et un bouton « + Branche » crée celle
+  qui manque. Une carte « Branches sans ticket » liste les branches qui ne citent aucun
+  ticket : « Créer un ticket » le crée et renomme la branche d'après le gabarit du projet.
 
 ## [0.91.1] — 2026-09-28
 
