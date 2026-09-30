@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.93.0] — 2026-09-30
+
 ### Added
 
 - Paramètres → Général : une case permet de couper la transmission des erreurs à l'équipe de
