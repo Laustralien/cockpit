@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.95.0] — 2026-09-30
+
 ### Changed
 
 - Plugins : Cockpit ne connaît plus de marketplace particulière. Toute marketplace que Claude
