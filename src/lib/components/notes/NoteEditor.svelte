@@ -603,23 +603,6 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
       <span class="file-title" ondblclick={() => (renaming = true)}>{file.name}</span>
     {/if}
-    <div class="toolbar">
-      <button class="tb" onclick={() => format("bold")} title={$trad("note.bold")}><b>G</b></button>
-      <button class="tb" onclick={() => format("italic")} title={$trad("note.italic")}><i>I</i></button>
-      <button class="tb" onclick={() => format("strikeThrough")} title={$trad("note.strike")}><s>S</s></button>
-      <span class="tb-sep"></span>
-      <button class="tb" onclick={texteNormal} title={$trad("note.normalText")}>¶</button>
-      <button class="tb" onclick={() => insertHeading(1)} title={$trad("note.h1")}>H1</button>
-      <button class="tb" onclick={() => insertHeading(2)} title={$trad("note.h2")}>H2</button>
-      <button class="tb" onclick={() => insertHeading(3)} title={$trad("note.h3")}>H3</button>
-      <span class="tb-sep"></span>
-      <button class="tb" onclick={() => format("insertUnorderedList")} title={$trad("note.list")}>•</button>
-      <button class="tb" onclick={() => format("insertOrderedList")} title={$trad("note.orderedList")}>1.</button>
-      <button class="tb" onclick={() => format("formatBlock", "blockquote")} title={$trad("note.quote")}>❝</button>
-      <span class="tb-sep"></span>
-      <button class="tb" onclick={basculerBlocDeCode} title={$trad("note.codeBlock")}>&lt;/&gt;</button>
-      <button class="tb" onclick={insererUnLien} title={$trad("note.link")}>🔗</button>
-    </div>
     <!-- Le bouton reste a la MEME place dans les deux etats : c'est ce qui garantit qu'on
          retrouve le chemin du retour la ou on a replie. -->
     <ReadingToggle onToggle={basculerLecture} />
@@ -640,6 +623,26 @@
     onkeydown={onEditorKeydown}
     onclick={onEditorClick}
   ></div>
+  <!-- **LA BARRE DE MISE EN FORME EST EN BAS, ET ELLE Y RESTE.** En haut, une longue note la
+     faisait sortir de l'ecran ; collee en haut, elle restait loin de la ligne qu'on ecrit.
+     En bas, elle est la ou l'on tape (demande du 2026-09-30). -->
+  <div class="toolbar">
+    <button class="tb" onclick={() => format("bold")} title={$trad("note.bold")}><b>G</b></button>
+    <button class="tb" onclick={() => format("italic")} title={$trad("note.italic")}><i>I</i></button>
+    <button class="tb" onclick={() => format("strikeThrough")} title={$trad("note.strike")}><s>S</s></button>
+    <span class="tb-sep"></span>
+    <button class="tb" onclick={texteNormal} title={$trad("note.normalText")}>¶</button>
+    <button class="tb" onclick={() => insertHeading(1)} title={$trad("note.h1")}>H1</button>
+    <button class="tb" onclick={() => insertHeading(2)} title={$trad("note.h2")}>H2</button>
+    <button class="tb" onclick={() => insertHeading(3)} title={$trad("note.h3")}>H3</button>
+    <span class="tb-sep"></span>
+    <button class="tb" onclick={() => format("insertUnorderedList")} title={$trad("note.list")}>•</button>
+    <button class="tb" onclick={() => format("insertOrderedList")} title={$trad("note.orderedList")}>1.</button>
+    <button class="tb" onclick={() => format("formatBlock", "blockquote")} title={$trad("note.quote")}>❝</button>
+    <span class="tb-sep"></span>
+    <button class="tb" onclick={basculerBlocDeCode} title={$trad("note.codeBlock")}>&lt;/&gt;</button>
+    <button class="tb" onclick={insererUnLien} title={$trad("note.link")}>🔗</button>
+  </div>
 </div>
 
 <style>
@@ -653,18 +656,16 @@
      `:global` est obligatoire — le contenu vient de `innerHTML`, donc Svelte ne voit pas
      ces balises et eliminerait la regle. */
   .editor.liens-actifs :global(a) { cursor: pointer; text-decoration: underline; }
-  /* **LA BARRE D'OUTILS SUIT L'ECRITURE.** Une longue note fait defiler la PAGE, pas la zone
-     de texte : la barre sortait de l'ecran, et il fallait remonter chercher le gras (signale
-     le 2026-09-29). Collante en haut, elle reste a portee ou que l'on ecrive. Fond OPAQUE,
-     sinon le texte qui defile dessous transparait (regle des surfaces flottantes). */
-  .editor-header {
-    display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;
-    position: sticky; top: 0; z-index: 2; background: var(--surface-base);
-    padding: 0.35rem 0;
-  }
+  .editor-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
   .file-title { font-weight: 600; font-size: 0.9rem; }
 
-  .toolbar { display: flex; align-items: center; gap: 0.15rem; margin-left: auto; flex-wrap: wrap; }
+  /* Collee en BAS de la vue : une longue note fait defiler la page, et la barre suit l'endroit
+     ou l'on ecrit. Fond OPAQUE (regle des surfaces flottantes) : le texte passe dessous. */
+  .toolbar {
+    display: flex; align-items: center; gap: 0.15rem; flex-wrap: wrap;
+    position: sticky; bottom: 0; z-index: 2; background: var(--surface-base);
+    padding: 0.4rem 0; margin-top: 0.4rem;
+  }
   .tb {
     background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-secondary);
     padding: 0.2rem 0.45rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem;

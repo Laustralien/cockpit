@@ -24,7 +24,7 @@
   import { forgetProjectTab } from "../../stores/ui";
   import { updateState, checkForUpdate } from "../../stores/update";
   import { trad, locale, setLocale, LOCALES, type Locale } from "../../i18n";
-  import { signalerErreur } from "../../stores/errors";
+  import { signalerErreur, reportingConsent, setReportingConsent } from "../../stores/errors";
   import { notify } from "../../stores/toast";
   import type { DbProject } from "../../types";
   import { onMount, onDestroy } from "svelte";
@@ -411,6 +411,26 @@
               <span class="feedback">{$trad("settings.app.updateAvailable", { version: $updateState.newVersion })}</span>
             {/if}
           </div>
+        </section>
+
+        <!-- **LA TRANSMISSION DES ERREURS SE COUPE ICI.** Retiree le 2026-08-26, remise le
+             2026-09-30 pour un partage hors de l'equipe : des inconnus doivent pouvoir dire non.
+             C'est le BACKEND qui refuse l'envoi quand la case est decochee (`report_error`),
+             pas l'interface ; le journal local, lui, s'ecrit toujours. -->
+        <section class="card">
+          <div class="card-head">
+            <h3>{$trad("settings.transmission.titre")}</h3>
+            <p>{$trad("settings.transmission.detail")}</p>
+          </div>
+          <label class="check-row">
+            <input
+              type="checkbox"
+              checked={$reportingConsent === "on"}
+              onchange={(e) => void setReportingConsent((e.currentTarget as HTMLInputElement).checked)
+                .catch((err) => notify(String(err)))}
+            />
+            <span>{$trad("settings.transmission.case")}</span>
+          </label>
         </section>
 
         <section class="card">
@@ -803,6 +823,7 @@
     background: var(--bg-primary); color: var(--text-primary); font-size: 0.88rem;
   }
   .actions-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; }
+  .check-row { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
 
   /* Boutons */
   .btn {

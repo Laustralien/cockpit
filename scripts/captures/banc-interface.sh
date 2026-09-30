@@ -261,6 +261,15 @@ SQL
   exit 0
 fi
 
+# **LA TRANSMISSION DES ERREURS SE COUPE DANS PARAMETRES -> GENERAL.**
+if [ -n "${COCKPIT_BANC_TRANSMISSION:-}" ]; then
+  clic 900 472 1
+  clic 1275 27 3          # l engrenage
+  python3 "$OUTILS" defiler 900 500 4; sleep 1
+  image transmission-1-reglages
+  exit 0
+fi
+
 if [ -n "${COCKPIT_BANC_NS:-}" ]; then
   # **LE NAMESPACE CHOISI DOIT REVENIR.** Signale par le mainteneur : il choisit celui de son
   # projet, part, revient, et retrouve celui du contexte. On pose le choix EN BASE, comme s'il

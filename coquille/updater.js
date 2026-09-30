@@ -55,7 +55,10 @@ function suivreLeTelechargement(pousser) {
       annonce = true
       pousser({ event: 'Started', data: { contentLength: p.total } })
     }
-    pousser({ event: 'Progress', data: { chunkLength: p.delta } })
+    // `transferred` rapporte a SON `total` fait foi. Additionner les `delta` depassait la taille
+    // annoncee : en telechargement de la seule difference, plusieurs compteurs d'electron-updater
+    // parlent chacun avec leur propre total (la barre montait a 300 %).
+    pousser({ event: 'Progress', data: { chunkLength: p.delta, transferred: p.transferred, total: p.total } })
   }
   const surFin = () => pousser({ event: 'Finished' })
   updater().on('download-progress', surProgres)

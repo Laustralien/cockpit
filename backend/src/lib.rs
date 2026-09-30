@@ -1671,7 +1671,7 @@ async fn report_error(
     // faite pour traverser un await.
     let (autorise, utilisateur) = {
         let db = &state.db;
-        let autorise = db.get_setting(report::CONSENT_KEY).as_deref() == Some("on");
+        let autorise = envoi_des_erreurs_autorise(db);
         let utilisateur = db
             .get_setting(report::USER_KEY)
             .filter(|v| !v.trim().is_empty())
@@ -1688,6 +1688,27 @@ async fn report_error(
         report::send(&scope, &message, &utilisateur).await;
     }
     Ok(())
+}
+
+/// **RIEN NE PART SANS UN « on » EXPLICITE** : la case de Parametres -> General ecrit ce
+/// reglage, et c'est ICI, cote backend, que le refus s'applique. Absent, vide ou autre : non.
+fn envoi_des_erreurs_autorise(db: &storage::db::Database) -> bool {
+    db.get_setting(report::CONSENT_KEY).as_deref() == Some("on")
+}
+
+#[cfg(test)]
+mod tests_transmission {
+    use super::*;
+
+    #[test]
+    fn decocher_la_case_coupe_l_envoi() {
+        let db = storage::db::Database::new(":memory:").unwrap();
+        assert!(!envoi_des_erreurs_autorise(&db), "sans reglage, rien ne part");
+        db.set_setting(report::CONSENT_KEY, "on").unwrap();
+        assert!(envoi_des_erreurs_autorise(&db));
+        db.set_setting(report::CONSENT_KEY, "off").unwrap();
+        assert!(!envoi_des_erreurs_autorise(&db), "la case decochee coupe l'envoi");
+    }
 }
 
 /// Nom par defaut a cote des erreurs : le compte du systeme, faute de mieux.

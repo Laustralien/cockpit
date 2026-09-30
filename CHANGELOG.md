@@ -12,6 +12,19 @@ le script de release.
 
 ## [Unreleased]
 
+### Added
+
+- Paramètres → Général : une case permet de couper la transmission des erreurs à l'équipe de
+  développement. Ce qui est transmis y est détaillé. Le journal local reste sur ta machine.
+
+### Changed
+
+- Notes : la barre de mise en forme est en bas de la note, et y reste pendant qu'on écrit.
+
+### Fixed
+
+- Mise à jour : la barre de progression du téléchargement ne dépasse plus 100 %.
+
 ## [0.92.0] — 2026-09-29
 
 ### Changed
