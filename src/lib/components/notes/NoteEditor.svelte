@@ -613,6 +613,7 @@
        d'equivalent clavier utile ici. -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <div class="corps">
   <div
     bind:this={editorEl}
     class="editor"
@@ -623,9 +624,10 @@
     onkeydown={onEditorKeydown}
     onclick={onEditorClick}
   ></div>
-  <!-- **LA BARRE DE MISE EN FORME EST EN BAS, ET ELLE Y RESTE.** En haut, une longue note la
-     faisait sortir de l'ecran ; collee en haut, elle restait loin de la ligne qu'on ecrit.
-     En bas, elle est la ou l'on tape (demande du 2026-09-30). -->
+  <!-- **LA BARRE DE MISE EN FORME EST UNE COLONNE A DROITE DE LA NOTE, ET ELLE SUIT LE
+       DEFILEMENT.** En haut elle sortait de l'ecran sur une longue note ; posee en bas, elle
+       mangeait la feuille. Sur le cote, elle reste a portee sans rien couvrir (demande du
+       2026-09-30). -->
   <div class="toolbar">
     <button class="tb" onclick={() => format("bold")} title={$trad("note.bold")}><b>G</b></button>
     <button class="tb" onclick={() => format("italic")} title={$trad("note.italic")}><i>I</i></button>
@@ -643,6 +645,7 @@
     <button class="tb" onclick={basculerBlocDeCode} title={$trad("note.codeBlock")}>&lt;/&gt;</button>
     <button class="tb" onclick={insererUnLien} title={$trad("note.link")}>🔗</button>
   </div>
+  </div>
 </div>
 
 <style>
@@ -659,12 +662,15 @@
   .editor-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
   .file-title { font-weight: 600; font-size: 0.9rem; }
 
-  /* Collee en BAS de la vue : une longue note fait defiler la page, et la barre suit l'endroit
-     ou l'on ecrit. Fond OPAQUE (regle des surfaces flottantes) : le texte passe dessous. */
+  .corps { flex: 1; display: flex; gap: 0.5rem; align-items: stretch; min-height: 0; }
+  .corps .editor { flex: 1; min-width: 0; }
+  /* Colonne a droite, collee en haut de la vue : une longue note fait defiler la PAGE, et la
+     barre suit. Fond OPAQUE (regle des surfaces flottantes). */
   .toolbar {
-    display: flex; align-items: center; gap: 0.15rem; flex-wrap: wrap;
-    position: sticky; bottom: 0; z-index: 2; background: var(--surface-base);
-    padding: 0.4rem 0; margin-top: 0.4rem;
+    display: flex; flex-direction: column; align-items: stretch; gap: 0.2rem;
+    position: sticky; top: 0.5rem; align-self: flex-start; z-index: 2;
+    background: var(--surface-base); padding: 0.3rem;
+    border: 1px solid var(--border-color); border-radius: 6px;
   }
   .tb {
     background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-secondary);
@@ -672,7 +678,7 @@
     line-height: 1; min-width: 24px; text-align: center;
   }
   .tb:hover { background: var(--accent); color: white; border-color: var(--accent); }
-  .tb-sep { width: 1px; height: 16px; background: var(--border-color); margin: 0 0.2rem; }
+  .tb-sep { height: 1px; width: 100%; background: var(--border-color); margin: 0.15rem 0; }
 
   .editor {
     flex: 1; overflow-y: auto; padding: 0.75rem; border: 1px solid var(--border-color);

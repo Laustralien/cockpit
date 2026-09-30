@@ -12,6 +12,11 @@ le script de release.
 
 ## [Unreleased]
 
+### Changed
+
+- Notes : la barre de mise en forme est une colonne à droite de la note. Elle suit le
+  défilement et ne couvre plus le texte.
+
 ## [0.93.1] — 2026-09-30
 
 ### Fixed
