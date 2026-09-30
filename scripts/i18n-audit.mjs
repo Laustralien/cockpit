@@ -25,7 +25,7 @@ const SKIP_FILES = [/src\/lib\/i18n\//, /src\/main\.ts$/];
 const ALLOW = new Set(["px", "ms", "fr", "en", "id", "px)", "%", "OK",
   "docker-compose.yml", "docker compose", "Ctrl+S", "Aa",
   // Sigles et valeurs de configuration, identiques dans les deux langues.
-  "CPU", "RSS", "PID", "auto", "in-process", "tmux", "sk-...", "gpt-4o", "ccm-xxx",
+  "CPU", "RSS", "PID", "auto", "in-process", "tmux", "sk-...", "gpt-4o", "mon-plugin",
   "Ctrl", "Start", "Stop", "Restart", "Pull", "Push", "⬇ Pull", "⬆ Push", "main",
   "⎇ main ▾", "running", "stopped", "running · 8080→80",
   // Donnees d'exemple des maquettes de la documentation : noms de projets fictifs,

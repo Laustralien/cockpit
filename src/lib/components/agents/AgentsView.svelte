@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focaliser } from "../../actions/focaliser";
   import { onMount } from "svelte";
   import {
     listMarketplaces,
@@ -255,17 +256,20 @@
 
   async function createNewPlugin() {
     const name = newPluginName.trim();
-    if (!name) return;
-    if (!/^ccm-[a-z0-9][a-z0-9-]*$/.test(name)) {
+    if (!name || !selectedMarketplace) return;
+    // Un nom en kebab-case, sans prefixe impose : c'est la forme qu'attend Claude Code.
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
       errorMsg = $trad("agents.invalidPluginName");
       return;
     }
     try {
-      await createPlugin(name, newPluginDesc.trim());
+      await createPlugin(selectedMarketplace, name, newPluginDesc.trim());
       newPluginOpen = false;
       newPluginName = "";
       newPluginDesc = "";
-      await reloadPlugins();
+      // La liste des marketplaces porte le COMPTE de plugins : sans la relire, le selecteur
+      // affichait encore « 0 plugins » a cote du plugin qu'on venait de creer.
+      await reloadMarketplaces();
       await selectPlugin(name);
     } catch (e) {
       signalerErreur("agents.createNewPlugin", String(e));
@@ -395,8 +399,11 @@ You are the **${name}** agent.
         </div>
         {#if newPluginOpen && isEditable}
           <div class="form-block">
+            <!-- Le focus va au nom : sans lui, taper puis Entree actionnait le bouton « + »
+                 encore focalise, et le formulaire se refermait. -->
             <input
-              placeholder="ccm-xxx"
+              placeholder="mon-plugin"
+              use:focaliser
               bind:value={newPluginName}
               onkeydown={(e) => {
                 if (e.key === "Enter") createNewPlugin();

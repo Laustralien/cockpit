@@ -1408,11 +1408,6 @@ pub async fn appeler(
             ).await?))
         })
         .await,
-        "get_marketplace_path" => typer(async {
-            valeur(serde_json::to_value(crate::get_marketplace_path(
-            )?))
-        })
-        .await,
         "list_marketplaces" => typer(async {
             valeur(serde_json::to_value(crate::list_marketplaces(
             )?))
@@ -1484,6 +1479,8 @@ pub async fn appeler(
         .await,
         "create_plugin" => typer(async {
             valeur(serde_json::to_value(crate::create_plugin(
+                serde_json::from_value(prendre(a, "marketplaceId", "marketplace_id"))
+                    .map_err(|e| format!("argument marketplaceId : {e}"))?,
                 serde_json::from_value(prendre(a, "name", "name"))
                     .map_err(|e| format!("argument name : {e}"))?,
                 serde_json::from_value(prendre(a, "description", "description"))

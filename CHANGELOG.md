@@ -12,6 +12,19 @@ le script de release.
 
 ## [Unreleased]
 
+### Changed
+
+- Plugins : Cockpit ne connaît plus de marketplace particulière. Toute marketplace que Claude
+  Code a enregistrée depuis un dossier local est modifiable dans Paramètres → IA → Claude →
+  Bibliothèque, et un plugin peut porter n'importe quel nom en minuscules et tirets.
+
+### Fixed
+
+- Plugins : créer, renommer ou supprimer un plugin ne retire plus de `marketplace.json` les
+  champs que Cockpit ne connaît pas, dont `owner`, que Claude Code exige.
+- Plugins : le champ du nom prend le focus à l'ouverture du formulaire ; taper puis Entrée ne
+  referme plus le formulaire. Le nombre de plugins se met à jour après une création.
+
 ## [0.94.0] — 2026-09-30
 
 ### Changed

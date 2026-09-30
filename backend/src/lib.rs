@@ -1974,11 +1974,6 @@ async fn git_delete_branch(project_path: String, name: String, force: bool) -> R
 // --- Tauri Commands: Agents marketplace (multi-marketplace) ---
 
 #[commande]
-fn get_marketplace_path() -> Result<String, String> {
-    Ok(agents::ccm_marketplace_path()?.to_string_lossy().to_string())
-}
-
-#[commande]
 fn list_marketplaces() -> Result<Vec<agents::MarketplaceLocation>, String> {
     agents::list_marketplaces()
 }
@@ -2024,8 +2019,8 @@ fn rename_agent(
 }
 
 #[commande]
-fn create_plugin(name: String, description: String) -> Result<(), String> {
-    agents::create_plugin(&name, &description)
+fn create_plugin(marketplace_id: String, name: String, description: String) -> Result<(), String> {
+    agents::create_plugin(&marketplace_id, &name, &description)
 }
 
 #[commande]

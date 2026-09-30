@@ -2,8 +2,9 @@
 //!
 //! Marketplaces supportes :
 //!
-//! - **Local editable** : le repo CCM dans `~/Documents/workspace/ccm-claude-marketplace/`
-//!   (override via `CCM_MARKETPLACE_PATH`). CRUD complet possible.
+//! - **Dossier local, modifiable** : toute marketplace que Claude Code a enregistree comme un
+//!   DOSSIER (`claude plugin marketplace add <dossier>`), lue dans
+//!   `~/.claude/plugins/known_marketplaces.json`. CRUD complet possible.
 //! - **Cache Claude Code** : `~/.claude/plugins/cache/<marketplace-id>/<plugin>/<version>/`.
 //!   Lecture seule (ces fichiers sont gere par Claude Code lui-meme).
 //!
@@ -68,40 +69,85 @@ struct PluginManifest {
     description: Option<String>,
 }
 
+/// **CE FICHIER APPARTIENT A CLAUDE CODE : ON NE REECRIT QUE CE QU'ON CHANGE.** La premiere
+/// version ne gardait que les champs qu'elle connaissait : ajouter un plugin effacait `owner`,
+/// que Claude Code exige, et posait `"description": null`. Tout ce qui n'est pas decrit ici
+/// voyage dans `autres`, et un champ absent n'est pas ecrit (vu au banc le 2026-09-30).
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MarketplaceManifest {
     pub name: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub plugins: Vec<MarketplacePluginEntry>,
+    #[serde(flatten)]
+    pub autres: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MarketplacePluginEntry {
     pub name: String,
-    pub source: String,
-    #[serde(default)]
+    /// Un chemin (`"./plugins/x"`) OU un objet (`{"source": "github", ...}`) : les deux formes
+    /// existent, et refuser la seconde bloquait toute ecriture dans la marketplace.
+    pub source: serde_json::Value,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
+    #[serde(flatten)]
+    pub autres: serde_json::Map<String, serde_json::Value>,
 }
 
 // ---------- Constantes ----------
 
-pub const CCM_MARKETPLACE_ID: &str = "ccm-claude-marketplace";
+/// **LES MARKETPLACES MODIFIABLES SONT CELLES QUE CLAUDE CODE CONNAIT COMME DOSSIERS.**
+/// Jusqu'au 2026-09-30, une seule marketplace etait modifiable, celle d'UNE entreprise, a un
+/// chemin ecrit en dur, et tout plugin cree devait porter son prefixe : chez n'importe qui
+/// d'autre, le bouton « Nouveau plugin » refusait les noms, ou creait un dossier inutile.
+/// On lit donc `known_marketplaces.json`, que Claude Code tient lui-meme : une entree dont la
+/// source est un dossier (`"source": "directory"`) est modifiable, les autres sont en
+/// lecture seule. **L'interface envoie l'IDENTIFIANT, jamais un chemin** : le dossier vient de
+/// ce fichier, sinon cet ecran pourrait ecrire n'importe ou sur le disque.
+pub(crate) fn marketplaces_locales_depuis(brut: &str) -> Vec<(String, PathBuf)> {
+    let Ok(serde_json::Value::Object(tout)) = serde_json::from_str::<serde_json::Value>(brut) else {
+        return Vec::new();
+    };
+    let mut out: Vec<(String, PathBuf)> = tout
+        .iter()
+        .filter_map(|(id, v)| {
+            let source = v.get("source")?;
+            if source.get("source")?.as_str()? != "directory" {
+                return None;
+            }
+            let chemin = source.get("path")?.as_str()?;
+            validate_name(id).ok()?;
+            Some((id.clone(), PathBuf::from(chemin)))
+        })
+        .collect();
+    out.sort();
+    out
+}
 
-/// Ces quatre fonctions rendent un `Result` et non un `PathBuf` : le repli `"/root"`
-/// qu'elles portaient avant designait le dossier d'un AUTRE utilisateur (ou rien du tout
-/// sous Windows, qui n'a pas de `HOME`), donc un marketplace vide et une liste d'agents
-/// muette. Une ecriture y aurait en plus depose des fichiers au hasard. Le dossier
-/// personnel est resolu par `crate::chemins`, seul endroit qui connait `USERPROFILE`.
-pub fn ccm_marketplace_path() -> Result<PathBuf, String> {
-    if let Ok(p) = std::env::var("CCM_MARKETPLACE_PATH") {
-        return Ok(PathBuf::from(p));
-    }
-    Ok(home_path()?.join("Documents/workspace/ccm-claude-marketplace"))
+fn marketplaces_locales() -> Vec<(String, PathBuf)> {
+    let Ok(chemin) = home_path().map(|h| h.join(".claude/plugins/known_marketplaces.json")) else {
+        return Vec::new();
+    };
+    std::fs::read_to_string(chemin)
+        .map(|brut| marketplaces_locales_depuis(&brut))
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|(_, p)| p.is_dir())
+        .collect()
+}
+
+/// Le dossier d'une marketplace MODIFIABLE, ou un refus clair si elle ne l'est pas.
+fn racine_modifiable(marketplace_id: &str) -> Result<PathBuf, String> {
+    marketplaces_locales()
+        .into_iter()
+        .find(|(id, _)| id == marketplace_id)
+        .map(|(_, p)| p)
+        .ok_or_else(|| format!("marketplace '{marketplace_id}' en lecture seule (gérée par Claude Code)"))
 }
 
 fn home_path() -> Result<PathBuf, String> {
@@ -131,8 +177,8 @@ fn validate_name(name: &str) -> Result<(), String> {
 /// Retourne le chemin du dossier racine d'un plugin (ou None s'il n'existe pas).
 fn plugin_root(marketplace_id: &str, plugin: &str) -> Option<PathBuf> {
     validate_name(plugin).ok()?;
-    if marketplace_id == CCM_MARKETPLACE_ID {
-        let p = ccm_marketplace_path().ok()?.join("plugins").join(plugin);
+    if let Ok(racine) = racine_modifiable(marketplace_id) {
+        let p = racine.join("plugins").join(plugin);
         return if p.exists() { Some(p) } else { None };
     }
     // Cache Claude Code
@@ -159,17 +205,16 @@ fn plugin_agents_dir(marketplace_id: &str, plugin: &str) -> Option<PathBuf> {
 pub fn list_marketplaces() -> Result<Vec<MarketplaceLocation>, String> {
     let mut out = Vec::new();
 
-    // 1. CCM marketplace (local, editable)
-    let ccm = ccm_marketplace_path()?;
-    if ccm.exists() {
-        let count = count_plugins_in_dir(&ccm.join("plugins"));
+    // 1. Les marketplaces en dossier local, modifiables
+    let locales = marketplaces_locales();
+    for (id, racine) in &locales {
         out.push(MarketplaceLocation {
-            id: CCM_MARKETPLACE_ID.to_string(),
-            display_name: "CCM Claude Marketplace".to_string(),
-            path: ccm.to_string_lossy().to_string(),
+            id: id.clone(),
+            display_name: id.clone(),
+            path: racine.to_string_lossy().to_string(),
             source_type: "directory".to_string(),
             editable: true,
-            plugins_count: count,
+            plugins_count: count_plugins_in_dir(&racine.join("plugins")),
         });
     }
 
@@ -182,8 +227,8 @@ pub fn list_marketplaces() -> Result<Vec<MarketplaceLocation>, String> {
                     continue;
                 }
                 let id = entry.file_name().to_string_lossy().to_string();
-                if id == CCM_MARKETPLACE_ID {
-                    continue; // already added via local path
+                if locales.iter().any(|(l, _)| *l == id) {
+                    continue; // deja listee comme dossier local
                 }
                 let count = count_cached_plugins(&entry.path());
                 out.push(MarketplaceLocation {
@@ -199,7 +244,7 @@ pub fn list_marketplaces() -> Result<Vec<MarketplaceLocation>, String> {
     }
 
     out.sort_by(|a, b| {
-        // CCM en premier, puis alphabetique
+        // Les modifiables en premier, puis alphabetique
         if a.editable != b.editable {
             b.editable.cmp(&a.editable)
         } else {
@@ -233,14 +278,14 @@ fn count_cached_plugins(marketplace_cache_dir: &Path) -> usize {
 // ---------- Plugins / agents listing ----------
 
 pub fn list_plugins_in(marketplace_id: &str) -> Result<Vec<PluginInfo>, String> {
-    if marketplace_id == CCM_MARKETPLACE_ID {
-        return list_ccm_plugins();
+    if let Ok(racine) = racine_modifiable(marketplace_id) {
+        return list_local_plugins(marketplace_id, &racine);
     }
     list_cached_plugins(marketplace_id)
 }
 
-fn list_ccm_plugins() -> Result<Vec<PluginInfo>, String> {
-    let dir = ccm_marketplace_path()?.join("plugins");
+fn list_local_plugins(marketplace_id: &str, racine: &Path) -> Result<Vec<PluginInfo>, String> {
+    let dir = racine.join("plugins");
     if !dir.exists() {
         return Ok(Vec::new());
     }
@@ -252,7 +297,7 @@ fn list_ccm_plugins() -> Result<Vec<PluginInfo>, String> {
         }
         let plugin_path = entry.path();
         let info = read_plugin_metadata(
-            CCM_MARKETPLACE_ID,
+            marketplace_id,
             &entry.file_name().to_string_lossy(),
             &plugin_path,
             true,
@@ -422,16 +467,6 @@ pub fn read_agent(marketplace_id: &str, plugin: &str, name: &str) -> Result<Stri
     std::fs::read_to_string(&path).map_err(|e| format!("read {}: {}", path.display(), e))
 }
 
-fn ensure_editable(marketplace_id: &str) -> Result<(), String> {
-    if marketplace_id == CCM_MARKETPLACE_ID {
-        Ok(())
-    } else {
-        Err(format!(
-            "marketplace '{}' en lecture seule (cache Claude Code)",
-            marketplace_id
-        ))
-    }
-}
 
 pub fn save_agent(
     marketplace_id: &str,
@@ -439,10 +474,10 @@ pub fn save_agent(
     name: &str,
     content: &str,
 ) -> Result<(), String> {
-    ensure_editable(marketplace_id)?;
+    let racine = racine_modifiable(marketplace_id)?;
     validate_name(plugin)?;
     validate_name(name)?;
-    let dir = ccm_marketplace_path()?
+    let dir = racine
         .join("plugins")
         .join(plugin)
         .join("agents");
@@ -452,10 +487,10 @@ pub fn save_agent(
 }
 
 pub fn delete_agent(marketplace_id: &str, plugin: &str, name: &str) -> Result<(), String> {
-    ensure_editable(marketplace_id)?;
+    let racine = racine_modifiable(marketplace_id)?;
     validate_name(plugin)?;
     validate_name(name)?;
-    let path = ccm_marketplace_path()?
+    let path = racine
         .join("plugins")
         .join(plugin)
         .join("agents")
@@ -472,14 +507,14 @@ pub fn rename_agent(
     old_name: &str,
     new_name: &str,
 ) -> Result<(), String> {
-    ensure_editable(marketplace_id)?;
+    let racine = racine_modifiable(marketplace_id)?;
     validate_name(plugin)?;
     validate_name(old_name)?;
     validate_name(new_name)?;
     if old_name == new_name {
         return Ok(());
     }
-    let dir = ccm_marketplace_path()?
+    let dir = racine
         .join("plugins")
         .join(plugin)
         .join("agents");
@@ -530,9 +565,10 @@ fn replace_frontmatter_name(content: &str, new_name: &str) -> String {
 
 // ---------- Plugin scaffold / rename / delete ----------
 
-pub fn create_plugin(name: &str, description: &str) -> Result<(), String> {
+pub fn create_plugin(marketplace_id: &str, name: &str, description: &str) -> Result<(), String> {
+    let racine = racine_modifiable(marketplace_id)?;
     validate_name(name)?;
-    let dir = ccm_marketplace_path()?.join("plugins").join(name);
+    let dir = racine.join("plugins").join(name);
     if dir.exists() {
         return Err(format!("le plugin '{}' existe deja", name));
     }
@@ -554,12 +590,12 @@ pub fn create_plugin(name: &str, description: &str) -> Result<(), String> {
     );
     std::fs::write(dir.join("README.md"), readme)
         .map_err(|e| format!("write README: {}", e))?;
-    add_plugin_to_manifest(name, description)?;
+    add_plugin_to_manifest(&racine, name, description)?;
     Ok(())
 }
 
-fn add_plugin_to_manifest(plugin_name: &str, description: &str) -> Result<(), String> {
-    let manifest_path = ccm_marketplace_path()?.join(".claude-plugin/marketplace.json");
+fn add_plugin_to_manifest(racine: &Path, plugin_name: &str, description: &str) -> Result<(), String> {
+    let manifest_path = racine.join(".claude-plugin/marketplace.json");
     if !manifest_path.exists() {
         return Err("marketplace.json introuvable".to_string());
     }
@@ -572,10 +608,11 @@ fn add_plugin_to_manifest(plugin_name: &str, description: &str) -> Result<(), St
     }
     manifest.plugins.push(MarketplacePluginEntry {
         name: plugin_name.to_string(),
-        source: format!("./plugins/{}", plugin_name),
-        description: Some(description.to_string()),
+        source: serde_json::Value::String(format!("./plugins/{}", plugin_name)),
+        description: Some(description.to_string()).filter(|d| !d.is_empty()),
         version: Some("0.1.0".to_string()),
         tags: Vec::new(),
+        autres: serde_json::Map::new(),
     });
     let out = serde_json::to_string_pretty(&manifest)
         .map_err(|e| format!("serialize: {}", e))?;
@@ -585,19 +622,19 @@ fn add_plugin_to_manifest(plugin_name: &str, description: &str) -> Result<(), St
 }
 
 pub fn delete_plugin(marketplace_id: &str, name: &str) -> Result<(), String> {
-    ensure_editable(marketplace_id)?;
+    let racine = racine_modifiable(marketplace_id)?;
     validate_name(name)?;
-    let dir = ccm_marketplace_path()?.join("plugins").join(name);
+    let dir = racine.join("plugins").join(name);
     if !dir.exists() {
         return Err(format!("plugin inexistant : {}", name));
     }
     std::fs::remove_dir_all(&dir).map_err(|e| format!("remove plugin: {}", e))?;
-    remove_plugin_from_manifest(name)?;
+    remove_plugin_from_manifest(&racine, name)?;
     Ok(())
 }
 
-fn remove_plugin_from_manifest(plugin_name: &str) -> Result<(), String> {
-    let manifest_path = ccm_marketplace_path()?.join(".claude-plugin/marketplace.json");
+fn remove_plugin_from_manifest(racine: &Path, plugin_name: &str) -> Result<(), String> {
+    let manifest_path = racine.join(".claude-plugin/marketplace.json");
     if !manifest_path.exists() {
         return Ok(());
     }
@@ -622,13 +659,13 @@ pub fn rename_plugin(
     old_name: &str,
     new_name: &str,
 ) -> Result<(), String> {
-    ensure_editable(marketplace_id)?;
+    let racine = racine_modifiable(marketplace_id)?;
     validate_name(old_name)?;
     validate_name(new_name)?;
     if old_name == new_name {
         return Ok(());
     }
-    let base = ccm_marketplace_path()?.join("plugins");
+    let base = racine.join("plugins");
     let old_dir = base.join(old_name);
     let new_dir = base.join(new_name);
     if !old_dir.exists() {
@@ -659,14 +696,14 @@ pub fn rename_plugin(
     }
 
     // Mettre a jour marketplace.json (entry name + source path)
-    let market_manifest = ccm_marketplace_path()?.join(".claude-plugin/marketplace.json");
+    let market_manifest = racine.join(".claude-plugin/marketplace.json");
     if market_manifest.exists() {
         if let Ok(raw) = std::fs::read_to_string(&market_manifest) {
             if let Ok(mut manifest) = serde_json::from_str::<MarketplaceManifest>(&raw) {
                 for entry in &mut manifest.plugins {
                     if entry.name == old_name {
                         entry.name = new_name.to_string();
-                        entry.source = format!("./plugins/{}", new_name);
+                        entry.source = serde_json::Value::String(format!("./plugins/{}", new_name));
                     }
                 }
                 if let Ok(out) = serde_json::to_string_pretty(&manifest) {
@@ -848,4 +885,47 @@ pub fn toggle_plugin_enabled(plugin_key: &str, enabled: bool) -> Result<(), Stri
         }
     }
     write_claude_settings(&settings)
+}
+
+#[cfg(test)]
+mod tests_marketplaces {
+    use super::*;
+
+    #[test]
+    fn seules_les_marketplaces_en_dossier_sont_modifiables() {
+        let brut = r#"{
+          "officielle": {"source": {"source": "github", "repo": "exemple/plugins", "path": "/home/u/.claude/plugins/marketplaces/officielle"}},
+          "equipe": {"source": {"source": "directory", "path": "/srv/marketplace-equipe"}},
+          "../sortie": {"source": {"source": "directory", "path": "/tmp/x"}}
+        }"#;
+        let l = marketplaces_locales_depuis(brut);
+        assert_eq!(l, vec![("equipe".to_string(), PathBuf::from("/srv/marketplace-equipe"))]);
+    }
+
+    #[test]
+    fn reecrire_la_marketplace_garde_ce_qu_on_ne_connait_pas() {
+        let brut = r#"{"name": "equipe", "owner": {"name": "Equipe"},
+          "plugins": [{"name": "a", "source": {"source": "github", "repo": "x/a"}, "category": "outils"}]}"#;
+        let mut m: MarketplaceManifest = serde_json::from_str(brut).unwrap();
+        m.plugins.push(MarketplacePluginEntry {
+            name: "b".into(),
+            source: serde_json::Value::String("./plugins/b".into()),
+            description: None,
+            version: Some("0.1.0".into()),
+            tags: Vec::new(),
+            autres: serde_json::Map::new(),
+        });
+        let relu: serde_json::Value = serde_json::from_str(&serde_json::to_string(&m).unwrap()).unwrap();
+        assert_eq!(relu["owner"]["name"], "Equipe", "owner est exige par Claude Code");
+        assert_eq!(relu["plugins"][0]["source"]["repo"], "x/a");
+        assert_eq!(relu["plugins"][0]["category"], "outils");
+        assert!(relu.get("description").is_none(), "pas de description: null");
+        assert!(relu["plugins"][1].get("description").is_none());
+    }
+
+    #[test]
+    fn un_fichier_illisible_ne_rend_rien() {
+        assert!(marketplaces_locales_depuis("pas du json").is_empty());
+        assert!(marketplaces_locales_depuis("[]").is_empty());
+    }
 }

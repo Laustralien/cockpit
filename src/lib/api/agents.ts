@@ -47,8 +47,8 @@ export const renameAgent = (
 
 // --- Plugins CRUD ---
 
-export const createPlugin = (name: string, description: string) =>
-  invoke<void>("create_plugin", { name, description });
+export const createPlugin = (marketplaceId: string, name: string, description: string) =>
+  invoke<void>("create_plugin", { marketplaceId, name, description });
 
 export const deletePlugin = (marketplaceId: string, name: string) =>
   invoke<void>("delete_plugin", { marketplaceId, name });

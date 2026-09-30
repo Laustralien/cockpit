@@ -270,6 +270,31 @@ if [ -n "${COCKPIT_BANC_TRANSMISSION:-}" ]; then
   exit 0
 fi
 
+# **UNE MARKETPLACE EN DOSSIER, DECLAREE A CLAUDE CODE, SE MODIFIE DANS COCKPIT**, avec
+# n'importe quel nom de plugin. Rien n'est propre a une entreprise.
+if [ -n "${COCKPIT_BANC_PLUGINS:-}" ]; then
+  M="$TRAVAIL/home/marketplace-equipe"
+  mkdir -p "$M/.claude-plugin" "$M/plugins" "$TRAVAIL/home/.claude/plugins"
+  printf '{"name": "equipe", "owner": {"name": "Equipe"}, "plugins": []}\n' > "$M/.claude-plugin/marketplace.json"
+  printf '{"equipe": {"source": {"source": "directory", "path": "%s"}, "installLocation": "%s"}}\n' "$M" "$M" \
+    > "$TRAVAIL/home/.claude/plugins/known_marketplaces.json"
+  clic 900 472 1
+  clic 1275 27 3          # l engrenage
+  clic 372 228 3          # IA
+  image plugins-1-ia
+  clic "${COCKPIT_BANC_OUVRIR_X:-1286}" "${COCKPIT_BANC_OUVRIR_Y:-414}" 3
+  image plugins-2-agent
+  clic "${COCKPIT_BANC_BIBLIO_X:-395}" "${COCKPIT_BANC_BIBLIO_Y:-350}" 3
+  image plugins-3-bibliotheque
+  clic 746 326 2          # « + » : nouveau plugin
+  image plugins-4-formulaire
+  python3 "$OUTILS" taper "mon-plugin" 2>/dev/null || true
+  sleep 2
+  image plugins-5-nom
+  ls -R "$M/plugins" | head
+  exit 0
+fi
+
 if [ -n "${COCKPIT_BANC_NS:-}" ]; then
   # **LE NAMESPACE CHOISI DOIT REVENIR.** Signale par le mainteneur : il choisit celui de son
   # projet, part, revient, et retrouve celui du contexte. On pose le choix EN BASE, comme s'il
