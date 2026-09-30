@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.94.0] — 2026-09-30
+
 ### Changed
 
 - Notes : la barre de mise en forme est une colonne à droite de la note. Elle suit le
