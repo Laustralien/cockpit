@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.93.1] — 2026-09-30
+
 ### Fixed
 
 - Windows : la 0.93.0 n'avait pas été publiée pour Windows. Cette version apporte à Windows
