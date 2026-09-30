@@ -349,14 +349,14 @@ A mesurer sur une vraie machine Windows avant de laisser le mode Live activable 
 
 ## 8. Fichiers concernes
 
-- `/home/jguevel/Documents/workspace/core/cockpit/src-tauri/src/system/metrics.rs`
-- `/home/jguevel/Documents/workspace/core/cockpit/src-tauri/src/system/process.rs`
-- `/home/jguevel/Documents/workspace/core/cockpit/src-tauri/src/terminal/mod.rs`
+- `src-tauri/src/system/metrics.rs`
+- `src-tauri/src/system/process.rs`
+- `src-tauri/src/terminal/mod.rs`
   (lignes 318-432 : `LLM_COMMANDS`, `exe_is_llm`, `args_are_llm`, `tmux_llm_sessions`)
-- `/home/jguevel/Documents/workspace/core/cockpit/src/lib/components/dashboard/MonitoringView.svelte`
+- `src/lib/components/dashboard/MonitoringView.svelte`
   (ligne 26 : le calcul de la barre « Processus »)
-- `/home/jguevel/Documents/workspace/core/cockpit/src/lib/components/system/SystemMonitor.svelte`
+- `src/lib/components/system/SystemMonitor.svelte`
   (lignes 69-71 : l'affichage des disques)
-- `/home/jguevel/Documents/workspace/core/cockpit/src/lib/stores/system.ts` (cadence Live 3 s)
-- `/home/jguevel/Documents/workspace/core/cockpit/src/lib/stores/terminals.ts`
+- `src/lib/stores/system.ts` (cadence Live 3 s)
+- `src/lib/stores/terminals.ts`
   (ligne 26 : sondage 5 s de la detection des agents)

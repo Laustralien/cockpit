@@ -1,7 +1,7 @@
 //! Le nom de branche d'un ticket, tire d'un gabarit propre a chaque projet.
 //!
 //! **UN GABARIT, PAS UN FORMAT EN DUR** : chaque equipe a sa convention
-//! (`{type}/tl/{cle}/{slug}` chez CCM), et Cockpit est un outil public.
+//! (`{type}/tl/{cle}/{slug}` chez PROJ), et Cockpit est un outil public.
 
 use std::collections::HashMap;
 
@@ -86,8 +86,8 @@ mod tests {
     fn un_bug_devient_une_branche_fix() {
         let c = correspondance_par_defaut();
         assert_eq!(
-            nom_de_branche("{type}/tl/{cle}/{slug}", "CCM-1234", "Bug", "Correction login", &c),
-            "fix/tl/CCM-1234/correction-login"
+            nom_de_branche("{type}/tl/{cle}/{slug}", "PROJ-1234", "Bug", "Correction login", &c),
+            "fix/tl/PROJ-1234/correction-login"
         );
     }
 
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn un_resume_sans_lettre_retombe_sur_la_cle() {
         let c = correspondance_par_defaut();
-        assert_eq!(nom_de_branche("{type}/{cle}/{slug}", "CCM-9", "Bug", "???", &c), "fix/CCM-9/ccm-9");
+        assert_eq!(nom_de_branche("{type}/{cle}/{slug}", "PROJ-9", "Bug", "???", &c), "fix/PROJ-9/proj-9");
     }
 
     #[test]

@@ -277,8 +277,8 @@ test("les filtres comptent ce qu'ils montrent", () => {
 
 test("un namespace absent de la liste reste atteignable a la main", () => {
   // La liste vient des droits et peut etre vide alors que l'acces aux pods marche.
-  assert.equal(peutAllerA("discover-static", ["ccm-main"]), true);
-  assert.equal(peutAllerA("ccm-main", ["ccm-main"]), false, "deja dans la liste : le bouton n'a rien a dire");
+  assert.equal(peutAllerA("discover-static", ["acme-main"]), true);
+  assert.equal(peutAllerA("acme-main", ["acme-main"]), false, "deja dans la liste : le bouton n'a rien a dire");
   assert.equal(peutAllerA("  ", []), false);
 });
 

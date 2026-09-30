@@ -285,8 +285,8 @@ mod tests {
     #[test]
     fn l_encodage_du_chemin_suit_celui_de_claude_code() {
         assert_eq!(
-            encoder_le_chemin("/home/jguevel/Documents/workspace/core/cockpit"),
-            "-home-jguevel-Documents-workspace-core-cockpit"
+            encoder_le_chemin("/home/utilisateur/projets/cockpit"),
+            "-home-utilisateur-projets-cockpit"
         );
         assert_eq!(encoder_le_chemin("/a/b.c_d"), "-a-b-c-d");
     }

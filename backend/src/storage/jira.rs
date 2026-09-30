@@ -56,19 +56,19 @@ mod tests {
         db.create_project("autre", "/tmp/autre", "", "", &[]).unwrap();
         assert_eq!(db.get_project_jira("site").unwrap(), (None, None));
 
-        db.set_project_jira("site", Some("CCM,ABC"), Some("{type}/tl/{cle}/{slug}")).unwrap();
+        db.set_project_jira("site", Some("PROJ,ABC"), Some("{type}/tl/{cle}/{slug}")).unwrap();
         assert_eq!(
             db.get_project_jira("site").unwrap(),
-            (Some("CCM,ABC".into()), Some("{type}/tl/{cle}/{slug}".into()))
+            (Some("PROJ,ABC".into()), Some("{type}/tl/{cle}/{slug}".into()))
         );
 
         let liste = db.list_project_jira().unwrap();
-        assert_eq!(liste, vec![("site".into(), "CCM,ABC".into(), Some("{type}/tl/{cle}/{slug}".into()))]);
+        assert_eq!(liste, vec![("site".into(), "PROJ,ABC".into(), Some("{type}/tl/{cle}/{slug}".into()))]);
     }
 
     #[test]
     fn un_projet_inconnu_est_une_erreur() {
         let db = Database::new(":memory:").unwrap();
-        assert!(db.set_project_jira("fantome", Some("CCM"), None).is_err());
+        assert!(db.set_project_jira("fantome", Some("PROJ"), None).is_err());
     }
 }

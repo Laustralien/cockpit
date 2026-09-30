@@ -367,19 +367,19 @@ mod tests {
     const BASE: &str = "https://jira.exemple.org";
 
     const RECHERCHE: &str = r#"{"issues":[
-      {"key":"CCM-1234","fields":{"summary":"Correction login",
+      {"key":"PROJ-1234","fields":{"summary":"Correction login",
         "status":{"name":"En cours","statusCategory":{"key":"indeterminate"}},
-        "issuetype":{"name":"Bug"},"priority":{"name":"Major"},"project":{"key":"CCM"},
+        "issuetype":{"name":"Bug"},"priority":{"name":"Major"},"project":{"key":"PROJ"},
         "updated":"2026-09-25T10:12:00.000+0200"}},
       {"key":"ABC-7","fields":{"summary":"Sans priorite",
         "status":{"name":"A faire","statusCategory":{"key":"new"}},
         "issuetype":{"name":"Story"},"priority":null,"project":{"key":"ABC"},
         "updated":"2026-09-20T08:00:00.000+0200"}}]}"#;
 
-    const TICKET: &str = r#"{"key":"CCM-1234","fields":{"summary":"Correction login",
+    const TICKET: &str = r#"{"key":"PROJ-1234","fields":{"summary":"Correction login",
       "description":"Le bouton ne repond pas",
       "status":{"name":"En cours","statusCategory":{"key":"indeterminate"}},
-      "issuetype":{"name":"Bug"},"priority":{"name":"Major"},"project":{"key":"CCM"},
+      "issuetype":{"name":"Bug"},"priority":{"name":"Major"},"project":{"key":"PROJ"},
       "updated":"2026-09-25T10:12:00.000+0200",
       "comment":{"comments":[{"author":{"displayName":"Ada"},"created":"2026-09-24T09:00:00.000+0200","body":"Vu en QLF"}]}}}"#;
 
@@ -397,20 +397,20 @@ mod tests {
     fn lit_une_recherche() {
         let t = lire_recherche(RECHERCHE, BASE).unwrap();
         assert_eq!(t.len(), 2);
-        assert_eq!(t[0].cle, "CCM-1234");
+        assert_eq!(t[0].cle, "PROJ-1234");
         assert_eq!(t[0].categorie_statut, "indeterminate");
         assert_eq!(t[0].type_ticket, "Bug");
-        assert_eq!(t[0].projet, "CCM");
-        assert_eq!(t[0].url, "https://jira.exemple.org/browse/CCM-1234");
+        assert_eq!(t[0].projet, "PROJ");
+        assert_eq!(t[0].url, "https://jira.exemple.org/browse/PROJ-1234");
         assert_eq!(t[1].priorite, "", "une priorite nulle devient vide");
     }
 
     /// Cloud (`/rest/api/3/search/jql`) : meme forme `{"issues":[...]}`, plus la pagination
     /// (`nextPageToken`, `isLast`) et sans `description` demandee dans la liste.
     const RECHERCHE_CLOUD: &str = r#"{"issues":[
-      {"key":"CCM-1234","fields":{"summary":"Correction login",
+      {"key":"PROJ-1234","fields":{"summary":"Correction login",
         "status":{"name":"En cours","statusCategory":{"key":"indeterminate"}},
-        "issuetype":{"name":"Bug"},"priority":{"name":"Major"},"project":{"key":"CCM"},
+        "issuetype":{"name":"Bug"},"priority":{"name":"Major"},"project":{"key":"PROJ"},
         "updated":"2026-09-25T10:12:00.000+0200"}}],
       "nextPageToken":"CAEaAggD","isLast":true}"#;
 
@@ -418,13 +418,13 @@ mod tests {
     fn lit_une_recherche_cloud_avec_pagination() {
         let t = lire_recherche(RECHERCHE_CLOUD, BASE).unwrap();
         assert_eq!(t.len(), 1);
-        assert_eq!(t[0].cle, "CCM-1234");
+        assert_eq!(t[0].cle, "PROJ-1234");
         assert_eq!(t[0].description, "", "pas demandee dans la liste");
     }
 
     const RECHERCHE_CLOUD_PAGE_SUIVANTE: &str = r#"{"issues":[
-      {"key":"CCM-1","fields":{"summary":"Un","status":{"name":"A faire","statusCategory":{"key":"new"}},
-        "issuetype":{"name":"Bug"},"priority":null,"project":{"key":"CCM"},
+      {"key":"PROJ-1","fields":{"summary":"Un","status":{"name":"A faire","statusCategory":{"key":"new"}},
+        "issuetype":{"name":"Bug"},"priority":null,"project":{"key":"PROJ"},
         "updated":"2026-09-20T08:00:00.000+0200"}}],
       "nextPageToken":"CAEaAggD","isLast":false}"#;
 
@@ -485,7 +485,7 @@ mod tests {
         assert_eq!(m.name, "jdupont");
         assert_eq!(m.nom_affiche, "J. Dupont");
         assert_eq!(m.account_id, "", "absent sur Server/DC");
-        assert_eq!(lire_ticket_cree(r#"{"id":"1","key":"CCM-42","self":"x"}"#).unwrap(), "CCM-42");
+        assert_eq!(lire_ticket_cree(r#"{"id":"1","key":"PROJ-42","self":"x"}"#).unwrap(), "PROJ-42");
     }
 
     #[test]
@@ -529,35 +529,35 @@ mod tests {
 
     #[test]
     fn le_corps_de_creation_assigne_le_ticket_par_name() {
-        let c = corps_de_creation("CCM", "1", " Corriger ", Some("desc"), Some(Assigne::Nom("jdupont"))).unwrap();
+        let c = corps_de_creation("PROJ", "1", " Corriger ", Some("desc"), Some(Assigne::Nom("jdupont"))).unwrap();
         assert_eq!(
             c,
             serde_json::json!({"fields": {
-                "project": {"key": "CCM"}, "issuetype": {"id": "1"}, "summary": "Corriger",
+                "project": {"key": "PROJ"}, "issuetype": {"id": "1"}, "summary": "Corriger",
                 "assignee": {"name": "jdupont"}, "description": "desc"}})
         );
-        assert!(corps_de_creation("CCM", "1", "  ", None, Some(Assigne::Nom("x"))).is_err());
-        assert!(corps_de_creation("CCM", "", "Titre", None, Some(Assigne::Nom("x"))).is_err());
+        assert!(corps_de_creation("PROJ", "1", "  ", None, Some(Assigne::Nom("x"))).is_err());
+        assert!(corps_de_creation("PROJ", "", "Titre", None, Some(Assigne::Nom("x"))).is_err());
     }
 
     #[test]
     fn le_corps_de_creation_assigne_le_ticket_par_account_id_sur_cloud() {
-        let c = corps_de_creation("CCM", "1", "Corriger", None, Some(Assigne::Compte("acc-123"))).unwrap();
+        let c = corps_de_creation("PROJ", "1", "Corriger", None, Some(Assigne::Compte("acc-123"))).unwrap();
         assert_eq!(
             c,
             serde_json::json!({"fields": {
-                "project": {"key": "CCM"}, "issuetype": {"id": "1"}, "summary": "Corriger",
+                "project": {"key": "PROJ"}, "issuetype": {"id": "1"}, "summary": "Corriger",
                 "assignee": {"accountId": "acc-123"}}})
         );
     }
 
     #[test]
     fn le_corps_de_creation_sans_assignation_omet_le_champ() {
-        let c = corps_de_creation("CCM", "1", "Corriger", None, None).unwrap();
+        let c = corps_de_creation("PROJ", "1", "Corriger", None, None).unwrap();
         assert_eq!(
             c,
             serde_json::json!({"fields": {
-                "project": {"key": "CCM"}, "issuetype": {"id": "1"}, "summary": "Corriger"}})
+                "project": {"key": "PROJ"}, "issuetype": {"id": "1"}, "summary": "Corriger"}})
         );
     }
 

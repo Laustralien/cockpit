@@ -294,11 +294,11 @@ simplement pas signee par Apple.
 
 ## Fichiers concernes
 
-- `/home/jguevel/Documents/workspace/core/cockpit/.github/workflows/release.yml`
-- `/home/jguevel/Documents/workspace/core/cockpit/src-tauri/tauri.conf.json`
-- `/home/jguevel/Documents/workspace/core/cockpit/src/lib/stores/update.ts`
-- `/home/jguevel/Documents/workspace/core/cockpit/scripts/install.sh`
-- `/home/jguevel/Documents/workspace/core/cockpit/scripts/build-tmux-static.sh`
-- `/home/jguevel/Documents/workspace/core/cockpit/README.md` (section macOS a corriger)
-- `/home/jguevel/Documents/workspace/core/cockpit/src-tauri/src/workspace/mod.rs:663` (le test
+- `.github/workflows/release.yml`
+- `src-tauri/tauri.conf.json`
+- `src/lib/stores/update.ts`
+- `scripts/install.sh`
+- `scripts/build-tmux-static.sh`
+- `README.md` (section macOS a corriger)
+- `src-tauri/src/workspace/mod.rs:663` (le test
   qui a casse la v0.32.0, corrige depuis)

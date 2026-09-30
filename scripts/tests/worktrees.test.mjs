@@ -18,14 +18,14 @@ import {
 } from "../../src/lib/terminaux/worktrees.ts";
 
 const principal = { chemin: "/code/projet", branche: "main", tete: "abc1234", principal: true, verrouille: false, elagable: false };
-const ticket = { chemin: "/code/projet.worktrees/ccm-10200", branche: "feat/ccm-10200", tete: "def5678", principal: false, verrouille: false, elagable: false };
+const ticket = { chemin: "/code/projet.worktrees/acme-10200", branche: "feat/acme-10200", tete: "def5678", principal: false, verrouille: false, elagable: false };
 const urgent = { chemin: "/code/projet.worktrees/hotfix", branche: "hotfix", tete: "9991111", principal: false, verrouille: false, elagable: false };
 const tous = [principal, ticket, urgent];
 
 test("un terminal est rattache au dossier qui le contient", () => {
   assert.equal(worktreeDe("/code/projet", tous), principal.chemin);
   assert.equal(worktreeDe("/code/projet/src/lib", tous), principal.chemin);
-  assert.equal(worktreeDe("/code/projet.worktrees/ccm-10200/src", tous), ticket.chemin);
+  assert.equal(worktreeDe("/code/projet.worktrees/acme-10200/src", tous), ticket.chemin);
 });
 
 test("le dossier le plus precis gagne, pas le premier de la liste", () => {
@@ -43,8 +43,8 @@ test("un chemin voisin n'est pas un chemin contenu", () => {
 });
 
 test("un separateur final ne change rien", () => {
-  const avecBarre = { ...ticket, chemin: "/code/projet.worktrees/ccm-10200/" };
-  assert.equal(worktreeDe("/code/projet.worktrees/ccm-10200", [avecBarre]), avecBarre.chemin);
+  const avecBarre = { ...ticket, chemin: "/code/projet.worktrees/acme-10200/" };
+  assert.equal(worktreeDe("/code/projet.worktrees/acme-10200", [avecBarre]), avecBarre.chemin);
 });
 
 test("un terminal ouvert ailleurs n'est pas perdu, il revient au principal", () => {
@@ -52,7 +52,7 @@ test("un terminal ouvert ailleurs n'est pas perdu, il revient au principal", () 
     { id: 1, cwd: "/code/projet/src" },
     { id: 2, cwd: "/tmp" },
     { id: 3, cwd: null },
-    { id: 4, cwd: "/code/projet.worktrees/ccm-10200" },
+    { id: 4, cwd: "/code/projet.worktrees/acme-10200" },
   ]);
   const parChemin = Object.fromEntries(groupes.map((g) => [g.chemin, g.terminaux]));
   assert.deepEqual(parChemin[principal.chemin], [1, 2, 3], "aucun terminal ne disparait");
@@ -79,7 +79,7 @@ test("sans worktree connu, il n'y a pas de groupe du tout", () => {
 test("les dossiers affiches ensemble ont tous une couleur differente", () => {
   // Le cas qui arrive vraiment : des branches de tickets qui ne different que par un chiffre.
   // Un hachage du nom y produit des collisions ; une distribution, jamais.
-  const proches = ["ccm-10200", "ccm-10201", "ccm-10202", "ccm-01", "ccm-10"].map((n) => ({
+  const proches = ["acme-10200", "acme-10201", "acme-10202", "acme-01", "acme-10"].map((n) => ({
     ...ticket,
     chemin: `/code/projet.worktrees/${n}`,
   }));
@@ -110,10 +110,10 @@ test("au-dela de la palette, les couleurs se reprennent sans casser", () => {
 });
 
 test("une tete detachee montre son DOSSIER, pas son hash", () => {
-  assert.equal(libelleDe(ticket), "feat/ccm-10200");
+  assert.equal(libelleDe(ticket), "feat/acme-10200");
   // Vu chez l'utilisateur : deux dossiers nommes « (b897940b) » et « (8b66e238) », impossible
   // de savoir lequel est lequel. Le nom du dossier, lui, vient de la branche qui l'a cree.
-  assert.equal(libelleDe({ ...ticket, branche: null }), "ccm-10200");
+  assert.equal(libelleDe({ ...ticket, branche: null }), "acme-10200");
   assert.equal(libelleDe({ ...ticket, branche: null, chemin: "/code/projet.worktrees/hotfix/" }), "hotfix");
   // Plus de nom du tout : le hash reste le dernier recours, plutot que du vide.
   assert.equal(libelleDe({ ...ticket, branche: null, chemin: "" }), "(def5678)");
