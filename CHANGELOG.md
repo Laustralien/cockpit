@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Windows : la 0.93.0 n'avait pas été publiée pour Windows. Cette version apporte à Windows
+  la case de transmission des erreurs, la barre des notes en bas et la barre de mise à jour
+  corrigée.
+
 ## [0.93.0] — 2026-09-30
 
 ### Added
