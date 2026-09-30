@@ -36,7 +36,7 @@
       }
       allPlugins = all;
       const enabledList = await getProjectPlugins(projectPath);
-      // Le format peut être "ccm-core" ou "ccm-core@ccm-claude-marketplace".
+      // Le format peut être "mon-plugin" ou "mon-plugin@ma-marketplace".
       // On stocke la forme courte (avant le @).
       enabled = new Set(enabledList.map(p => p.split('@')[0]));
     } catch (e) {

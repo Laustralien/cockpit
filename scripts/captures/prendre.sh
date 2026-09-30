@@ -219,20 +219,20 @@ python3 "$OUTILS" preparer "$COCKPIT_DB" "$TRAVAIL/home/projets" "$LANGUE"
 echo "── relance et captures"
 lancer
 prise taches
-clic 104 168          # le projet, dans la barre laterale
+clic 104 140          # le projet, dans la barre laterale
 onglet terminal
-clic 790 512 10       # « Ouvrir un terminal »
-clic 800 400 1        # le focus dans le terminal
+clic 790 484 10       # « Ouvrir un terminal »
+clic 800 372 1        # le focus dans le terminal
 frappe "git status --short --branch"
 frappe "git log --oneline -3"
 frappe "ls src" 3
 prise terminal
 onglet git 5
-clic 392 304 4        # le fichier modifie, pour afficher son diff
+clic 392 276 4        # le fichier modifie, pour afficher son diff
 prise git
 onglet fichiers 5
-clic 360 273 2        # deplier le dossier `src`
-clic 391 296 4        # le premier fichier dedans, pour le montrer colore
+clic 360 245 2        # deplier le dossier `src`
+clic 391 268 4        # le premier fichier dedans, pour le montrer colore
 prise fichiers
 
 echo "── fait, dans $SORTIE (langue : $LANGUE)"

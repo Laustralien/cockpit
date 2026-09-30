@@ -176,7 +176,7 @@ export interface MiseAJourTrouvee {
 /** Ce que la coquille rapporte pendant le telechargement. */
 export type AvancementDeMiseAJour =
   | { event: "Started"; data: { contentLength?: number } }
-  | { event: "Progress"; data: { chunkLength: number } }
+  | { event: "Progress"; data: { chunkLength: number; transferred?: number; total?: number } }
   | { event: "Finished" };
 
 /** Cherche une version plus recente. Rend `null` quand il n'y a rien de neuf. */

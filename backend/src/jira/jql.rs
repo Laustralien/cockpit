@@ -1,7 +1,7 @@
 //! Les requetes JQL et la validation de ce qui y entre.
 //!
 //! **UNE CLE N'ENTRE DANS LA JQL OU DANS UN CHEMIN QU'APRES VALIDATION** : c'est ce qui
-//! empeche une saisie de devenir une autre requete (`CCM) OR (1=1`) ou un autre chemin (`../`).
+//! empeche une saisie de devenir une autre requete (`PROJ) OR (1=1`) ou un autre chemin (`../`).
 
 pub fn cle_de_projet_valide(cle: &str) -> bool {
     let mut c = cle.chars();
@@ -36,7 +36,7 @@ pub fn normaliser_cle_de_projet(brut: &str) -> Result<String, String> {
     }
 }
 
-/// « ccm, ABC;abc DEF » → `["CCM", "ABC", "DEF"]` : majuscules, sans doublon, dans l'ordre saisi.
+/// « proj, ABC;abc DEF » → `["PROJ", "ABC", "DEF"]` : majuscules, sans doublon, dans l'ordre saisi.
 pub fn decouper_cles(brut: &str) -> Vec<String> {
     let mut cles: Vec<String> = Vec::new();
     for morceau in brut.split(|c: char| c == ',' || c == ';' || c.is_whitespace()) {
@@ -71,32 +71,32 @@ mod tests {
 
     #[test]
     fn valide_les_cles_de_projet() {
-        assert!(cle_de_projet_valide("CCM"));
+        assert!(cle_de_projet_valide("PROJ"));
         assert!(cle_de_projet_valide("AB_2"));
-        assert!(!cle_de_projet_valide("ccm"));
+        assert!(!cle_de_projet_valide("proj"));
         assert!(!cle_de_projet_valide("2AB"));
-        assert!(!cle_de_projet_valide("CCM) OR (1=1"));
+        assert!(!cle_de_projet_valide("PROJ) OR (1=1"));
         assert!(!cle_de_projet_valide(""));
     }
 
     #[test]
     fn normalise_puis_valide_une_cle_de_projet() {
-        assert_eq!(normaliser_cle_de_projet(" ccm ").unwrap(), "CCM");
-        assert!(normaliser_cle_de_projet("CCM-1").unwrap_err().contains("invalide"));
+        assert_eq!(normaliser_cle_de_projet(" proj ").unwrap(), "PROJ");
+        assert!(normaliser_cle_de_projet("PROJ-1").unwrap_err().contains("invalide"));
     }
 
     #[test]
     fn valide_les_cles_de_ticket() {
-        assert!(cle_de_ticket_valide("CCM-1234"));
-        assert!(!cle_de_ticket_valide("CCM-"));
-        assert!(!cle_de_ticket_valide("CCM-12a"));
-        assert!(!cle_de_ticket_valide("../CCM-1"));
+        assert!(cle_de_ticket_valide("PROJ-1234"));
+        assert!(!cle_de_ticket_valide("PROJ-"));
+        assert!(!cle_de_ticket_valide("PROJ-12a"));
+        assert!(!cle_de_ticket_valide("../PROJ-1"));
         assert!(verifier_cle_de_ticket("x").is_err());
     }
 
     #[test]
     fn decoupe_et_normalise_les_cles() {
-        assert_eq!(decouper_cles(" ccm, ABC;abc  DEF "), vec!["CCM", "ABC", "DEF"]);
+        assert_eq!(decouper_cles(" proj, ABC;abc  DEF "), vec!["PROJ", "ABC", "DEF"]);
         assert!(decouper_cles("  ").is_empty());
     }
 
@@ -110,10 +110,10 @@ mod tests {
 
     #[test]
     fn le_filtre_restreint_aux_projets() {
-        let cles = vec!["CCM".to_string(), "ABC".to_string()];
+        let cles = vec!["PROJ".to_string(), "ABC".to_string()];
         assert_eq!(
             mes_tickets(Some(cles.as_slice())).unwrap().unwrap(),
-            "assignee = currentUser() AND statusCategory != Done AND project in (CCM, ABC) ORDER BY updated DESC"
+            "assignee = currentUser() AND statusCategory != Done AND project in (PROJ, ABC) ORDER BY updated DESC"
         );
     }
 
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn une_cle_invalide_est_refusee() {
-        let cles = vec!["CCM) OR (1=1".to_string()];
+        let cles = vec!["PROJ) OR (1=1".to_string()];
         assert!(mes_tickets(Some(cles.as_slice())).is_err());
     }
 }

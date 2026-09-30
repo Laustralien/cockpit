@@ -271,6 +271,19 @@ def taper(texte: str, entree: bool = True) -> None:
         time.sleep(0.03)
 
 
+def raccourci(touches: str) -> None:
+    """Presse une combinaison, par exemple « Control_L+equal » : noms de touches X."""
+    from Xlib import X, XK
+    from Xlib.ext import xtest
+
+    d = _ecran()
+    codes = [d.keysym_to_keycode(XK.string_to_keysym(t)) for t in touches.split("+")]
+    for c in codes:
+        xtest.fake_input(d, X.KeyPress, c); d.sync(); time.sleep(0.03)
+    for c in reversed(codes):
+        xtest.fake_input(d, X.KeyRelease, c); d.sync(); time.sleep(0.03)
+
+
 def survoler(x: int, y: int) -> None:
     """Pose le pointeur sans cliquer.
 
@@ -680,6 +693,8 @@ if __name__ == "__main__":
         taper(sys.argv[2])
     elif quoi == "effacer":
         effacer()
+    elif quoi == "raccourci":
+        raccourci(sys.argv[2])
     elif quoi == "survoler":
         survoler(int(sys.argv[2]), int(sys.argv[3]))
     elif quoi == "arreter":

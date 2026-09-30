@@ -118,12 +118,12 @@ printf 'fn main() {\n    let total: u32 = 42; // commentaire\n    println!("{}",
 git -C "$P" add -A; git -C "$P" commit -qm "Poser les bases"
 
 lancer
-clic 105 296 3            # le projet « boutique-vinyles » (le premier de la liste)
-clic 727 127 10           # l onglet Terminal
+clic 105 268 3            # le projet « boutique-vinyles » (le premier de la liste)
+clic 727 99 10           # l onglet Terminal
 image 1-avant
 # **LES LIENS DU PROJET TIENNENT DANS UN MENU**, sur la ligne des onglets : sept liens cotes a
 # cote prenaient une ligne entiere de l'ecran.
-clic 1190 176 2           # le bouton « Liens »
+clic 1190 148 2           # le bouton « Liens »
 image 1b-liens
 
 # **UN COLLAGE VA DANS LE TERMINAL QU'ON VISE, PAS DANS CELUI D'AVANT.** Signale le 2026-09-24 :
@@ -131,22 +131,22 @@ image 1b-liens
 # arrive chez l'agent. Il faut que les terminaux aient ete crees par un affichage PRECEDENT de
 # l'onglet : on en ouvre deux, on revient sur le premier, on part sur Git et on revient.
 if [ -n "${COCKPIT_BANC_COLLER:-}" ]; then
-  clic 900 500 1          # ferme le menu des liens
-  clic 900 500 1          # focalise le premier terminal
+  clic 900 472 1          # ferme le menu des liens
+  clic 900 472 1          # focalise le premier terminal
   python3 "$OUTILS" taper "echo terminal-UN"
-  clic 509 221 4          # « + » : le second terminal
+  clic 509 193 4          # « + » : le second terminal
   python3 "$OUTILS" taper "echo terminal-DEUX"
   image coller-1-deux-terminaux
-  clic 400 221 3          # retour sur le premier
-  clic 862 127 3          # Git, puis retour : l'onglet des terminaux est remonte
-  clic 727 127 5
+  clic 400 193 3          # retour sur le premier
+  clic 862 99 3          # Git, puis retour : l'onglet des terminaux est remonte
+  clic 727 99 5
   image coller-2-retour
-  clic "${COCKPIT_BANC_ONGLET2_X:-580}" 221 3   # l'onglet du second terminal
+  clic "${COCKPIT_BANC_ONGLET2_X:-580}" 193 3   # l'onglet du second terminal
   printf 'MARQUE-COLLEE' | DISPLAY="$ECRAN" xclip -selection clipboard
-  python3 "$OUTILS" cliquer 900 500 2           # clic molette dans le second terminal
+  python3 "$OUTILS" cliquer 900 472 2           # clic molette dans le second terminal
   sleep 2
   image coller-3-apres-molette
-  clic 400 221 3          # le premier : le texte ne doit PAS y etre
+  clic 400 193 3          # le premier : le texte ne doit PAS y etre
   image coller-4-premier
   # **LE CLIC DROIT GARDE LA SELECTION**, y compris quand le programme suit la souris, comme
   # claude : on l'active a la main, on selectionne en tenant Maj, puis clic droit.
@@ -154,15 +154,15 @@ if [ -n "${COCKPIT_BANC_COLLER:-}" ]; then
   python3 "$OUTILS" taper "clear"
   python3 "$OUTILS" taper "bash $TRAVAIL/bin/souris"
   sleep 1
-  python3 "$OUTILS" glisser 332 273 440 273 --maj
+  python3 "$OUTILS" glisser 332 245 440 245 --maj
   sleep 1
   image coller-5-selection
-  python3 "$OUTILS" cliquer 380 273 3
+  python3 "$OUTILS" cliquer 380 245 3
   sleep 1
   image coller-6-clic-droit
   if [ -n "${COCKPIT_BANC_SOURIS:-}" ]; then
-    python3 "$OUTILS" cliquer 900 700 1; sleep 1
-    python3 "$OUTILS" cliquer 900 700 1; sleep 1
+    python3 "$OUTILS" cliquer 900 672 1; sleep 1
+    python3 "$OUTILS" cliquer 900 672 1; sleep 1
     image coller-7-clic-gauche
   fi
   echo "images collage : $TRAVAIL/img"
@@ -175,8 +175,8 @@ fi
 # personne ne le remet. Deux cas : le programme seul est tue, puis tout le service.
 if [ -n "${COCKPIT_BANC_CURSEUR:-}" ]; then
   printf '#!/bin/bash\nprintf "\\e[?25l"\necho curseur-masque\necho $$ > %s/masquer.pid\nexec sleep 600\n' "$TRAVAIL" > "$TRAVAIL/bin/masquer"
-  clic 900 500 1
-  clic 900 500 1
+  clic 900 472 1
+  clic 900 472 1
   python3 "$OUTILS" taper "bash $TRAVAIL/bin/masquer"
   sleep 2
   image curseur-1-masque
@@ -193,8 +193,8 @@ if [ -n "${COCKPIT_BANC_CURSEUR:-}" ]; then
   done
   kill "$(cat "$TRAVAIL/masquer.pid")" 2>/dev/null || true
   sleep 3
-  clic 862 127 3; clic 727 127 8    # Git puis Terminal : l'onglet se rouvre
-  clic 900 500 3
+  clic 862 99 3; clic 727 99 8    # Git puis Terminal : l'onglet se rouvre
+  clic 900 472 3
   image curseur-3-apres-le-service
   echo "images curseur : $TRAVAIL/img"
   exit 0
@@ -203,10 +203,10 @@ fi
 # **LA COLORATION DES FICHIERS DOIT SE VOIR.** Elle avait disparu : la politique de securite de
 # la page refusait le moteur en WebAssembly. Un fichier Rust doit sortir en couleurs.
 if [ -n "${COCKPIT_BANC_FICHIERS:-}" ]; then
-  clic 900 500 1
-  clic 797 127 5          # l onglet Fichiers
+  clic 900 472 1
+  clic 797 99 5          # l onglet Fichiers
   image fichiers-1-liste
-  clic "${COCKPIT_BANC_FICHIER_X:-400}" "${COCKPIT_BANC_FICHIER_Y:-297}" 4
+  clic "${COCKPIT_BANC_FICHIER_X:-400}" "${COCKPIT_BANC_FICHIER_Y:-269}" 4
   image fichiers-2-code
   echo "images fichiers : $TRAVAIL/img"
   exit 0
@@ -215,16 +215,83 @@ fi
 # **JIRA : LES REGLAGES, ET UNE ADRESSE EN http:// REFUSEE.** Le jeton part a chaque requete :
 # il ne doit pas circuler en clair.
 if [ -n "${COCKPIT_BANC_JIRA:-}" ]; then
-  clic 900 500 1          # ferme le menu des liens
-  clic 1275 55 3          # l engrenage
+  clic 900 472 1          # ferme le menu des liens
+  clic 1275 27 3          # l engrenage
   image jira-1-reglages
-  clic "${COCKPIT_BANC_JIRA_X:-375}" "${COCKPIT_BANC_JIRA_Y:-339}" 3
+  clic "${COCKPIT_BANC_JIRA_X:-375}" "${COCKPIT_BANC_JIRA_Y:-311}" 3
   image jira-2-ecran
-  clic 965 263 1          # l adresse
+  clic 965 235 1          # l adresse
   python3 "$OUTILS" taper "http://jira.exemple.org" 2>/dev/null || true
-  clic "${COCKPIT_BANC_JIRA_SAUVER_X:-630}" "${COCKPIT_BANC_JIRA_SAUVER_Y:-742}" 3
+  clic "${COCKPIT_BANC_JIRA_SAUVER_X:-630}" "${COCKPIT_BANC_JIRA_SAUVER_Y:-714}" 3
   image jira-3-http-refuse
   echo "images jira : $TRAVAIL/img"
+  exit 0
+fi
+
+# **PAS DE MENU D'ELECTRON, ET LE ZOOM AU CLAVIER PASSE PAR L'INTERFACE** : l'en-tete doit
+# afficher le palier atteint.
+if [ -n "${COCKPIT_BANC_ZOOM:-}" ]; then
+  clic 1000 672 1
+  image zoom-1-avant
+  python3 "$OUTILS" raccourci "Control_L+equal"; sleep 2
+  image zoom-2-plus
+  python3 "$OUTILS" raccourci "Control_L+0"; sleep 2
+  image zoom-3-remis
+  exit 0
+fi
+
+# **LA BARRE D'OUTILS D'UNE NOTE RESTE A PORTEE QUAND ON ECRIT LONGTEMPS.** Une longue note
+# fait defiler la page : la barre doit rester collee en haut.
+if [ -n "${COCKPIT_BANC_NOTE:-}" ]; then
+  python3 - "$COCKPIT_DB" <<'SQL'
+import sqlite3, sys
+c = sqlite3.connect(sys.argv[1])
+texte = "".join(f"<p>Paragraphe {i} : une ligne de compte rendu assez longue pour remplir la largeur.</p>" for i in range(80))
+c.execute("INSERT INTO note_files (project, folder_id, name, content, position) VALUES (?, NULL, ?, ?, 99)",
+          ("api-facturation", "Longue note", texte))
+c.commit()
+SQL
+  clic 900 500 1          # ferme le menu des liens
+  clic 539 98 4           # l onglet Workspace, ou vivent les notes
+  image note-1-liste
+  clic "${COCKPIT_BANC_NOTE_X:-410}" "${COCKPIT_BANC_NOTE_Y:-244}" 3
+  image note-2-ouverte
+  python3 "$OUTILS" defiler 700 600 25; sleep 1
+  image note-3-defilee
+  exit 0
+fi
+
+# **LA TRANSMISSION DES ERREURS SE COUPE DANS PARAMETRES -> GENERAL.**
+if [ -n "${COCKPIT_BANC_TRANSMISSION:-}" ]; then
+  clic 900 472 1
+  clic 1275 27 3          # l engrenage
+  python3 "$OUTILS" defiler 900 500 4; sleep 1
+  image transmission-1-reglages
+  exit 0
+fi
+
+# **UNE MARKETPLACE EN DOSSIER, DECLAREE A CLAUDE CODE, SE MODIFIE DANS COCKPIT**, avec
+# n'importe quel nom de plugin. Rien n'est propre a une entreprise.
+if [ -n "${COCKPIT_BANC_PLUGINS:-}" ]; then
+  M="$TRAVAIL/home/marketplace-equipe"
+  mkdir -p "$M/.claude-plugin" "$M/plugins" "$TRAVAIL/home/.claude/plugins"
+  printf '{"name": "equipe", "owner": {"name": "Equipe"}, "plugins": []}\n' > "$M/.claude-plugin/marketplace.json"
+  printf '{"equipe": {"source": {"source": "directory", "path": "%s"}, "installLocation": "%s"}}\n' "$M" "$M" \
+    > "$TRAVAIL/home/.claude/plugins/known_marketplaces.json"
+  clic 900 472 1
+  clic 1275 27 3          # l engrenage
+  clic 372 228 3          # IA
+  image plugins-1-ia
+  clic "${COCKPIT_BANC_OUVRIR_X:-1286}" "${COCKPIT_BANC_OUVRIR_Y:-414}" 3
+  image plugins-2-agent
+  clic "${COCKPIT_BANC_BIBLIO_X:-395}" "${COCKPIT_BANC_BIBLIO_Y:-350}" 3
+  image plugins-3-bibliotheque
+  clic 746 326 2          # « + » : nouveau plugin
+  image plugins-4-formulaire
+  python3 "$OUTILS" taper "mon-plugin" 2>/dev/null || true
+  sleep 2
+  image plugins-5-nom
+  ls -R "$M/plugins" | head
   exit 0
 fi
 
@@ -242,10 +309,10 @@ c.execute("insert or replace into settings(key, value) values(?, ?)",
 c.commit()
 print("reglage pose")
 SQL
-  clic 941 127 15         # l onglet Kubernetes
+  clic 941 99 15         # l onglet Kubernetes
   image ns-1-relecture
-  clic 862 127 4          # on part sur Git
-  clic 941 127 12         # et on revient
+  clic 862 99 4          # on part sur Git
+  clic 941 99 12         # et on revient
   image ns-2-retour
   echo "images namespace : $TRAVAIL/img"
   exit 0
@@ -253,9 +320,9 @@ fi
 
 if [ -n "${COCKPIT_BANC_MAJ:-}" ]; then
   # La cloche des mises a jour : elle doit voir la derniere Release publiee.
-  clic 1063 55 3
+  clic 1063 27 3
   image maj-1-cloche
-  clic 1342 101 15        # « Verifier »
+  clic 1342 73 15        # « Verifier »
   image maj-2-verifie
   echo "images mise a jour : $TRAVAIL/img"
   exit 0
@@ -265,17 +332,17 @@ fi
 # repondent autrement : un contraste correct en sombre ne prouve rien. Le theme vit dans le
 # stockage de la page, donc on le choisit en cliquant, comme un utilisateur.
 if [ -n "${COCKPIT_BANC_CLAIR:-}" ]; then
-  clic 1275 55 3          # l engrenage
-  clic 400 215 3          # « Apparence »
-  clic 1117 232 3         # la palette « Clair »
+  clic 1275 27 3          # l engrenage
+  clic 400 187 3          # « Apparence »
+  clic 1117 204 3         # la palette « Clair »
   image clair-1-apparence
-  clic 105 296 3          # un projet
-  clic 941 127 14         # l onglet Kubernetes
-  clic 849 268 3          # l onglet « Ressources »
+  clic 105 268 3          # un projet
+  clic 941 99 14         # l onglet Kubernetes
+  clic 849 240 3          # l onglet « Ressources »
   sleep 30                # de quoi remplir les courbes
   image clair-2-ressources
   # **UNE BANDE SANS NOM NE SERT A RIEN** : le survol doit dire QUEL pod on designe.
-  python3 "$OUTILS" survoler 600 540
+  python3 "$OUTILS" survoler 600 512
   image clair-3-survol
   exit 0
 fi
@@ -328,16 +395,16 @@ SQL
        "$TRAVAIL/home/.local/share/com.cockpit.dev/wallpaper.png"
     echo "  image de fond posee"
   fi
-  clic 105 296 3          # le projet
-  clic 941 127 14         # l onglet Kubernetes
-  clic 849 268 8          # l onglet « Ressources »
+  clic 105 268 3          # le projet
+  clic 941 99 14         # l onglet Kubernetes
+  clic 849 240 8          # l onglet « Ressources »
   image histo-1-courbes
   # **CLIQUER UNE BANDE SUIT CE POD, SUR LES DEUX GRAPHIQUES ET DANS LE CLASSEMENT.** Sans ca,
   # il fallait retrouver dans la liste du dessous le pod qu'on venait de montrer du doigt.
-  python3 "$OUTILS" survoler 600 540
-  clic 600 540 4
+  python3 "$OUTILS" survoler 600 512
+  clic 600 512 4
   image histo-2-suivi
-  clic 1126 307 4         # « Reinitialiser », entre la periode et la mesure en direct
+  clic 1126 279 4         # « Reinitialiser », entre la periode et la mesure en direct
   image histo-3-remis
   echo "images historique : $TRAVAIL/img"
   exit 0
@@ -346,108 +413,108 @@ fi
 # **CHAQUE CLUSTER GARDE SON NAMESPACE.** Signale le 2026-09-28 : passer de la prod a la
 # qualification faisait oublier le namespace de la prod, a rechoisir a chaque retour.
 if [ -n "${COCKPIT_BANC_K8S_CLUSTERS:-}" ]; then
-  clic 941 127 1
-  clic 941 127 14         # Kubernetes, sur cluster-demo
-  clic 610 228 2          # le selecteur de namespace
-  clic 450 364 8          # « boutique-demo »
+  clic 941 99 1
+  clic 941 99 14         # Kubernetes, sur cluster-demo
+  clic 610 200 2          # le selecteur de namespace
+  clic 450 336 8          # « boutique-demo »
   image clusters-1-demo-boutique
-  clic "${COCKPIT_BANC_CLUSTER_X:-410}" 228 2   # le selecteur de cluster
+  clic "${COCKPIT_BANC_CLUSTER_X:-410}" 200 2   # le selecteur de cluster
   image clusters-2-liste
-  clic "${COCKPIT_BANC_QLF_X:-450}" "${COCKPIT_BANC_QLF_Y:-355}" 8   # « cluster-qlf »
+  clic "${COCKPIT_BANC_QLF_X:-450}" "${COCKPIT_BANC_QLF_Y:-327}" 8   # « cluster-qlf »
   image clusters-3-qlf
-  clic 610 228 2
+  clic 610 200 2
   image clusters-3b-liste-ns
-  clic 450 "${COCKPIT_BANC_NS2_Y:-468}" 8          # un autre namespace sur qlf
+  clic 450 "${COCKPIT_BANC_NS2_Y:-440}" 8          # un autre namespace sur qlf
   image clusters-4-qlf-autre
-  clic "${COCKPIT_BANC_CLUSTER_X:-410}" 228 2
-  clic "${COCKPIT_BANC_DEMO_X:-450}" "${COCKPIT_BANC_DEMO_Y:-320}" 8  # retour sur cluster-demo
+  clic "${COCKPIT_BANC_CLUSTER_X:-410}" 200 2
+  clic "${COCKPIT_BANC_DEMO_X:-450}" "${COCKPIT_BANC_DEMO_Y:-292}" 8  # retour sur cluster-demo
   image clusters-5-retour-demo
-  clic "${COCKPIT_BANC_CLUSTER_X:-410}" 228 2
-  clic "${COCKPIT_BANC_QLF_X:-450}" "${COCKPIT_BANC_QLF_Y:-355}" 8
+  clic "${COCKPIT_BANC_CLUSTER_X:-410}" 200 2
+  clic "${COCKPIT_BANC_QLF_X:-450}" "${COCKPIT_BANC_QLF_Y:-327}" 8
   image clusters-6-retour-qlf
   echo "images clusters : $TRAVAIL/img"
   exit 0
 fi
 
 if [ -n "${COCKPIT_BANC_K8S:-}" ]; then
-  clic 941 127 1          # ferme le menu des liens, reste ouvert apres sa capture
-  clic 941 127 14         # l onglet Kubernetes (a droite de Git)
+  clic 941 99 1          # ferme le menu des liens, reste ouvert apres sa capture
+  clic 941 99 14         # l onglet Kubernetes (a droite de Git)
   image k8s-1-ensemble    # ce que le namespace contient, en objets declares
   # **LA VUE DES TACHES PLANIFIEES EST CELLE QUI A MOTIVE TOUT CECI.** Elle doit montrer les
   # taches DECLAREES, y compris celles qui ne se sont jamais declenchees et n'ont donc aucun pod.
-  clic 632 268 3          # l onglet « Taches planifiees »
+  clic 632 240 3          # l onglet « Taches planifiees »
   image k8s-2-taches
   # **LE MENAGE DE TOUT LE NAMESPACE EN UN GESTE**, a droite des onglets de vue.
   if [ -n "${COCKPIT_BANC_TOUT_NETTOYER:-}" ]; then
-    clic "${COCKPIT_BANC_TOUT_X:-1300}" 268 3
+    clic "${COCKPIT_BANC_TOUT_X:-1300}" 240 3
     image k8s-tout-1-confirmation
-    clic 884 504 12       # « Supprimer »
+    clic 884 476 12       # « Supprimer »
     image k8s-tout-2-nettoye
     exit 0
   fi
   # **SUPPRIMER LES PODS D'UN TRAVAIL QUI A RATE**, ce qu'on vient faire apres avoir corrige.
-  clic 600 320 4          # « nettoyage-archives », en tete car il porte quatre echecs
+  clic 600 292 4          # « nettoyage-archives », en tete car il porte quatre echecs
   image k8s-2b-echecs
-  clic 1270 391 3         # « Supprimer les 4 pods en echec »
+  clic 1270 363 3         # « Supprimer les 4 pods en echec »
   image k8s-2c-confirmation
-  clic 884 504 12         # « Supprimer » : le flux annonce ensuite les quatre disparitions
+  clic 884 476 12         # « Supprimer » : le flux annonce ensuite les quatre disparitions
   image k8s-2d-nettoye
-  clic 380 317 3          # retour a la liste
-  clic 600 400 3          # une tache de la liste : on entre dedans
+  clic 380 289 3          # retour a la liste
+  clic 600 372 3          # une tache de la liste : on entre dedans
   image k8s-3-dans-la-tache
   # Un pod ouvert DEPUIS un objet doit rendre le meme detail que depuis la liste des pods.
-  clic 500 389 4
+  clic 500 361 4
   image k8s-3b-pod-depuis-la-tache
-  clic 1351 350 1         # fermer le detail
-  clic 380 317 3          # « Retour a la liste »
+  clic 1351 322 1         # fermer le detail
+  clic 380 289 3          # « Retour a la liste »
   image k8s-4-retour
-  clic 500 268 3          # l onglet « Services »
+  clic 500 240 3          # l onglet « Services »
   image k8s-5-services
-  clic 742 268 3          # l onglet « Pods »
+  clic 742 240 3          # l onglet « Pods »
   image k8s-6-pods
-  clic 1000 228 1         # le champ de recherche
+  clic 1000 200 1         # le champ de recherche
   python3 "$OUTILS" taper "web" 2>/dev/null || true
   sleep 3
   image k8s-7-recherche
   # **UNE RECHERCHE QUI NE TROUVE RIEN ICI DOIT DIRE OU ELLE TROUVE.** « snap » ne rend aucun
   # pod : la tache planifiee de ce nom ne s'est jamais declenchee. L'ecran doit y emmener.
-  clic 1000 228 1
+  clic 1000 200 1
   python3 "$OUTILS" effacer 2>/dev/null || true
   python3 "$OUTILS" taper "snap" 2>/dev/null || true
   sleep 2
   image k8s-7b-passerelle
-  clic 1000 228 1
+  clic 1000 200 1
   python3 "$OUTILS" effacer 2>/dev/null || true
   python3 "$OUTILS" taper "web" 2>/dev/null || true
   sleep 2
-  clic 500 376 6          # le premier pod trouve : ouvre son detail et ses logs
+  clic 500 348 6          # le premier pod trouve : ouvre son detail et ses logs
   image k8s-8-detail
   sleep 6                 # de quoi voir arriver des lignes en direct
   image k8s-9-logs
-  clic 1351 311 1         # fermer le detail
-  clic 1000 228 1
+  clic 1351 283 1         # fermer le detail
+  clic 1000 200 1
   python3 "$OUTILS" effacer 2>/dev/null || true
-  clic 849 268 3          # l onglet « Ressources »
+  clic 849 240 3          # l onglet « Ressources »
   sleep 25                # cinq mesures a cinq secondes
   image k8s-10-ressources
-  clic 600 620 4          # le premier pod du classement : on le suit de pres
+  clic 600 592 4          # le premier pod du classement : on le suit de pres
   image k8s-11-focus
   # Les reglages : c'est la qu'on declare ce que Cockpit suit en continu.
   # On enregistre le namespace affiche AVANT d'aller aux reglages : sans cible, l'ecran des
   # reglages ne montre ni le rythme ni le cout par jour, donc rien de ce qu'on veut relire.
-  clic 1264 368 4         # « Enregistrer ce namespace », a droite du bandeau
+  clic 1264 340 4         # « Enregistrer ce namespace », a droite du bandeau
   image k8s-11b-enregistre
   # **ENREGISTRER UN SECOND NAMESPACE EST LE GESTE QUI ECHOUAIT** (« An object could not be
   # cloned ») : la liste envoyee portait alors un objet venu de l'etat, que le pont refuse de
   # cloner. Le premier passait, donc le defaut ne se voyait qu'une fois l'ecran rempli.
-  clic 610 228 2          # le selecteur de namespace
-  clic 450 364 10         # « boutique-demo », la premiere entree SOUS le champ de filtre
-  clic 849 268 5          # l onglet « Ressources »
+  clic 610 200 2          # le selecteur de namespace
+  clic 450 336 10         # « boutique-demo », la premiere entree SOUS le champ de filtre
+  clic 849 240 5          # l onglet « Ressources »
   image k8s-11c-avant     # ou est le bouton a cet instant, pour recaler le clic
-  clic 1264 368 6         # « Enregistrer ce namespace », pour le second
+  clic 1264 340 6         # « Enregistrer ce namespace », pour le second
   image k8s-11c-second
-  clic 1275 55 3          # l engrenage
-  clic 380 300 3          # l entree « Kubernetes » du menu
+  clic 1275 27 3          # l engrenage
+  clic 380 272 3          # l entree « Kubernetes » du menu
   image k8s-12-reglages
   echo "images kubernetes : $TRAVAIL/img"
   exit 0
@@ -456,7 +523,7 @@ fi
 # On lance le faux agent dans le terminal affiche : ce qu'on verifie ici, c'est qu'un agent
 # tourne bien dans un terminal et que la barre laterale le SIGNALE (l'asterisque). Les reperes
 # « attend » et « fini » ont ete retires en 0.87.0, il n'y a plus rien a en attendre.
-clic 900 500 1
+clic 900 472 1
 python3 "$OUTILS" taper "claude $TRAVAIL/bin/faux-agent"
 sleep 5
 image 2-agent-en-cours
@@ -469,8 +536,8 @@ lancer
 # **PENDANT QU'IL SE ROUVRE, L'ECRAN DOIT LE DIRE.** Il annoncait « aucun terminal ouvert » et
 # proposait d'en creer un, alors qu'il en rechargeait un : on croyait tout perdu, et cliquer en
 # aurait cree un de plus. On capture donc TOT, avant la fin du chargement.
-clic 105 296 2            # le projet
-clic 727 127 0            # l onglet Terminal, sans laisser le temps de finir
+clic 105 268 2            # le projet
+clic 727 99 0            # l onglet Terminal, sans laisser le temps de finir
 image 3-pendant-la-reouverture
 sleep 8
 image 4-apres-relance
@@ -479,19 +546,19 @@ image 4-apres-relance
 # « parfois ça revient sur l'autre terminal ». Le premier terminal porte l'ecran du faux
 # agent, reconnaissable ; on en ouvre un second, et l'onglet actif doit montrer une invite
 # NEUVE, pas l'agent. Puis on provoque ce qui remettait l'ancien : une nouvelle mise en page.
-clic 862 127 3            # on part sur Git
-clic 727 127 0            # retour sur Terminal, sans attendre la fin du montage
-clic 594 224 0            # « + » tout de suite
+clic 862 99 3            # on part sur Git
+clic 727 99 0            # retour sur Terminal, sans attendre la fin du montage
+clic 594 196 0            # « + » tout de suite
 sleep 4
 image 5-apres-plus
-python3 "$OUTILS" survoler 900 500
-clic 797 127 3            # Fichiers, puis retour : la disposition est relue
-clic 727 127 4
+python3 "$OUTILS" survoler 900 472
+clic 797 99 3            # Fichiers, puis retour : la disposition est relue
+clic 727 99 4
 image 6-apres-aller-retour
 # Le second chemin : un simple CLIC sur l'autre onglet doit lui aussi survivre au retour.
-clic 485 224 3            # l onglet « - 1 »
-clic 862 127 3            # Git, puis retour
-clic 727 127 4
+clic 485 196 3            # l onglet « - 1 »
+clic 862 99 3            # Git, puis retour
+clic 727 99 4
 image 7-clic-puis-retour
 
 echo "images : $TRAVAIL/img"

@@ -249,8 +249,8 @@ mod tests {
     #[test]
     fn la_liaison_decoupe_les_cles_et_prend_le_gabarit_par_defaut() {
         let db = base();
-        let l = poser_liaison(&db, "site", "ccm, ABC", "").unwrap();
-        assert_eq!(l.cles, vec!["CCM", "ABC"]);
+        let l = poser_liaison(&db, "site", "proj, ABC", "").unwrap();
+        assert_eq!(l.cles, vec!["PROJ", "ABC"]);
         assert_eq!(l.gabarit, GABARIT_PAR_DEFAUT);
         assert_eq!(liaisons(&db).unwrap(), vec![l]);
     }
@@ -258,8 +258,8 @@ mod tests {
     #[test]
     fn la_liaison_refuse_une_cle_ou_un_gabarit_invalide() {
         let db = base();
-        assert!(poser_liaison(&db, "site", "CCM-1", "").is_err());
-        assert!(poser_liaison(&db, "site", "CCM", "{type}/{slug}").is_err(), "sans {{cle}}, deux tickets auraient la meme branche");
+        assert!(poser_liaison(&db, "site", "PROJ-1", "").is_err());
+        assert!(poser_liaison(&db, "site", "PROJ", "{type}/{slug}").is_err(), "sans {{cle}}, deux tickets auraient la meme branche");
     }
 
     #[test]

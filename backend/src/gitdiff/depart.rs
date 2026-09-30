@@ -119,17 +119,17 @@ mod tests {
         // Le clone est sur une autre branche.
         git(&clone, &["checkout", "-b", "ailleurs"]);
 
-        let d = partir_de_la_base(clone.to_str().unwrap(), "feature/CCM-1/essai").await.unwrap();
+        let d = partir_de_la_base(clone.to_str().unwrap(), "feature/PROJ-1/essai").await.unwrap();
         assert!(d.creee);
         assert_eq!(d.base.as_deref(), Some("main"));
-        assert_eq!(branche_courante(&clone), "feature/CCM-1/essai");
+        assert_eq!(branche_courante(&clone), "feature/PROJ-1/essai");
         assert!(clone.join("b.txt").exists(), "la branche part de main A JOUR");
     }
 
     #[tokio::test]
     async fn prend_master_sans_main() {
         let (_, clone) = depot_avec_origin("master");
-        let d = partir_de_la_base(clone.to_str().unwrap(), "fix/CCM-2/x").await.unwrap();
+        let d = partir_de_la_base(clone.to_str().unwrap(), "fix/PROJ-2/x").await.unwrap();
         assert_eq!(d.base.as_deref(), Some("master"));
     }
 
@@ -138,7 +138,7 @@ mod tests {
         let (_, clone) = depot_avec_origin("main");
         git(&clone, &["checkout", "-b", "ailleurs"]);
         std::fs::write(clone.join("a.txt"), "modifie").unwrap();
-        let e = partir_de_la_base(clone.to_str().unwrap(), "fix/CCM-3/x").await.unwrap_err();
+        let e = partir_de_la_base(clone.to_str().unwrap(), "fix/PROJ-3/x").await.unwrap_err();
         assert!(e.contains("commit ou stash"), "{e}");
         assert_eq!(branche_courante(&clone), "ailleurs", "rien n'a bouge, pas meme un checkout avant le refus");
     }
@@ -147,25 +147,25 @@ mod tests {
     async fn un_fichier_non_suivi_ne_bloque_pas() {
         let (_, clone) = depot_avec_origin("main");
         std::fs::write(clone.join("brouillon.txt"), "x").unwrap();
-        assert!(partir_de_la_base(clone.to_str().unwrap(), "fix/CCM-4/x").await.is_ok());
+        assert!(partir_de_la_base(clone.to_str().unwrap(), "fix/PROJ-4/x").await.is_ok());
     }
 
     #[tokio::test]
     async fn bascule_sur_une_branche_existante() {
         let (_, clone) = depot_avec_origin("main");
-        git(&clone, &["checkout", "-b", "fix/CCM-5/x"]);
+        git(&clone, &["checkout", "-b", "fix/PROJ-5/x"]);
         git(&clone, &["checkout", "main"]);
-        let d = partir_de_la_base(clone.to_str().unwrap(), "fix/CCM-5/x").await.unwrap();
+        let d = partir_de_la_base(clone.to_str().unwrap(), "fix/PROJ-5/x").await.unwrap();
         assert!(!d.creee);
         assert_eq!(d.base, None);
-        assert_eq!(branche_courante(&clone), "fix/CCM-5/x");
+        assert_eq!(branche_courante(&clone), "fix/PROJ-5/x");
     }
 
     #[tokio::test]
     async fn refuse_un_nom_invalide_avant_tout() {
         let (_, clone) = depot_avec_origin("main");
         git(&clone, &["checkout", "-b", "ailleurs"]);
-        let e = partir_de_la_base(clone.to_str().unwrap(), "fix/CCM-6/avec espace").await.unwrap_err();
+        let e = partir_de_la_base(clone.to_str().unwrap(), "fix/PROJ-6/avec espace").await.unwrap_err();
         assert!(e.contains("nom de branche invalide"), "{e}");
         assert_eq!(branche_courante(&clone), "ailleurs");
     }
@@ -188,7 +188,7 @@ mod tests {
         git(&autre, &["commit", "-m", "divergence distante"]);
         git(&autre, &["push", "origin", "main"]);
 
-        let e = partir_de_la_base(clone.to_str().unwrap(), "fix/CCM-8/x").await.unwrap_err();
+        let e = partir_de_la_base(clone.to_str().unwrap(), "fix/PROJ-8/x").await.unwrap_err();
         assert!(e.contains("maintenant sur main"), "{e}");
         assert_eq!(branche_courante(&clone), "main", "le checkout a reussi, seul le pull a echoue");
     }
@@ -200,7 +200,7 @@ mod tests {
         std::fs::write(depot.join("a.txt"), "un").unwrap();
         git(&depot, &["add", "."]);
         git(&depot, &["commit", "-m", "depart"]);
-        let e = partir_de_la_base(depot.to_str().unwrap(), "fix/CCM-7/x").await.unwrap_err();
+        let e = partir_de_la_base(depot.to_str().unwrap(), "fix/PROJ-7/x").await.unwrap_err();
         assert!(e.contains("ni main ni master"), "{e}");
     }
 }

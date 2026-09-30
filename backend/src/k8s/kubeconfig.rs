@@ -321,7 +321,7 @@ apiVersion: v1
 current-context: prod
 contexts:
   - name: prod
-    context: { cluster: prod, user: prod, namespace: ccm-main }
+    context: { cluster: prod, user: prod, namespace: acme-main }
   - name: qlf
     context: { cluster: qlf, user: qlf }
 clusters:
@@ -349,7 +349,7 @@ users:
         assert_eq!(liste.len(), 2);
         assert_eq!(liste[0].nom, "prod");
         assert_eq!(liste[0].serveur, "https://prod.exemple.test:6443");
-        assert_eq!(liste[0].namespace.as_deref(), Some("ccm-main"));
+        assert_eq!(liste[0].namespace.as_deref(), Some("acme-main"));
         assert!(liste[0].courant, "current-context designe prod");
         assert!(!liste[1].courant);
         assert!(liste.iter().all(|c| c.obstacle.is_none()), "ces deux-la sont servables");
@@ -361,7 +361,7 @@ users:
         let a = acces(&[f], "prod", &sans_disque()).unwrap();
         assert_eq!(a.serveur, "https://prod.exemple.test:6443");
         assert_eq!(a.identite, Identite::Jeton("jeton-de-prod".into()));
-        assert_eq!(a.namespace.as_deref(), Some("ccm-main"));
+        assert_eq!(a.namespace.as_deref(), Some("acme-main"));
         assert!(!a.sans_verification);
     }
 
@@ -483,10 +483,10 @@ users: [{ name: b, user: { token: y } }]
 
     #[test]
     fn un_nom_de_ressource_ne_peut_pas_sortir_de_son_chemin() {
-        assert!(nom_valide("ccm-ccmadmin-main"));
+        assert!(nom_valide("acme-ccmadmin-main"));
         assert!(nom_valide("web-5cb5677dcc-8ms7z"));
         assert!(!nom_valide("../secrets"));
-        assert!(!nom_valide("ccm/main"));
+        assert!(!nom_valide("acme/main"));
         assert!(!nom_valide("MAJUSCULES"));
         assert!(!nom_valide(""));
         assert!(!nom_valide("-tiret-au-debut"));

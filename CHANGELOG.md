@@ -23,6 +23,64 @@ le script de release.
   qui manque. Une carte « Branches sans ticket » liste les branches qui ne citent aucun
   ticket : « Créer un ticket » le crée et renomme la branche d'après le gabarit du projet.
 
+## [0.95.0] — 2026-09-30
+
+### Changed
+
+- Plugins : Cockpit ne connaît plus de marketplace particulière. Toute marketplace que Claude
+  Code a enregistrée depuis un dossier local est modifiable dans Paramètres → IA → Claude →
+  Bibliothèque, et un plugin peut porter n'importe quel nom en minuscules et tirets.
+
+### Fixed
+
+- Plugins : créer, renommer ou supprimer un plugin ne retire plus de `marketplace.json` les
+  champs que Cockpit ne connaît pas, dont `owner`, que Claude Code exige.
+- Plugins : le champ du nom prend le focus à l'ouverture du formulaire ; taper puis Entrée ne
+  referme plus le formulaire. Le nombre de plugins se met à jour après une création.
+
+## [0.94.0] — 2026-09-30
+
+### Changed
+
+- Notes : la barre de mise en forme est une colonne à droite de la note. Elle suit le
+  défilement et ne couvre plus le texte.
+
+## [0.93.1] — 2026-09-30
+
+### Fixed
+
+- Windows : la 0.93.0 n'avait pas été publiée pour Windows. Cette version apporte à Windows
+  la case de transmission des erreurs, la barre des notes en bas et la barre de mise à jour
+  corrigée.
+
+## [0.93.0] — 2026-09-30
+
+### Added
+
+- Paramètres → Général : une case permet de couper la transmission des erreurs à l'équipe de
+  développement. Ce qui est transmis y est détaillé. Le journal local reste sur ta machine.
+
+### Changed
+
+- Notes : la barre de mise en forme est en bas de la note, et y reste pendant qu'on écrit.
+
+### Fixed
+
+- Mise à jour : la barre de progression du téléchargement ne dépasse plus 100 %.
+
+## [0.92.0] — 2026-09-29
+
+### Changed
+
+- La barre de menus « File, Edit, View, Window, Help » en haut de la fenêtre disparaît : elle
+  prenait une ligne sans rien apporter. Ctrl + / Ctrl − / Ctrl 0 règlent toujours le zoom, et
+  le pourcentage de l'en-tête suit maintenant ces raccourcis.
+
+### Fixed
+
+- Notes : la barre de mise en forme (gras, titres, listes…) reste visible en haut quand on
+  écrit une longue note, au lieu de défiler hors de l'écran.
+
 ## [0.91.1] — 2026-09-28
 
 ### Fixed

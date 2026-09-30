@@ -1110,11 +1110,10 @@ mod tests {
     /// l'ecran du service ET dans ce qui part vers l'application.
     #[test]
     fn le_curseur_revient_quand_l_agent_disparait() {
-        let s = session_avec_ecran(None, b"\x1b[?25l");
+        let s = session(None);
         let (boite, recu) = boite();
         s.attacher(boite);
         let visible = |s: &Session| s.partage.0.lock().unwrap().ecran.curseur_visible();
-        assert!(!visible(&s), "l'ecran initial devait masquer le curseur");
         // Le redessin de l'attache part d'abord : sans l'attendre, il pourrait partir APRES
         // et porter lui-meme le curseur visible, et l'essai ne prouverait plus rien.
         let fin = std::time::Instant::now() + std::time::Duration::from_secs(5);
@@ -1123,6 +1122,22 @@ mod tests {
                 break;
             }
         }
+        // **ON ATTEND QUE LE SHELL SE TAISE, PUIS ON MASQUE.** Sous Windows, la console
+        // (ConPTY) ecrit elle-meme l'etat du curseur au demarrage du shell : un ecran initial
+        // masque redevenait visible avant la premiere verification (vu en CI le 2026-09-30).
+        // Masquer une fois le shell silencieux joue ce que fait un agent, sur tous les systemes.
+        let fin = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while std::time::Instant::now() < fin {
+            let calme = s.partage.0.lock().unwrap().derniere_sortie
+                .is_some_and(|t| t.elapsed() > std::time::Duration::from_millis(800));
+            if calme {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        s.partage.0.lock().unwrap().ecran.avaler(b"\x1b[?25l");
+        while recu.try_recv().is_ok() {}
+        assert!(!visible(&s), "le curseur devait etre masque, comme par un agent");
         s.noter_le_premier_plan(true);
         assert!(!visible(&s), "tant que l'agent tourne, on ne touche a rien");
         s.noter_le_premier_plan(false);

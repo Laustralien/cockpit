@@ -10,6 +10,7 @@ import { pushNotice, removeNoticesByPrefix } from "./notifications";
 import { translate } from "../i18n";
 import { signalerErreur } from "./errors";
 import { cleErreurMaj, detailErreurMaj } from "./updateErreurs";
+import { pourcentage } from "./updateProgres";
 
 // Reexportes : les composants les importaient deja d'ici avant que ces regles soient
 // sorties dans leur propre module, essayable sous node.
@@ -136,9 +137,13 @@ export async function installUpdate() {
       if (avancement.event === "Started") {
         total = avancement.data.contentLength ?? null;
       } else if (avancement.event === "Progress") {
-        downloaded += avancement.data.chunkLength;
-        const progress = total ? Math.round((downloaded / total) * 100) : null;
-        updateState.update((s) => ({ ...s, progress }));
+        downloaded = avancement.data.transferred ?? downloaded + avancement.data.chunkLength;
+        const progress = pourcentage(downloaded, avancement.data.total ?? total);
+        // Une barre ne recule pas : un autre compteur qui prend le relais repartirait de zero.
+        updateState.update((s) => ({
+          ...s,
+          progress: progress === null ? s.progress : Math.max(s.progress ?? 0, progress),
+        }));
       } else if (avancement.event === "Finished") {
         updateState.update((s) => ({ ...s, phase: "installing", progress: 100 }));
       }
