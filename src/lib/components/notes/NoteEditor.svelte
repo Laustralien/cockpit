@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, tick, untrack } from "svelte";
   import { marked } from "marked";
-  import { creerTurndown, texteDeBloc } from "../../notes/conversion";
+  import { creerTurndown, texteDeBloc, versMarkdown } from "../../notes/conversion";
   import { saveNoteFile } from "../../api/storage";
   import { notify } from "../../stores/toast";
   import InlineEdit from "../ui/InlineEdit.svelte";
@@ -88,7 +88,7 @@
     if (!el) return;
     const id = currentId;
     // Turndown reparcourt tout le DOM : ne pas le faire a chaque frappe dans une note longue.
-    const content = turndown.turndown(el.innerHTML);
+    const content = versMarkdown(turndown, el.innerHTML, document);
     markdownContent = content;
     dirty = false;
     try { await saveNoteFile(id, content); } catch (e) { notify(String(e)); }

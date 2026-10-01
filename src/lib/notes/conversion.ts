@@ -49,3 +49,83 @@ export function creerTurndown(): TurndownService {
   });
   return turndown;
 }
+
+const estUnSaut = (n: Node) => n.nodeName === "BR";
+const estDuVide = (n: Node) => n.nodeType === 3 && !(n.nodeValue ?? "").trim();
+
+/**
+ * Chaque ligne laissee vide devient un VRAI paragraphe vide, quelle que soit la facon dont le
+ * navigateur l'a faite.
+ *
+ * **ENTREE NE PRODUIT PAS TOUJOURS LA MEME CHOSE.** Selon l'endroit, le navigateur ouvre un
+ * nouveau paragraphe, ou pose un `<br>` dans le paragraphe courant. Le premier cas etait gere ;
+ * le second ne l'etait pas, et le Markdown ignore des retours a la ligne en fin de paragraphe
+ * ou en serie : constate le 2026-10-01 dans la base de l'utilisateur, `resultat,  \n  \n`
+ * revenait sans sa ligne vide. Regle, celle de l'affichage : n retours a la ligne d'affilee
+ * dans un paragraphe font n - 1 lignes vides ; le dernier d'un paragraphe ne se voit pas.
+ */
+export function normaliserLesLignesVides(racine: Element, doc: Document): void {
+  for (const bloc of Array.from(racine.querySelectorAll("p, div"))) {
+    if (bloc.closest("pre")) continue;
+    const enfants = Array.from(bloc.childNodes);
+    // Morceaux de contenu, separes par un nombre de lignes vides.
+    const morceaux: Node[][] = [[]];
+    const videsApres: number[] = [0];
+    let i = 0;
+    while (i < enfants.length) {
+      if (!estUnSaut(enfants[i])) {
+        morceaux[morceaux.length - 1].push(enfants[i]);
+        i++;
+        continue;
+      }
+      let j = i;
+      let sauts = 0;
+      while (j < enfants.length && (estUnSaut(enfants[j]) || estDuVide(enfants[j]))) {
+        if (estUnSaut(enfants[j])) sauts++;
+        j++;
+      }
+      const enFin = j >= enfants.length;
+      if (enFin) {
+        videsApres[videsApres.length - 1] += sauts - 1;
+      } else if (sauts >= 2) {
+        videsApres[videsApres.length - 1] += sauts - 1;
+        morceaux.push([]);
+        videsApres.push(0);
+      } else {
+        morceaux[morceaux.length - 1].push(...enfants.slice(i, j));
+      }
+      i = j;
+    }
+    if (morceaux.length === 1 && videsApres[0] === 0) continue;
+    const paragrapheVide = () => {
+      const p = doc.createElement("p");
+      p.appendChild(doc.createElement("br"));
+      return p;
+    };
+    // Le premier morceau reste dans le bloc ; les suivants vont dans des blocs freres.
+    while (bloc.firstChild) bloc.removeChild(bloc.firstChild);
+    for (const n of morceaux[0]) bloc.appendChild(n);
+    let apres: Element = bloc;
+    morceaux.forEach((morceau, k) => {
+      if (k > 0) {
+        const suite = doc.createElement(bloc.nodeName.toLowerCase());
+        for (const n of morceau) suite.appendChild(n);
+        apres.after(suite);
+        apres = suite;
+      }
+      for (let v = 0; v < videsApres[k]; v++) {
+        const vide = paragrapheVide();
+        apres.after(vide);
+        apres = vide;
+      }
+    });
+  }
+}
+
+/// Le Markdown d'une note, depuis le HTML de son editeur.
+export function versMarkdown(turndown: TurndownService, html: string, doc: Document): string {
+  const conteneur = doc.createElement("div");
+  conteneur.innerHTML = html;
+  normaliserLesLignesVides(conteneur, doc);
+  return turndown.turndown(conteneur);
+}

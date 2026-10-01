@@ -341,7 +341,14 @@ SQL
   clic 410 244 3          # la note
   clic 760 263 1          # au bout de la premiere ligne
   python3 "$OUTILS" raccourci "End"
-  python3 "$OUTILS" raccourci "Return"
+  if [ -n "${COCKPIT_BANC_SAUTS:-}" ]; then
+    # Deux retours a la ligne DANS le paragraphe : la forme trouvee dans une vraie base.
+    python3 "$OUTILS" raccourci "Shift_L+Return"
+    python3 "$OUTILS" raccourci "Shift_L+Return"
+    python3 "$OUTILS" taper "suite" 2>/dev/null || true
+  else
+    python3 "$OUTILS" raccourci "Return"
+  fi
   clic 713 98 0           # Terminal, sans attendre
   sleep 3
   clic 539 98 3           # retour sur Workspace

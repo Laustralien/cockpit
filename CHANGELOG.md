@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Notes : toutes les lignes laissées vides sont gardées, y compris celles faites au milieu ou
+  à la fin d'un paragraphe. Selon l'endroit où l'on appuyait sur Entrée, certaines
+  disparaissaient encore à la relecture.
+
 ## [0.95.2] — 2026-10-01
 
 ### Fixed
