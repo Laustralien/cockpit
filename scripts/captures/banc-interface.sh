@@ -326,6 +326,34 @@ SQL
   exit 0
 fi
 
+# **PARTIR TOUT DE SUITE APRES AVOIR ECRIT NE PERD RIEN.** Signale le 2026-10-01 : une ligne
+# ajoutee puis l'onglet quitte aussitot, et au retour la ligne n'y etait plus.
+if [ -n "${COCKPIT_BANC_DEPART:-}" ]; then
+  python3 - "$COCKPIT_DB" <<'SQL'
+import sqlite3, sys
+c = sqlite3.connect(sys.argv[1])
+c.execute("INSERT INTO note_files (project, folder_id, name, content, position) VALUES (?, NULL, ?, ?, 99)",
+          ("api-facturation", "Compte rendu", "premiere phrase\n\nseconde phrase"))
+c.commit()
+SQL
+  clic 900 472 1
+  clic 539 98 4           # Workspace
+  clic 410 244 3          # la note
+  clic 760 263 1          # au bout de la premiere ligne
+  python3 "$OUTILS" raccourci "End"
+  python3 "$OUTILS" raccourci "Return"
+  clic 713 98 0           # Terminal, sans attendre
+  sleep 3
+  clic 539 98 3           # retour sur Workspace
+  clic 410 244 3
+  image depart-1-retour
+  python3 - "$COCKPIT_DB" <<'SQL'
+import sqlite3, sys
+print("  enregistre :", repr(sqlite3.connect(sys.argv[1]).execute("SELECT content FROM note_files WHERE name='Compte rendu'").fetchone()[0]))
+SQL
+  exit 0
+fi
+
 if [ -n "${COCKPIT_BANC_NS:-}" ]; then
   # **LE NAMESPACE CHOISI DOIT REVENIR.** Signale par le mainteneur : il choisit celui de son
   # projet, part, revient, et retrouve celui du contexte. On pose le choix EN BASE, comme s'il

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick, untrack } from "svelte";
+  import { onDestroy, tick, untrack } from "svelte";
   import { marked } from "marked";
   import { creerTurndown, texteDeBloc } from "../../notes/conversion";
   import { saveNoteFile } from "../../api/storage";
@@ -68,12 +68,27 @@
     });
   }
 
+  /// **UNE NOTE NE S'ENREGISTRE JAMAIS DEPUIS UNE ZONE DE TEXTE ABSENTE.** Constate au banc le
+  /// 2026-10-01 : ecrire, puis quitter l'onglet dans la seconde. Le minuteur partait apres la
+  /// fermeture, `editorEl` ne designait plus rien, et `innerHTML || ""` enregistrait une note
+  /// VIDE par-dessus la vraie. On garde donc l'element (il reste lisible, meme detache) et on
+  /// enregistre au moment ou l'editeur se ferme, plutot qu'apres.
+  let dernierEditeur: HTMLDivElement | null = null;
+  $effect(() => {
+    if (editorEl) dernierEditeur = editorEl;
+  });
+  onDestroy(() => {
+    void flush();
+  });
+
   async function flush() {
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
     if (!dirty || currentId === null) return;
+    const el = editorEl ?? dernierEditeur;
+    if (!el) return;
     const id = currentId;
     // Turndown reparcourt tout le DOM : ne pas le faire a chaque frappe dans une note longue.
-    const content = turndown.turndown(editorEl?.innerHTML || "");
+    const content = turndown.turndown(el.innerHTML);
     markdownContent = content;
     dirty = false;
     try { await saveNoteFile(id, content); } catch (e) { notify(String(e)); }

@@ -12,6 +12,11 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Notes : quitter l'onglet juste après avoir écrit ne perd plus rien. Ce qui venait d'être
+  tapé disparaissait, et dans le pire des cas la note entière était enregistrée vide.
+
 ## [0.95.1] — 2026-10-01
 
 ### Fixed
