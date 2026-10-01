@@ -295,6 +295,37 @@ if [ -n "${COCKPIT_BANC_PLUGINS:-}" ]; then
   exit 0
 fi
 
+# **UNE LIGNE LAISSEE VIDE ENTRE DEUX PHRASES SURVIT A L'ENREGISTREMENT.** On tape, on laisse
+# une ligne vide, on change de note (ce qui enregistre), on revient.
+if [ -n "${COCKPIT_BANC_LIGNE_VIDE:-}" ]; then
+  python3 - "$COCKPIT_DB" <<'SQL'
+import sqlite3, sys
+c = sqlite3.connect(sys.argv[1])
+for nom in ("Brouillon", "Autre"):
+    c.execute("INSERT INTO note_files (project, folder_id, name, content, position) VALUES (?, NULL, ?, '', 99)",
+              ("api-facturation", nom))
+c.commit()
+SQL
+  clic 900 472 1
+  clic 539 98 4           # Workspace
+  image ligne-vide-0-liste
+  clic 410 "${COCKPIT_BANC_BROUILLON_Y:-276}" 3          # « Brouillon »
+  clic 700 300 1          # dans la note
+  python3 "$OUTILS" taper "premiere phrase"
+  python3 "$OUTILS" taper ""
+  python3 "$OUTILS" taper "seconde phrase" 2>/dev/null || true
+  sleep 2
+  image ligne-vide-1-tapee
+  clic 410 "${COCKPIT_BANC_AUTRE_Y:-244}" 3          # « Autre » : la premiere s'enregistre
+  clic 410 "${COCKPIT_BANC_BROUILLON_Y:-276}" 3          # retour sur « Brouillon »
+  image ligne-vide-2-relue
+  python3 - "$COCKPIT_DB" <<'SQL'
+import sqlite3, sys
+print("  enregistre :", repr(sqlite3.connect(sys.argv[1]).execute("SELECT content FROM note_files WHERE name='Brouillon'").fetchone()[0]))
+SQL
+  exit 0
+fi
+
 if [ -n "${COCKPIT_BANC_NS:-}" ]; then
   # **LE NAMESPACE CHOISI DOIT REVENIR.** Signale par le mainteneur : il choisit celui de son
   # projet, part, revient, et retrouve celui du contexte. On pose le choix EN BASE, comme s'il

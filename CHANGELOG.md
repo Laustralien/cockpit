@@ -12,6 +12,11 @@ le script de release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Notes : une ligne laissée vide entre deux phrases est gardée. Elle disparaissait à
+  l'enregistrement, et les phrases revenaient collées.
+
 ## [0.95.0] — 2026-09-30
 
 ### Changed
