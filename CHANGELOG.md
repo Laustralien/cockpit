@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.95.1] — 2026-10-01
+
 ### Fixed
 
 - Notes : une ligne laissée vide entre deux phrases est gardée. Elle disparaissait à
