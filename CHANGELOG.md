@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [0.95.2] — 2026-10-01
+
 ### Fixed
 
 - Notes : quitter l'onglet juste après avoir écrit ne perd plus rien. Ce qui venait d'être
