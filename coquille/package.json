@@ -74,6 +74,12 @@
         "nsis"
       ],
       "icon": "../backend/icons/icon.ico",
+      "signtoolOptions": {
+        "sign": "./outils/signature.js",
+        "signingHashAlgorithms": [
+          "sha256"
+        ]
+      },
       "extraResources": [
         {
           "from": "../backend/target/release/cockpit.exe",

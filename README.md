@@ -63,9 +63,13 @@ quarantines what comes from a browser.
 ### Windows (first release)
 
 Download the `.exe` installer from the
-[releases page](https://github.com/jguevel-tech/cockpit/releases/latest) and run it. Windows will
-warn you that the publisher is unknown — the app is not signed with a paid certificate. Click
-**More info**, then **Run anyway**.
+[releases page](https://github.com/jguevel-tech/cockpit/releases/latest) and run it.
+
+Windows builds are not code-signed yet (see [Code signing policy](#code-signing-policy)). Until
+they are, SmartScreen warns that the publisher is unknown: click **More info**, then **Run
+anyway**. On a machine where **Smart App Control** is on (fresh Windows 11 installs), an unsigned
+build is blocked outright, with no way to run it: turn it off in Windows Security → App & browser
+control → Smart App Control settings, or wait for the first signed release.
 
 This is the first Windows build ever published. The full test suite passes there, terminals
 included, but nobody has yet used it for a day's work. If something is broken,
@@ -349,6 +353,38 @@ Releases build and run the full suite on Linux, macOS and Windows before bundlin
 test that only fails on one of them stops the release rather than shipping.
 
 And record it in [CHANGELOG.md](CHANGELOG.md) under `## [Unreleased]`, if a user can notice it.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
+[SignPath Foundation](https://signpath.org).
+
+Every Windows binary is signed: the installer, `Cockpit.exe`, the backend `cockpit.exe`, every
+DLL and the uninstaller. They are built from this repository by the
+[release workflow](.github/workflows/release.yml), on GitHub-hosted runners, from a `v*` tag, and
+nothing else is ever submitted for signing.
+
+- **Committers and reviewers:** the [repository owner](https://github.com/jguevel-tech). Pull
+  requests from anyone else are reviewed before they are merged.
+- **Approvers:** the [repository owner](https://github.com/jguevel-tech), for every signing
+  request.
+
+### Privacy
+
+Cockpit is a local application: your projects, notes, terminals and files stay on your machine.
+It only connects to other systems for these reasons:
+
+- **Updates:** it checks this repository's releases on GitHub.
+- **Error reports:** when an error is shown, it is sent to the maintainers with the app version,
+  the operating system and distribution, the install format, the audio device, the machine's
+  account name, and the error message (which can contain a file path). Turn it off in
+  Settings → General → *Error reporting*.
+- **Account (optional):** if you create one and sign in, your projects, notes and tasks are
+  synced with `api.cockpitdesktop.com`. Without an account, nothing is synced.
+- **Services you configure yourself:** the AI providers, Jira, Kubernetes clusters and Git
+  remotes you set up, with your own credentials, only when you use them.
+
+The full [privacy policy](https://cockpitdesktop.com/privacy) is on the website.
 
 ## License
 
