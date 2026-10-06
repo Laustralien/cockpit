@@ -12,6 +12,8 @@ le script de release.
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-10-06
+
 ### Changed
 
 - Cockpit passe en version 1.0.0 : c'est la première version annoncée publiquement.
