@@ -107,7 +107,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     # Le build Rust a cache froid est long ; au-dela c'est un blocage, pas une lenteur.
     # Sans ce plafond GitHub attend SIX HEURES avant de tuer le job.
-    timeout-minutes: 120
+    # Windows a plus : une personne doit approuver deux demandes de signature chez SignPath,
+    # et le job attend sa reponse.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 300 || 120 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -212,11 +214,37 @@ jobs:
         working-directory: coquille
         run: npm ci
 
+      # SignPath exige le nom du produit et la version sur chaque binaire qu'il signe, et cargo
+      # n'en pose aucun. Fait meme sans signature : c'est ce que Windows affiche dans les
+      # proprietes du fichier et le gestionnaire des taches.
+      - name: Fiche du backend (Windows)
+        if: runner.os == 'Windows'
+        working-directory: coquille
+        run: node outils/metadonnees-windows.js ../backend/target/release/cockpit.exe
+
+      # **LA SIGNATURE WINDOWS NE PART QUE SI SIGNPATH EST CONFIGURE.** Les secrets ne se
+      # lisent pas dans un `if:` : on les teste ici et on n'expose que la REPONSE aux etapes
+      # suivantes. Le jeton lui-meme ne parait que dans les deux etapes SignPath : electron-
+      # builder execute du code du depot et n'a pas a le voir.
+      - name: Signature configuree ? (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          PRET: ${{ secrets.SIGNPATH_API_TOKEN != '' && secrets.SIGNPATH_ORGANIZATION_ID != '' }}
+        run: |
+          if [ "$PRET" = "true" ]; then
+            echo "SIGNATURE=1" >> "$GITHUB_ENV"
+            echo "signature SignPath configuree : construction en deux passes"
+          else
+            echo "::warning::SignPath n'est pas configure : la version Windows part NON SIGNEE, et le Controle intelligent des applications la bloquera."
+          fi
+
       # **ON CONSTRUIT ICI, ON TELEVERSE A L'ETAPE SUIVANTE.** electron-builder sait publier
       # lui-meme, mais son client HTTP n'a AUCUN reessai : un fichier de 110 Mo qui depasse le
       # delai fait echouer tout le job, et la release reste incomplete. Constate deux fois de
       # suite (v0.76.0 cote macOS, v0.77.0 cote Linux) avec le meme « Request timed out ».
       - name: Empaqueter
+        if: runner.os != 'Windows' || env.SIGNATURE != '1'
         working-directory: coquille
         env:
           # Pas de compte developpeur Apple : on ne signe ni ne notarise, comme la version
@@ -224,6 +252,122 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         shell: bash
         run: npx electron-builder --publish never
+
+      # **WINDOWS SIGNE, EN DEUX PASSES** (le detail est dans `coquille/outils/signature.js`).
+      # Le Controle intelligent des applications refuse l'application des qu'UN fichier n'est
+      # pas signe : l'installateur, mais aussi Cockpit.exe, le backend, chaque DLL et le
+      # programme de desinstallation. Premiere passe : l'application, sans installateur utile.
+      - name: Empaqueter sans signer (Windows, passe 1)
+        if: runner.os == 'Windows' && env.SIGNATURE == '1'
+        working-directory: coquille
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          COCKPIT_SIGNATURE_ETAPE: capturer
+          COCKPIT_SIGNATURE_DOSSIER: ${{ github.workspace }}/coquille/signature/a-signer
+        run: |
+          set -euo pipefail
+          npx electron-builder --win --publish never
+          test -f signature/a-signer/desinstallation.exe
+          mv paquet/win-unpacked signature/a-signer/win-unpacked
+          # L'installateur de cette passe enferme des fichiers non signes : il ne doit partir
+          # nulle part.
+          rm -rf paquet
+
+      - name: Envoyer l'application a signer
+        id: a-signer
+        if: runner.os == 'Windows' && env.SIGNATURE == '1'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-application-a-signer
+          path: coquille/signature/a-signer/
+          retention-days: 1
+
+      # Epingle sur un commit et non sur `v3` : cette etape detient le jeton SignPath, et une
+      # etiquette deplacee pourrait le lire. Changer de version = relire le nouveau commit.
+      - name: Signer l'application (SignPath)
+        if: runner.os == 'Windows' && env.SIGNATURE == '1'
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: cockpit
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: application
+          github-artifact-id: ${{ steps.a-signer.outputs.artifact-id }}
+          wait-for-completion-timeout-in-seconds: "7200"
+          output-artifact-directory: coquille/signature/signe
+
+      # Seconde passe : l'installateur autour des fichiers SIGNES, sans rien y retoucher
+      # (`--prepackaged` ne modifie pas les binaires, ce qui casserait leur signature).
+      - name: Fabriquer l'installateur (Windows, passe 2)
+        if: runner.os == 'Windows' && env.SIGNATURE == '1'
+        working-directory: coquille
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          COCKPIT_SIGNATURE_ETAPE: remplacer
+          COCKPIT_SIGNATURE_DOSSIER: ${{ github.workspace }}/coquille/signature/signe
+        run: |
+          set -euo pipefail
+          npx electron-builder --win --prepackaged signature/signe/win-unpacked --publish never
+          mkdir -p signature/installateur
+          cp paquet/*.exe signature/installateur/
+
+      - name: Envoyer l'installateur a signer
+        id: installateur-a-signer
+        if: runner.os == 'Windows' && env.SIGNATURE == '1'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-installateur-a-signer
+          path: coquille/signature/installateur/
+          retention-days: 1
+
+      - name: Signer l'installateur (SignPath)
+        if: runner.os == 'Windows' && env.SIGNATURE == '1'
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: cockpit
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: installateur
+          github-artifact-id: ${{ steps.installateur-a-signer.outputs.artifact-id }}
+          wait-for-completion-timeout-in-seconds: "7200"
+          output-artifact-directory: coquille/signature/installateur-signe
+
+      - name: Poser l'installateur signe et refaire le manifeste
+        if: runner.os == 'Windows' && env.SIGNATURE == '1'
+        working-directory: coquille
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp signature/installateur-signe/*.exe paquet/
+          node outils/manifeste-windows.js paquet
+
+      # **UNE SIGNATURE SE VERIFIE AVANT DE PARTIR.** Un seul fichier non signe et
+      # l'application est bloquee chez l'utilisateur : on refuse de deposer quoi que ce soit
+      # tant que chaque binaire n'est pas valide.
+      - name: Verifier les signatures (Windows)
+        if: runner.os == 'Windows' && env.SIGNATURE == '1'
+        working-directory: coquille
+        shell: pwsh
+        run: |
+          $fichiers = @(Get-ChildItem signature/signe -Recurse -File -Include *.exe,*.dll,*.node)
+          $fichiers += @(Get-ChildItem paquet -File -Filter *.exe)
+          if ($fichiers.Count -lt 3) { Write-Host "::error::trop peu de binaires trouves ($($fichiers.Count))"; exit 1 }
+          $rates = 0
+          foreach ($f in $fichiers) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            if ($sig.Status -ne 'Valid') {
+              Write-Host "::error::$($f.Name) : $($sig.Status) $($sig.StatusMessage)"
+              $rates++
+            } else {
+              Write-Host "$($f.Name) : signe par $($sig.SignerCertificate.Subject)"
+            }
+          }
+          if ($rates -gt 0) { Write-Host "::error::$rates fichier(s) sans signature valide : rien ne part"; exit 1 }
+          Write-Host "$($fichiers.Count) binaires signes"
 
       # Depose les artefacts sur la MEME release que les autres plateformes, en BROUILLON :
       # le premier job a finir exposerait sinon une release incomplete. Le job `publier` leve

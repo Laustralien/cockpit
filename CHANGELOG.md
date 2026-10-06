@@ -23,6 +23,28 @@ le script de release.
   qui manque. Une carte « Branches sans ticket » liste les branches qui ne citent aucun
   ticket : « Créer un ticket » le crée et renomme la branche d'après le gabarit du projet.
 
+## [0.95.3] — 2026-10-01
+
+### Fixed
+
+- Notes : toutes les lignes laissées vides sont gardées, y compris celles faites au milieu ou
+  à la fin d'un paragraphe. Selon l'endroit où l'on appuyait sur Entrée, certaines
+  disparaissaient encore à la relecture.
+
+## [0.95.2] — 2026-10-01
+
+### Fixed
+
+- Notes : quitter l'onglet juste après avoir écrit ne perd plus rien. Ce qui venait d'être
+  tapé disparaissait, et dans le pire des cas la note entière était enregistrée vide.
+
+## [0.95.1] — 2026-10-01
+
+### Fixed
+
+- Notes : une ligne laissée vide entre deux phrases est gardée. Elle disparaissait à
+  l'enregistrement, et les phrases revenaient collées.
+
 ## [0.95.0] — 2026-09-30
 
 ### Changed

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { tick, untrack } from "svelte";
+  import { onDestroy, tick, untrack } from "svelte";
   import { marked } from "marked";
-  import TurndownService from "turndown";
+  import { creerTurndown, texteDeBloc, versMarkdown } from "../../notes/conversion";
   import { saveNoteFile } from "../../api/storage";
   import { notify } from "../../stores/toast";
   import InlineEdit from "../ui/InlineEdit.svelte";
@@ -21,36 +21,7 @@
     onRename?: (name: string) => void;
   } = $props();
 
-  const turndown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" });
-
-  /// Texte d'un bloc, les `<br>` comptes comme de vrais sauts de ligne.
-  function texteDeBloc(node: Node): string {
-    let texte = "";
-    for (const enfant of Array.from(node.childNodes)) {
-      if (enfant.nodeType === Node.TEXT_NODE) texte += enfant.nodeValue ?? "";
-      else if (enfant.nodeName === "BR") texte += "\n";
-      else texte += texteDeBloc(enfant);
-    }
-    return texte;
-  }
-
-  /// Tout `<pre>` redevient un bloc de code Markdown, avec ou sans enfant `<code>`.
-  ///
-  /// La regle d'origine de turndown lit `node.firstChild.textContent` : elle ignore donc un
-  /// `<pre>` NU (celui que posait le bouton) et perd les `<br>` que WebKit intercale quand on
-  /// met plusieurs lignes en bloc de code. Dans les deux cas le bloc repartait en simple
-  /// paragraphe a la sauvegarde — du code perdu en silence.
-  turndown.addRule("blocDeCode", {
-    filter: "pre",
-    replacement: (_contenu, node) => {
-      const texte = texteDeBloc(node).replace(/\n+$/, "");
-      const langue = (node.querySelector("code")?.className.match(/language-(\S+)/) ?? ["", ""])[1];
-      // La cloture doit etre plus longue que la plus longue suite d'accents graves du contenu.
-      const plusLongue = (texte.match(/`+/g) ?? []).reduce((max, suite) => Math.max(max, suite.length), 0);
-      const cloture = "`".repeat(Math.max(3, plusLongue + 1));
-      return `\n\n${cloture}${langue}\n${texte}\n${cloture}\n\n`;
-    },
-  });
+  const turndown = creerTurndown();
 
   /// Blocs qui, en dernier dans la note, n'offrent AUCUNE position de caret apres eux.
   ///
@@ -97,12 +68,27 @@
     });
   }
 
+  /// **UNE NOTE NE S'ENREGISTRE JAMAIS DEPUIS UNE ZONE DE TEXTE ABSENTE.** Constate au banc le
+  /// 2026-10-01 : ecrire, puis quitter l'onglet dans la seconde. Le minuteur partait apres la
+  /// fermeture, `editorEl` ne designait plus rien, et `innerHTML || ""` enregistrait une note
+  /// VIDE par-dessus la vraie. On garde donc l'element (il reste lisible, meme detache) et on
+  /// enregistre au moment ou l'editeur se ferme, plutot qu'apres.
+  let dernierEditeur: HTMLDivElement | null = null;
+  $effect(() => {
+    if (editorEl) dernierEditeur = editorEl;
+  });
+  onDestroy(() => {
+    void flush();
+  });
+
   async function flush() {
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
     if (!dirty || currentId === null) return;
+    const el = editorEl ?? dernierEditeur;
+    if (!el) return;
     const id = currentId;
     // Turndown reparcourt tout le DOM : ne pas le faire a chaque frappe dans une note longue.
-    const content = turndown.turndown(editorEl?.innerHTML || "");
+    const content = versMarkdown(turndown, el.innerHTML, document);
     markdownContent = content;
     dirty = false;
     try { await saveNoteFile(id, content); } catch (e) { notify(String(e)); }
