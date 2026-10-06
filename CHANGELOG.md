@@ -12,6 +12,12 @@ le script de release.
 
 ## [Unreleased]
 
+### Changed
+
+- Cockpit passe en version 1.0.0 : c'est la première version annoncée publiquement.
+- Windows : le service des terminaux affiche le nom « Cockpit » et sa version dans le
+  gestionnaire des tâches et dans les propriétés du fichier.
+
 ## [0.95.3] — 2026-10-01
 
 ### Fixed
